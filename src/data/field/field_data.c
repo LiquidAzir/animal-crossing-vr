@@ -1,0 +1,820 @@
+#include "m_field_make.h"
+#include "m_field_info.h"
+#include "m_scene.h"
+#include "m_name_table.h"
+#ifdef TARGET_PC
+#include "pc_bswap.h"
+#endif
+
+extern mFM_move_actor_data_c broker_shop_actable[];
+extern mFM_move_actor_data_c buggy_actable[];
+extern mFM_move_actor_data_c event_notification_actable[];
+extern mFM_move_actor_data_c fd0_actable[];
+extern mFM_move_actor_data_c fd1_actable[];
+extern mFM_move_actor_data_c fd2_actable[];
+extern mFM_move_actor_data_c fd4_actable[];
+extern mFM_move_actor_data_c fd_npc_land_actable[];
+extern mFM_move_actor_data_c fgout_actable[];
+extern mFM_move_actor_data_c kamakura_actable[];
+extern mFM_move_actor_data_c museum_entrance_actable[];
+extern mFM_move_actor_data_c museum_fish_actable[];
+extern mFM_move_actor_data_c museum_fossil_actable[];
+extern mFM_move_actor_data_c museum_insect_actable[];
+extern mFM_move_actor_data_c museum_picture_actable[];
+extern mFM_move_actor_data_c needlework_actable[];
+extern mFM_move_actor_data_c npcRoom001_actable[];
+extern mFM_move_actor_data_c playerRMM_actable[];
+extern mFM_move_actor_data_c playerRMS_actable[];
+extern mFM_move_actor_data_c playerRM_actable[];
+extern mFM_move_actor_data_c player_select2_actable[];
+extern mFM_move_actor_data_c player_select3_actable[];
+extern mFM_move_actor_data_c player_select4_actable[];
+extern mFM_move_actor_data_c player_select_actable[];
+extern mFM_move_actor_data_c police_box_actable[];
+extern mFM_move_actor_data_c post_office_actable[];
+extern mFM_move_actor_data_c shop01_actable[];
+extern mFM_move_actor_data_c shop02_actable[];
+extern mFM_move_actor_data_c shop03_actable[];
+extern mFM_move_actor_data_c shop04_1_actable[];
+extern mFM_move_actor_data_c shop04_2_actable[];
+extern mFM_move_actor_data_c start_demo1_actable[];
+extern mFM_move_actor_data_c start_demo2_actable[];
+extern mFM_move_actor_data_c start_demo3_actable[];
+extern mFM_move_actor_data_c tent_actable[];
+extern mFM_move_actor_data_c title_demo_actable[];
+extern mFM_move_actor_data_c water_test_actable[];
+
+mFM_field_data_c data_fdd[SCENE_NUM] = {
+    {
+        mFI_FIELD_FG,
+        4,
+        2,
+        {
+            { BLOCK_COMBI_GRD_1, 0 },
+            { BLOCK_COMBI_GRD_S_F_1_86, 0 },
+            { BLOCK_COMBI_GRD_S_HOLE_TEST, 0 },
+            { BLOCK_COMBI_GRD_11, 0 },
+            { BLOCK_COMBI_GRD_S_M_R1_3, 0 },
+            { BLOCK_COMBI_GRD_S_M_R1_3, 0 },
+            { BLOCK_COMBI_GRD_S_M_R1_B_2, 0 },
+            { BLOCK_COMBI_GRD_S_M_R1_B_3, 0 },
+        },
+        fd0_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        5,
+        6,
+        {
+            { BLOCK_COMBI_GRD_2, 0 }, { BLOCK_COMBI_GRD_2, 0 }, { BLOCK_COMBI_GRD_2, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_3, 0 },
+            { BLOCK_COMBI_GRD_S_R1_B_1, 0 }, { BLOCK_COMBI_GRD_3, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_4, 0 }, { BLOCK_COMBI_GRD_4, 0 },
+            { BLOCK_COMBI_GRD_4, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 },
+            { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 },
+            { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 }, { BLOCK_COMBI_GRD_0, 0 },
+        },
+        fd1_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        5,
+        6,
+        {
+            { BLOCK_COMBI_GRD_S_F_1_84, 0 }, { BLOCK_COMBI_GRD_S_F_1_284, 0 }, { BLOCK_COMBI_GRD_S_C1_R1_1_285, 0 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_7, 0 },
+            { BLOCK_COMBI_GRD_12, 0 }, { BLOCK_COMBI_GRD_5, 0 }, { BLOCK_COMBI_GRD_S_C7_S_3_265, 0 }, { BLOCK_COMBI_GRD_6, 1 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_23, 0 },
+            { BLOCK_COMBI_GRD_S_R1_P_1_264, 0 }, { BLOCK_COMBI_GRD_13, 0 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_S_F_1_84, 0 }, { BLOCK_COMBI_GRD_S_M_R1_5, 0 }, { BLOCK_COMBI_GRD_5, 0 },
+            { BLOCK_COMBI_GRD_5, 0 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_S_F_1_277, 0 }, { BLOCK_COMBI_GRD_5, 0 }, { BLOCK_COMBI_GRD_5, 0 }, { BLOCK_COMBI_GRD_5, 0 },
+            { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_6, 0 }, { BLOCK_COMBI_GRD_6, 0 },
+        },
+        fd2_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        4,
+        3,
+        {
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_IL_1, 0 },
+            { BLOCK_COMBI_GRD_S_IR_1, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+            { BLOCK_COMBI_GRD_S_O_I_1_350, 0 },
+        },
+        water_test_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_GRD_9, 0 },
+        },
+        NULL,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        5,
+        6,
+        {
+            { BLOCK_COMBI_GRD_S_F_1, 0 }, { BLOCK_COMBI_GRD_S_F_1, 0 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 0 },
+            { BLOCK_COMBI_GRD_S_F_1, 0 }, { BLOCK_COMBI_GRD_S_C1_R2_1, 0 }, { BLOCK_COMBI_GRD_S_C5_R2_1, 0 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 0 }, { BLOCK_COMBI_GRD_S_F_1, 0 },
+            { BLOCK_COMBI_GRD_S_F_1, 0 }, { BLOCK_COMBI_GRD_S_C6_1, 0 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_C3_R1_2, 0 }, { BLOCK_COMBI_GRD_S_F_1, 0 },
+            { BLOCK_COMBI_GRD_S_C6_R1_2, 0 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_C3_R1_1, 0 }, { BLOCK_COMBI_GRD_S_F_1, 0 }, { BLOCK_COMBI_GRD_S_C6_R1_1, 0 },
+            { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_C3_R1_2, 0 }, { BLOCK_COMBI_GRD_S_F_1, 0 }, { BLOCK_COMBI_GRD_S_C6_R1_2, 0 }, { BLOCK_COMBI_GRD_S_F_1, 1 },
+        },
+        fd4_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_NPCROOM0,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_NPC_ROOM01, 0 },
+        },
+        npcRoom001_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        7,
+        10,
+        {
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_23, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 }, { BLOCK_COMBI_GRD_22, 0 },
+        },
+        fd_npc_land_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        2,
+        2,
+        {
+            { BLOCK_COMBI_GRD_2, 0 },
+            { BLOCK_COMBI_GRD_2, 0 },
+            { BLOCK_COMBI_GRD_2, 0 },
+            { BLOCK_COMBI_GRD_2, 0 },
+        },
+        fgout_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_SHOP0,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_SHOP1, 0 },
+        },
+        shop01_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_TMP, 0 },
+        },
+        NULL,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_TMPR, 0 },
+        },
+        NULL,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_BROKER_SHOP,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_GRD_YAMISHOP, 0 },
+        },
+        broker_shop_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_NPCROOM_FIELD_TOOL_INSIDE,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_NPC_ROOM01, 0 },
+        },
+        npcRoom001_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_POST_OFFICE,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_GRD_POST_OFFICE, 0 },
+        },
+        post_office_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_DEMO_STARTDEMO,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_TRAIN_IN, 0 },
+        },
+        start_demo1_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_DEMO_STARTDEMO2,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_TRAIN_IN2, 0 },
+        },
+        start_demo2_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_POLICE_BOX,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_POLICE_INDOOR, 0 },
+        },
+        police_box_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_BUGGY,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_URANAI, 0 },
+        },
+        buggy_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_DEMO_PLAYERSELECT,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_GRD_PLAYER_SELECT, 0 },
+        },
+        player_select_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_S, 0 },
+        },
+        playerRMS_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_M, 0 },
+        },
+        playerRMM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_L, 0 },
+        },
+        playerRM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_SHOP1,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_SHOP2, 0 },
+        },
+        shop02_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_SHOP2,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_SHOP3, 0 },
+        },
+        shop03_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_SHOP3_1,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_SHOP4_1, 0 },
+        },
+        shop04_1_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        3,
+        3,
+        {
+            { BLOCK_COMBI_GRD_226, 0 },
+            { BLOCK_COMBI_GRD_226, 0 },
+            { BLOCK_COMBI_GRD_226, 0 },
+            { BLOCK_COMBI_GRD_226, 0 },
+            { BLOCK_COMBI_GRD_226, 0 },
+            { BLOCK_COMBI_GRD_226, 0 },
+            { BLOCK_COMBI_GRD_226, 0 },
+            { BLOCK_COMBI_GRD_226, 0 },
+            { BLOCK_COMBI_GRD_226, 0 },
+        },
+        NULL,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_DEMO_PLAYERSELECT,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_GRD_PLAYER_SELECT, 0 },
+        },
+        player_select2_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_DEMO_PLAYERSELECT,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_GRD_PLAYER_SELECT, 0 },
+        },
+        player_select3_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_SHOP3_2,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_SHOP4_2, 0 },
+        },
+        shop04_2_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        3,
+        3,
+        {
+            { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 },
+            { BLOCK_COMBI_GRD_22, 0 },
+        },
+        event_notification_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_KAMAKURA,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_KAMAKURA, 0 },
+        },
+        kamakura_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        7,
+        8,
+        {
+            { BLOCK_COMBI_GRD_S_E4_1, 1 }, { BLOCK_COMBI_GRD_S_E1_1, 1 }, { BLOCK_COMBI_GRD_S_E1_1, 1 }, { BLOCK_COMBI_GRD_S_E1_1, 1 }, { BLOCK_COMBI_GRD_S_E1_1, 1 }, { BLOCK_COMBI_GRD_S_E1_R1_1, 1 }, { BLOCK_COMBI_GRD_S_E5_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_T_1, 1 }, { BLOCK_COMBI_GRD_S_T_PO_1, 1 }, { BLOCK_COMBI_GRD_S_T_5, 1 }, { BLOCK_COMBI_GRD_S_T_ST1_1, 1 }, { BLOCK_COMBI_GRD_S_T_SH_1, 1 }, { BLOCK_COMBI_GRD_S_T_R1_1, 1 }, { BLOCK_COMBI_GRD_S_E3_T_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_2, 1 }, { BLOCK_COMBI_GRD_S_F_MH_1, 1 }, { BLOCK_COMBI_GRD_S_F_3, 1 }, { BLOCK_COMBI_GRD_S_R1_B_1, 1 }, { BLOCK_COMBI_GRD_S_E3_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_1, 1 }, { BLOCK_COMBI_GRD_S_C4_S_1, 0 }, { BLOCK_COMBI_GRD_S_C5_1, 0 }, { BLOCK_COMBI_GRD_S_R7_1, 1 }, { BLOCK_COMBI_GRD_S_R3_1, 1 }, { BLOCK_COMBI_GRD_S_R6_1, 1 }, { BLOCK_COMBI_GRD_S_E3_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_C1_1, 0 }, { BLOCK_COMBI_GRD_S_C2_1, 0 }, { BLOCK_COMBI_GRD_S_C7_1, 0 }, { BLOCK_COMBI_GRD_S_C1_R1_1, 0 }, { BLOCK_COMBI_GRD_S_C1_S_1, 0 }, { BLOCK_COMBI_GRD_S_C5_1, 0 }, { BLOCK_COMBI_GRD_S_E3_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_1, 0 }, { BLOCK_COMBI_GRD_S_F_PK_1, 0 }, { BLOCK_COMBI_GRD_S_R7_P_1, 0 }, { BLOCK_COMBI_GRD_S_R6_1, 0 }, { BLOCK_COMBI_GRD_S_F_KO_1, 0 }, { BLOCK_COMBI_GRD_S_C7_1, 0 }, { BLOCK_COMBI_GRD_S_E3_C1_1, 0 },
+            { BLOCK_COMBI_GRD_S_E2_M_1, 0 }, { BLOCK_COMBI_GRD_S_M_1_232, 0 }, { BLOCK_COMBI_GRD_S_M_R1_B_2, 0 }, { BLOCK_COMBI_GRD_S_M_2_233, 0 }, { BLOCK_COMBI_GRD_S_M_3, 0 }, { BLOCK_COMBI_GRD_S_M_4, 0 }, { BLOCK_COMBI_GRD_S_E3_M_1, 0 },
+            { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 },
+        },
+        title_demo_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_FG,
+        7,
+        8,
+        {
+            { BLOCK_COMBI_GRD_S_E4_1, 1 }, { BLOCK_COMBI_GRD_S_E1_1, 1 }, { BLOCK_COMBI_GRD_S_E1_1, 1 }, { BLOCK_COMBI_GRD_S_E1_1, 1 }, { BLOCK_COMBI_GRD_S_E1_1, 1 }, { BLOCK_COMBI_GRD_S_E1_R1_1, 1 }, { BLOCK_COMBI_GRD_S_E5_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_T_1, 1 }, { BLOCK_COMBI_GRD_S_T_PO_1, 1 }, { BLOCK_COMBI_GRD_S_T_5, 1 }, { BLOCK_COMBI_GRD_S_T_ST1_1, 1 }, { BLOCK_COMBI_GRD_S_T_SH_1, 1 }, { BLOCK_COMBI_GRD_S_T_R1_1, 1 }, { BLOCK_COMBI_GRD_S_E3_T_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_1, 1 }, { BLOCK_COMBI_GRD_S_F_1, 1 }, { BLOCK_COMBI_GRD_S_F_2, 1 }, { BLOCK_COMBI_GRD_S_F_MH_1, 1 }, { BLOCK_COMBI_GRD_S_F_3, 1 }, { BLOCK_COMBI_GRD_S_R1_B_1, 1 }, { BLOCK_COMBI_GRD_S_E3_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_1, 1 }, { BLOCK_COMBI_GRD_S_C4_S_1, 0 }, { BLOCK_COMBI_GRD_S_C5_1, 0 }, { BLOCK_COMBI_GRD_S_R7_1, 1 }, { BLOCK_COMBI_GRD_S_R3_1, 1 }, { BLOCK_COMBI_GRD_S_R6_1, 1 }, { BLOCK_COMBI_GRD_S_E3_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_C1_1, 0 }, { BLOCK_COMBI_GRD_S_C2_1, 0 }, { BLOCK_COMBI_GRD_S_C7_1, 0 }, { BLOCK_COMBI_GRD_S_C1_R1_1, 0 }, { BLOCK_COMBI_GRD_S_C1_S_1, 0 }, { BLOCK_COMBI_GRD_S_C5_1, 0 }, { BLOCK_COMBI_GRD_S_E3_1, 1 },
+            { BLOCK_COMBI_GRD_S_E2_1, 0 }, { BLOCK_COMBI_GRD_S_F_PK_1, 0 }, { BLOCK_COMBI_GRD_S_R7_P_1, 0 }, { BLOCK_COMBI_GRD_S_R6_1, 0 }, { BLOCK_COMBI_GRD_S_F_KO_1, 0 }, { BLOCK_COMBI_GRD_S_C7_1, 0 }, { BLOCK_COMBI_GRD_S_E3_C1_1, 0 },
+            { BLOCK_COMBI_GRD_S_E2_M_1, 0 }, { BLOCK_COMBI_GRD_S_M_1_232, 0 }, { BLOCK_COMBI_GRD_S_M_R1_B_2, 0 }, { BLOCK_COMBI_GRD_S_M_2_233, 0 }, { BLOCK_COMBI_GRD_S_M_3, 0 }, { BLOCK_COMBI_GRD_S_M_4, 0 }, { BLOCK_COMBI_GRD_S_E3_M_1, 0 },
+            { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 }, { BLOCK_COMBI_GRD_S_E1_1, 0 },
+        },
+        title_demo_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_DEMO_PLAYERSELECT,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_GRD_PLAYER_SELECT, 0 },
+        },
+        player_select4_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_MUSEUM_ENTRANCE,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MUSEUM1, 0 },
+        },
+        museum_entrance_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_MUSEUM_PAINTING,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MUSEUM3, 0 },
+        },
+        museum_picture_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_MUSEUM_FOSSIL,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MUSEUM2, 0 },
+        },
+        museum_fossil_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_MUSEUM_INSECT,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MUSEUM4, 0 },
+        },
+        museum_insect_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_MUSEUM_FISH,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MUSEUM5, 0 },
+        },
+        museum_fish_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_L, 0 },
+        },
+        playerRM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_M, 0 },
+        },
+        playerRMM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_M, 0 },
+        },
+        playerRMM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_M, 0 },
+        },
+        playerRMM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_M, 0 },
+        },
+        playerRMM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_M, 0 },
+        },
+        playerRMM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_NEEDLEWORK,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_TAILOR, 0 },
+        },
+        needlework_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_PLAYER0_ROOM,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_MY_ROOM_L, 0 },
+        },
+        playerRMM_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_NPCROOM0,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_NPC_ROOM01, 0 },
+        },
+        npcRoom001_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_DEMO_STARTDEMO3,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_TRAIN_IN, 0 },
+        },
+        start_demo3_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_LIGHTHOUSE,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_TOUDAI, 0 },
+        },
+        npcRoom001_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+    {
+        mFI_FIELD_ROOM_TENT,
+        1,
+        1,
+        {
+            { BLOCK_COMBI_ROM_TENT, 0 },
+        },
+        tent_actable,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+};
+
+#ifdef TARGET_PC
+/* Raw binary actable data (u8[] with #include'd .inc files) has BE multi-byte fields.
+   Byte-swap name_id (u16), block_x (u32), block_z (u32), arg (s16), desired_block_kind (u32)
+   in-place once at startup. Proper C struct actables (fd0, shop01, etc.) don't need this. */
+static void mFM_SwapActableOnce(mFM_move_actor_data_c* p) {
+    for (; p->name_id != RSV_NO; p++) {
+        p->name_id = pc_bswap16(p->name_id);
+        p->block_x = pc_bswap32(p->block_x);
+        p->block_z = pc_bswap32(p->block_z);
+        p->arg = (s16)pc_bswap16((u16)p->arg);
+        p->desired_block_kind = pc_bswap32(p->desired_block_kind);
+    }
+}
+
+void mFM_InitActableEndian(void) {
+    mFM_SwapActableOnce(museum_entrance_actable);
+    mFM_SwapActableOnce(museum_fish_actable);
+    mFM_SwapActableOnce(museum_fossil_actable);
+    mFM_SwapActableOnce(museum_insect_actable);
+    mFM_SwapActableOnce(museum_picture_actable);
+    mFM_SwapActableOnce(needlework_actable);
+}
+#endif
