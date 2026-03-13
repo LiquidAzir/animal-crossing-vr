@@ -30646,6 +30646,10 @@ void pc_assets_init(void) {
     _pc_load_src_game_m_choice_draw_c_inc();
     _pc_load_src_static_bootdata_logo_nin_c();
 
+    /* Font data from DOL .rodata (replaces pc_fontdata.c hex blob) */
+    { extern void _pc_load_JUTResFONT_Ascfont_fix12(void);
+      _pc_load_JUTResFONT_Ascfont_fix12(); }
+
     /* Free ROM data */
     if (g_rel_data) { free(g_rel_data); g_rel_data = NULL; }
     if (g_dol_data) { free(g_dol_data); g_dol_data = NULL; }

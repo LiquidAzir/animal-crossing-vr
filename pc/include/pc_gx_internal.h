@@ -214,7 +214,7 @@ typedef struct {
         GLint alpha_lighting_enabled, alpha_mat_src;
         GLint light_mask, light_pos[8], light_color[8];
         GLint texmtx_enable[2], texmtx_row0[2], texmtx_row1[2], texgen_src[2];
-        GLint use_texture, use_texture0, use_texture1, use_texture2;
+        GLint use_texture0, use_texture1, use_texture2;
         GLint texture0, texture1, texture2;
         GLint tev_tc_src[PC_GX_MAX_TEV_STAGES];
         GLint num_ind_stages;
@@ -226,10 +226,6 @@ typedef struct {
         GLint swap_table;
         GLint tev_swap[PC_GX_MAX_TEV_STAGES];
     } uloc;
-
-    struct PCGXShaderCacheEntry* shader_cache;
-    int shader_cache_count;
-    int shader_cache_capacity;
 
     float clear_color[4];
     float clear_depth;

@@ -16,6 +16,73 @@
 #include "JSystem/JUtility/JUTVideo.h"
 #include "JSystem/JFramework/JFWSystem.h"
 
+#ifdef TARGET_PC
+#include "pc_bswap.h"
+
+/* Font buffer loaded from DOL at runtime (replaces .s file's .incbin) */
+__attribute__((aligned(32)))
+unsigned char JUTResFONT_Ascfont_fix12[0x4160];
+
+/* BFN1 byte-swap: swap multi-byte header/block fields, skip glyph pixel data */
+static void bswap_bfn1(u8* data, u32 total_size) {
+    u32 num_blocks, i;
+    u8* block;
+
+    if (total_size < 0x20) return;
+
+    /* ResFONT header */
+    pc_bswap32_array(data + 0x00, 2);  /* magic (as two u32s) */
+    pc_bswap32_array(data + 0x08, 1);  /* fileSize */
+    pc_bswap32_array(data + 0x0C, 1);  /* numBlocks */
+
+    num_blocks = *(u32*)(data + 0x0C);
+    block = data + 0x20;
+
+    for (i = 0; i < num_blocks && block < data + total_size; i++) {
+        u32 block_size, magic;
+
+        /* BlockHeader: u32 magic, u32 size */
+        pc_bswap32_array(block, 2);
+        magic = *(u32*)(block + 0x00);
+        block_size = *(u32*)(block + 0x04);
+
+        if (block_size < 8 || block + block_size > data + total_size)
+            break;
+
+        switch (magic) {
+            case 0x494E4631: /* INF1 */
+                pc_bswap16_array(block + 0x08, 6);
+                break;
+            case 0x57494431: /* WID1 */
+                pc_bswap16_array(block + 0x08, 2);
+                break;
+            case 0x474C5931: /* GLY1 */
+                pc_bswap16_array(block + 0x08, 4);
+                pc_bswap32_array(block + 0x10, 1);
+                pc_bswap16_array(block + 0x14, 6);
+                /* glyph pixel data at 0x20+ is byte-level, no swap */
+                break;
+            case 0x4D415031: /* MAP1 */
+                pc_bswap16_array(block + 0x08, 4);
+                if (block_size > 0x10) {
+                    pc_bswap16_array(block + 0x10, (int)((block_size - 0x10) / 2));
+                }
+                break;
+        }
+
+        block += block_size;
+    }
+}
+
+extern "C" {
+extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
+void _pc_load_JUTResFONT_Ascfont_fix12(void) {
+    pc_load_asset(NULL, (void*)&JUTResFONT_Ascfont_fix12, 0x4160, 0x0A8260, 1 /* SRC_DOL */, 0 /* SWAP_NONE */);
+    bswap_bfn1((u8*)&JUTResFONT_Ascfont_fix12, 0x4160);
+}
+}
+#endif /* TARGET_PC */
+
 int JFWSystem::CSetUpParam::maxStdHeaps = 2;
 u32 JFWSystem::CSetUpParam::sysHeapSize = 0x400000;
 u32 JFWSystem::CSetUpParam::fifoBufSize = 0x40000;
@@ -24,7 +91,11 @@ u32 JFWSystem::CSetUpParam::aramGraphBufSize = 0x600000;
 s32 JFWSystem::CSetUpParam::streamPriority = 8;
 s32 JFWSystem::CSetUpParam::decompPriority = 7;
 s32 JFWSystem::CSetUpParam::aPiecePriority = 6;
+#ifdef TARGET_PC
+const ResFONT* JFWSystem::CSetUpParam::systemFontRes = (const ResFONT*)JUTResFONT_Ascfont_fix12;
+#else
 const ResFONT* JFWSystem::CSetUpParam::systemFontRes = &JUTResFONT_Ascfont_fix12;
+#endif
 const _GXRenderModeObj* JFWSystem::CSetUpParam::renderMode = &GXNtsc480IntDf;
 u32 JFWSystem::CSetUpParam::exConsoleBufferSize = 0x24F8;
 

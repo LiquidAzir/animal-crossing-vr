@@ -358,12 +358,12 @@ static void aAL_pc_game_start_wait(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
       return;
     }
 
-    /* Up/down navigation within options (4 items: 0=res, 1=fs, 2=vsync, 3=msaa) */
+    /* Up/down navigation within options (5 items: 0=res, 1=fs, 2=vsync, 3=msaa, 4=textures) */
     if (actor->pc_cursor_cooldown == 0) {
       if (stick_y > 30 || (on_btn & BUTTON_DUP)) {
         if (actor->pc_options_sel > 0) { actor->pc_options_sel--; actor->pc_cursor_cooldown = 8; }
       } else if (stick_y < -30 || (on_btn & BUTTON_DDOWN)) {
-        if (actor->pc_options_sel < 3) { actor->pc_options_sel++; actor->pc_cursor_cooldown = 8; }
+        if (actor->pc_options_sel < 4) { actor->pc_options_sel++; actor->pc_cursor_cooldown = 8; }
       }
 
       /* Left/right to change values */
@@ -391,6 +391,9 @@ static void aAL_pc_game_start_wait(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
             if (g_pc_settings.msaa == 0) g_pc_settings.msaa = 2;
             else if (g_pc_settings.msaa < 8) g_pc_settings.msaa *= 2;
           } break;
+          case 4: { /* Textures cycle up: 0→1→2 */
+            if (g_pc_settings.preload_textures < 2) g_pc_settings.preload_textures++;
+          } break;
         }
       } else if (stick_x < -30 || (on_btn & BUTTON_DLEFT)) {
         changed = 1; actor->pc_cursor_cooldown = 8;
@@ -409,6 +412,9 @@ static void aAL_pc_game_start_wait(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
           case 3: { /* MSAA cycle down: 8→4→2→0 */
             if (g_pc_settings.msaa > 2) g_pc_settings.msaa /= 2;
             else g_pc_settings.msaa = 0;
+          } break;
+          case 4: { /* Textures cycle down: 2→1→0 */
+            if (g_pc_settings.preload_textures > 0) g_pc_settings.preload_textures--;
           } break;
         }
       }
@@ -808,7 +814,7 @@ static void aAL_pc_options_draw(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
   /* Semi-transparent background behind options panel */
   {
     Gfx* gfx;
-    int x0 = 45, y0_bg = 58, x1 = 280, y1_bg = 180;
+    int x0 = 45, y0_bg = 58, x1 = 295, y1_bg = 196;
     OPEN_DISP(graph);
     gfx = NOW_FONT_DISP;
     gDPPipeSync(gfx++);
@@ -894,6 +900,24 @@ static void aAL_pc_options_draw(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
     len = sprintf(buf, "< Off >");
   {
     static u8 lbl[] = { 'M', 'S', 'A', 'A' };
+    mFont_SetLineStrings(game, lbl, sizeof(lbl), x, y,
+      sel == item ? 255 : 180, sel == item ? 255 : 180, sel == item ? 255 : 180,
+      sel == item ? 255 : 160, FALSE, TRUE, 1.0f, 1.0f, mFont_MODE_FONT);
+  }
+  mFont_SetLineStrings(game, (u8*)buf, len, 180.0f, y,
+    sel == item ? 255 : 180, sel == item ? 255 : 180, sel == item ? 255 : 180,
+    sel == item ? 255 : 160, FALSE, TRUE, 1.0f, 1.0f, mFont_MODE_FONT);
+  if (sel == item) mFont_SetLineStrings(game, str_arrow, 1, x - 12.0f, y, 255, 255, 255, 255, FALSE, TRUE, 1.0f, 1.0f, mFont_MODE_FONT);
+  item++; y += line_h;
+
+  /* Textures */
+  {
+    const char* tp = g_pc_settings.preload_textures == 0 ? "< On Demand >" :
+                     g_pc_settings.preload_textures == 1 ? "< Preload >" : "< Preload&Cache >";
+    len = sprintf(buf, "%s", tp);
+  }
+  {
+    static u8 lbl[] = { 'T', 'e', 'x', 't', 'u', 'r', 'e', 's' };
     mFont_SetLineStrings(game, lbl, sizeof(lbl), x, y,
       sel == item ? 255 : 180, sel == item ? 255 : 180, sel == item ? 255 : 180,
       sel == item ? 255 : 160, FALSE, TRUE, 1.0f, 1.0f, mFont_MODE_FONT);

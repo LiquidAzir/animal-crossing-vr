@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 void pc_texture_pack_init(void);
+void pc_texture_pack_preload_all(void);
 void pc_texture_pack_shutdown(void);
 
 /* Returns GL texture ID for an HD replacement, or 0 if none found */

@@ -1037,37 +1037,8 @@ int emu64::replace_combine_to_tev(Gfx* g) {
     int Ac;
     int Ad;
 
-#if 0 /* TARGET_PC: disable early TEXEL1 substitution; use non-TEV/manual path instead */
-    /* On PC we don't support multi-texture (TEXEL1). Instead of rejecting the
-       entire combine (leaving stale TEV state -> white box), substitute
-       TEXEL1 -> TEXEL0 for an approximate result. This fixes shadow rendering.
-       SPECIAL: When TEXEL1 appears in 'b' slot (subtraction), the naive substitution
-       produces (TEXEL0 - TEXEL0) = 0 (black/invisible). Instead, replace TEXEL1 in
-       'b' slots with 0 to get (TEXEL0 - 0) = TEXEL0 (better approximation). */
-    {
-        Gsetcombine_new* sc = (Gsetcombine_new*)&g->setcombine;
-        if (sc->a0 == G_CCMUX_TEXEL1) sc->a0 = G_CCMUX_TEXEL0;
-        /* b0: TEXEL1 in subtraction slot → use constant 0 instead of TEXEL0 to avoid (T0-T0)=0 */
-        if (sc->b0 == G_CCMUX_TEXEL1) sc->b0 = G_CCMUX_0;
-        if (sc->c0 == G_CCMUX_TEXEL1) sc->c0 = G_CCMUX_TEXEL0;
-        if (sc->d0 == G_CCMUX_TEXEL1) sc->d0 = G_CCMUX_TEXEL0;
-        if (sc->c0 == G_CCMUX_TEXEL1_ALPHA) sc->c0 = G_CCMUX_TEXEL0_ALPHA;
-        if (sc->Aa0 == G_ACMUX_TEXEL1) sc->Aa0 = G_ACMUX_TEXEL0;
-        /* Ab0: TEXEL1 in alpha subtraction slot → use constant 0 */
-        if (sc->Ab0 == G_ACMUX_TEXEL1) sc->Ab0 = G_ACMUX_0;
-        if (sc->Ac0 == G_ACMUX_TEXEL1) sc->Ac0 = G_ACMUX_TEXEL0;
-        if (sc->Ad0 == G_ACMUX_TEXEL1) sc->Ad0 = G_ACMUX_TEXEL0;
-        if (sc->a1 == G_CCMUX_TEXEL1) sc->a1 = G_CCMUX_TEXEL0;
-        if (sc->b1 == G_CCMUX_TEXEL1) sc->b1 = G_CCMUX_0;
-        if (sc->c1 == G_CCMUX_TEXEL1) sc->c1 = G_CCMUX_TEXEL0;
-        if (sc->d1 == G_CCMUX_TEXEL1) sc->d1 = G_CCMUX_TEXEL0;
-        if (sc->c1 == G_CCMUX_TEXEL1_ALPHA) sc->c1 = G_CCMUX_TEXEL0_ALPHA;
-        if (sc->Aa1 == G_ACMUX_TEXEL1) sc->Aa1 = G_ACMUX_TEXEL0;
-        if (sc->Ab1 == G_ACMUX_TEXEL1) sc->Ab1 = G_ACMUX_0;
-        if (sc->Ac1 == G_ACMUX_TEXEL1) sc->Ac1 = G_ACMUX_TEXEL0;
-        if (sc->Ad1 == G_ACMUX_TEXEL1) sc->Ad1 = G_ACMUX_TEXEL0;
-    }
-#else
+    /* TARGET_PC: TEXEL1 substitution disabled — combine_manual() handles multi-texture cases
+       (spotlight, fog, inventory oval) with per-stage texture binding instead. */
     if ((setcombine->a0 == G_CCMUX_TEXEL1 || setcombine->b0 == G_CCMUX_TEXEL1 || setcombine->c0 == G_CCMUX_TEXEL1 ||
          setcombine->d0 == G_CCMUX_TEXEL1 || setcombine->c0 == G_CCMUX_TEXEL1_ALPHA) ||
         (setcombine->Aa0 == G_ACMUX_TEXEL1 || setcombine->Ab0 == G_ACMUX_TEXEL1 || setcombine->Ac0 == G_ACMUX_TEXEL1 ||
@@ -1079,7 +1050,6 @@ int emu64::replace_combine_to_tev(Gfx* g) {
         g->setcombine.cmd = G_SETCOMBINE_NOTEV;
         return -1;
     }
-#endif
 
     a = setcombine->a0;
     b = setcombine->b0;
@@ -3846,7 +3816,6 @@ void emu64::dl_G_SETTILESIZE() {
 }
 
 #ifdef TARGET_PC
-int tlut_path_type2 = 0, tlut_path_dolphin = 0, tlut_path_n64 = 0;
 extern "C" void pc_gx_tlut_set_native_le(unsigned int idx);
 #endif
 
@@ -3856,9 +3825,6 @@ void emu64::dl_G_LOADTLUT() {
     void* tlut_addr;
     u32 tlut_name;
     void* aligned_addr;
-#ifdef TARGET_PC
-    extern int diag_frame;
-#endif
 
     EMU64_TIMED_SEGMENT_BEGIN();
 
@@ -3896,7 +3862,6 @@ void emu64::dl_G_LOADTLUT() {
                     GXLoadTlut(&this->tlut_objs[tlut_name], tlut_name);
 #ifdef TARGET_PC
                     pc_gx_tlut_set_native_le(tlut_name);
-                    tlut_path_type2++;
 #endif
 
                     EMU64_INFOF("GXInitTlutObj %08x %d pal_no=%d\n", tlut_addr, count, tlut_name);
@@ -3934,11 +3899,6 @@ void emu64::dl_G_LOADTLUT() {
                         GXLoadTlut(&this->tlut_objs[tlut_name], tlut_name);
 #ifdef TARGET_PC
                         pc_gx_tlut_set_native_le(tlut_name);
-                        if (this->now_setimg.setimg2.isDolphin) {
-                            tlut_path_dolphin++;
-                        } else {
-                            tlut_path_n64++;
-                        }
 #endif
 
                         EMU64_INFOF("GXInitTlutObj %08x %d pal_no=%d\n", addr, (u16)count, tlut_name);
@@ -5886,7 +5846,6 @@ u32 emu64::emu64_taskstart_r(Gfx* dl_p) {
     }
 
 #ifdef TARGET_PC
-pc_dl_loop_done:
     pc_crash_set_jmpbuf(NULL);
 #endif
 

@@ -1,0 +1,155 @@
+/* pc_keybindings.c - customizable keyboard bindings loaded from keybindings.ini */
+#include "pc_keybindings.h"
+#include "pc_platform.h"
+
+PCKeybindings g_pc_keybindings = {
+    /* buttons */
+    .a     = SDL_SCANCODE_SPACE,
+    .b     = SDL_SCANCODE_LSHIFT,
+    .x     = SDL_SCANCODE_X,
+    .y     = SDL_SCANCODE_Y,
+    .start = SDL_SCANCODE_RETURN,
+    .z     = SDL_SCANCODE_Z,
+    .l     = SDL_SCANCODE_Q,
+    .r     = SDL_SCANCODE_E,
+
+    /* main stick (WASD) */
+    .stick_up    = SDL_SCANCODE_W,
+    .stick_down  = SDL_SCANCODE_S,
+    .stick_left  = SDL_SCANCODE_A,
+    .stick_right = SDL_SCANCODE_D,
+
+    /* C-stick (arrows) */
+    .cstick_up    = SDL_SCANCODE_UP,
+    .cstick_down  = SDL_SCANCODE_DOWN,
+    .cstick_left  = SDL_SCANCODE_LEFT,
+    .cstick_right = SDL_SCANCODE_RIGHT,
+
+    /* D-pad (IJKL) */
+    .dpad_up    = SDL_SCANCODE_I,
+    .dpad_down  = SDL_SCANCODE_K,
+    .dpad_left  = SDL_SCANCODE_J,
+    .dpad_right = SDL_SCANCODE_L,
+};
+
+static const char* KEYBINDINGS_FILE = "keybindings.ini";
+
+/* mapping table: ini key name -> offset into PCKeybindings */
+typedef struct {
+    const char* ini_key;
+    int offset; /* byte offset into PCKeybindings */
+} KeybindEntry;
+
+#define KB_ENTRY(name, field) { name, offsetof(PCKeybindings, field) }
+
+static const KeybindEntry s_entries[] = {
+    KB_ENTRY("A",            a),
+    KB_ENTRY("B",            b),
+    KB_ENTRY("X",            x),
+    KB_ENTRY("Y",            y),
+    KB_ENTRY("Start",        start),
+    KB_ENTRY("Z",            z),
+    KB_ENTRY("L",            l),
+    KB_ENTRY("R",            r),
+    KB_ENTRY("Stick_Up",     stick_up),
+    KB_ENTRY("Stick_Down",   stick_down),
+    KB_ENTRY("Stick_Left",   stick_left),
+    KB_ENTRY("Stick_Right",  stick_right),
+    KB_ENTRY("CStick_Up",    cstick_up),
+    KB_ENTRY("CStick_Down",  cstick_down),
+    KB_ENTRY("CStick_Left",  cstick_left),
+    KB_ENTRY("CStick_Right", cstick_right),
+    KB_ENTRY("DPad_Up",      dpad_up),
+    KB_ENTRY("DPad_Down",    dpad_down),
+    KB_ENTRY("DPad_Left",    dpad_left),
+    KB_ENTRY("DPad_Right",   dpad_right),
+};
+
+#define NUM_ENTRIES (sizeof(s_entries) / sizeof(s_entries[0]))
+
+static const char* skip_ws(const char* s) {
+    while (*s == ' ' || *s == '\t') s++;
+    return s;
+}
+
+static void trim_end(char* s) {
+    int len = (int)strlen(s);
+    while (len > 0 && (s[len-1] == ' ' || s[len-1] == '\t' ||
+                       s[len-1] == '\r' || s[len-1] == '\n')) {
+        s[--len] = '\0';
+    }
+}
+
+static void apply_keybind(const char* key, const char* value) {
+    SDL_Scancode sc = SDL_GetScancodeFromName(value);
+    if (sc == SDL_SCANCODE_UNKNOWN) {
+        printf("[Keybindings] WARNING: unknown key name '%s' for '%s'\n", value, key);
+        return;
+    }
+
+    for (int i = 0; i < (int)NUM_ENTRIES; i++) {
+        if (strcmp(key, s_entries[i].ini_key) == 0) {
+            *(SDL_Scancode*)((char*)&g_pc_keybindings + s_entries[i].offset) = sc;
+            return;
+        }
+    }
+    printf("[Keybindings] WARNING: unknown binding '%s'\n", key);
+}
+
+static void write_defaults(const char* path) {
+    FILE* f = fopen(path, "w");
+    if (!f) return;
+
+    fprintf(f, "[Keyboard]\n");
+    fprintf(f, "# Key names use SDL2 scancode names.\n");
+    fprintf(f, "# Common names: Space, Left Shift, Right Shift, Left Ctrl, Right Ctrl,\n");
+    fprintf(f, "#   Left Alt, Right Alt, Return, Escape, Tab, Backspace, Delete,\n");
+    fprintf(f, "#   A-Z, 0-9, F1-F12, Up, Down, Left, Right, etc.\n");
+    fprintf(f, "# Full list: https://wiki.libsdl.org/SDL2/SDL_Scancode\n");
+    fprintf(f, "\n");
+    fprintf(f, "# Buttons\n");
+
+    for (int i = 0; i < (int)NUM_ENTRIES; i++) {
+        SDL_Scancode sc = *(SDL_Scancode*)((char*)&g_pc_keybindings + s_entries[i].offset);
+        const char* name = SDL_GetScancodeName(sc);
+        fprintf(f, "%s = %s\n", s_entries[i].ini_key, name);
+
+        /* blank line separators between sections */
+        if (i == 7)  fprintf(f, "\n# Main Stick\n");
+        if (i == 11) fprintf(f, "\n# C-Stick (Camera)\n");
+        if (i == 15) fprintf(f, "\n# D-Pad\n");
+    }
+
+    fclose(f);
+}
+
+void pc_keybindings_load(void) {
+    FILE* f = fopen(KEYBINDINGS_FILE, "r");
+    if (!f) {
+        write_defaults(KEYBINDINGS_FILE);
+        printf("[Keybindings] Created default %s\n", KEYBINDINGS_FILE);
+        return;
+    }
+
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+        const char* p = skip_ws(line);
+
+        if (*p == '#' || *p == ';' || *p == '\0' || *p == '\n' || *p == '[')
+            continue;
+
+        char* eq = strchr(line, '=');
+        if (!eq) continue;
+        *eq = '\0';
+        char* key = (char*)skip_ws(line);
+        trim_end(key);
+        char* value = (char*)skip_ws(eq + 1);
+        trim_end(value);
+
+        if (*key && *value) {
+            apply_keybind(key, value);
+        }
+    }
+    fclose(f);
+    printf("[Keybindings] Loaded %s\n", KEYBINDINGS_FILE);
+}

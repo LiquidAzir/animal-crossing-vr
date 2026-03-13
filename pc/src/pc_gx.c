@@ -503,7 +503,6 @@ static void pc_gx_cache_uniform_locations(GLuint shader) {
     g_gx.uloc.texmtx_row1[1]  = UL("u_texmtx1_row1");
     g_gx.uloc.texgen_src[1]   = UL("u_texgen_src1");
 
-    g_gx.uloc.use_texture  = UL("u_use_texture");
     g_gx.uloc.use_texture0 = UL("u_use_texture0");
     g_gx.uloc.use_texture1 = UL("u_use_texture1");
     g_gx.uloc.use_texture2 = UL("u_use_texture2");
@@ -713,7 +712,6 @@ void pc_gx_flush_vertices(void) {
             loc = UL(use_texture0); if (loc >= 0) glUniform1i(loc, use_tex_stage[0]);
             loc = UL(use_texture1); if (loc >= 0) glUniform1i(loc, use_tex_stage[1]);
             loc = UL(use_texture2); if (loc >= 0) glUniform1i(loc, use_tex_stage[2]);
-            loc = UL(use_texture);  if (loc >= 0) glUniform1i(loc, use_tex_stage[0] || use_tex_stage[1] || use_tex_stage[2]);
             loc = UL(texture0); if (loc >= 0) glUniform1i(loc, 0);
             loc = UL(texture1); if (loc >= 0) glUniform1i(loc, 1);
             loc = UL(texture2); if (loc >= 0) glUniform1i(loc, 2);

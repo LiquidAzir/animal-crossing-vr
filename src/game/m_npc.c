@@ -2474,12 +2474,21 @@ extern void mNpc_SetAnimalTitleDemo(mNpc_demo_npc_c* demo_npc, Animal_c* animal,
     int i;
 
     for (i = 0; i < ANIMAL_NUM_MAX; i++) {
+#ifdef TARGET_PC
+        /* Keep title-demo animal slots deterministic across repeated demo loops. */
+        mNpc_ClearAnimalInfo(animal);
+
+        if (ITEM_NAME_GET_TYPE(demo_npc->npc_name) == NAME_TYPE_NPC) {
+#endif
         mNpc_SetDefAnimal(animal, demo_npc->npc_name, def_list);
         animal->home_info.type_unused = 0;
         animal->home_info.block_x = demo_npc->block_x;
         animal->home_info.block_z = demo_npc->block_z;
         animal->home_info.ut_x = demo_npc->ut_x;
         animal->home_info.ut_z = demo_npc->ut_z;
+#ifdef TARGET_PC
+        }
+#endif
 
         animal++;
         demo_npc++;

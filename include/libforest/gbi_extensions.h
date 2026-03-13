@@ -1187,19 +1187,6 @@ do { \
   _g->words.w1 = (u32)(_SHIFTL(gsSPNTriangleData1(v3, v4, v5, 0), 19, 13) | _SHIFTL(gsSPNTriangleData1(v0, v1, v2, 0), 4, 15) | _SHIFTL(G_VTX_MODE_5bit, 0, 1)); \
 }}
 
-// TODO: convert
-#define gSPNTriangles_7b(v0, v1, v2, v3, v4, v5, v6, v7, v8) \
-{{ \
-    (unsigned long long)((gsSPNTriangleData2(v6, v7, v8) << 43) | (gsSPNTriangleData2(v3, v4, v5) << 22) | \
-        (gsSPNTriangleData2(v0, v1, v2) << 1)) | G_VTX_MODE_7bit \
-}}
-
-#define gSPNTrianglesInit_7b(n, v0, v1, v2, v3, v4, v5) \
-{{ \
-    (unsigned long long)((((unsigned long long)gsSPNTriangles_Independ(n)) << 32) | (gsSPNWTriangleData2(v3, v4, v5) << 22) | \
-        (gsSPNTriangleData2(v0, v1, v2) << 1)) | G_VTX_MODE_7bit \
-}}
-
 #define gsSPNTriangles_5b(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) \
 {{ \
     _SHIFTL(gsSPNTriangleData1(v9, v10, v11, 0), 17, 15) | _SHIFTL(gsSPNTriangleData1(v6, v7, v8, 0), 2, 15) | _SHIFTL(_SHIFTR(gsSPNTriangleData1(v3, v4, v5, 0), 13, 2), 0, 2), \
@@ -1220,7 +1207,7 @@ do { \
 
 #define gsSPNTrianglesInit_7b(n, v0, v1, v2, v3, v4, v5) \
 {{ \
-    (unsigned long long)((((unsigned long long)gsSPNTriangles_Independ(n)) << 32) | (gsSPNWTriangleData2(v3, v4, v5) << 22) | \
+    (unsigned long long)((((unsigned long long)gsSPNTriangles_Independ(n)) << 32) | (gsSPNTriangleData2(v3, v4, v5) << 22) | \
         (gsSPNTriangleData2(v0, v1, v2) << 1)) | G_VTX_MODE_7bit \
 }}
 

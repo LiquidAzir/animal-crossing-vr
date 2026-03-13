@@ -1,21 +1,64 @@
-/* pc_audio.c - SDL2 audio backend, ring buffer bridging jaudio's DAC output */
+/* pc_audio.c - SDL2 audio backend with dedicated producer thread.
+ *
+ * Architecture (matches GC):
+ *   Game thread:  Na_GameFrame() queues commands via message queues
+ *   Audio thread: pc_audio_process_frame() produces samples into ring buffer
+ *   SDL callback: reads ring buffer → speakers
+ *
+ * The audio thread decouples sample production from the game frame,
+ * so OS preemption of the game thread doesn't cause audio dropouts.
+ */
 #include "pc_platform.h"
+#include "jaudio_NES/audiothread.h"
 
 #define PC_AUDIO_SAMPLE_RATE 32000
 
-/* lock-free SPSC ring buffer */
-#define RING_BUF_SAMPLES (16384) /* ~256ms at 32kHz stereo */
+/* lock-free SPSC ring buffer (producer=audio thread, consumer=SDL callback) */
+#define RING_BUF_SAMPLES (32768) /* ~512ms at 32kHz stereo */
 #define RING_BUF_MASK    (RING_BUF_SAMPLES - 1)
 
+/* Produce more samples when buffer drops below this level.
+ * ~4 audio frames ahead = ~70ms of buffer at 32kHz stereo. */
+#define AUDIO_PRODUCE_THRESHOLD 4480
+
 static s16 ring_buffer[RING_BUF_SAMPLES];
-static SDL_atomic_t ring_write_pos; /* written by main thread */
-static SDL_atomic_t ring_read_pos;  /* written by audio callback */
+static SDL_atomic_t ring_write_pos; /* written by audio producer thread */
+static SDL_atomic_t ring_read_pos;  /* written by SDL audio callback */
 static SDL_AudioDeviceID audio_device = 0;
 
 typedef void (*AIDMACallback)(void);
 static AIDMACallback ai_dma_callback = NULL;
 static u32 ai_dsp_sample_rate = PC_AUDIO_SAMPLE_RATE;
 
+/* --- Audio producer thread --- */
+static SDL_Thread* audio_producer_thread = NULL;
+static SDL_atomic_t audio_thread_running;
+
+static int pc_audio_producer_func(void* data) {
+    (void)data;
+    while (SDL_AtomicGet(&audio_thread_running)) {
+        int fill = pc_audio_get_buffer_fill();
+        if (fill < AUDIO_PRODUCE_THRESHOLD) {
+            pc_audio_process_frame();
+        } else {
+            SDL_Delay(1);
+        }
+    }
+    return 0;
+}
+
+void pc_audio_start_producer_thread(void) {
+    if (audio_producer_thread) return;
+    SDL_AtomicSet(&audio_thread_running, 1);
+    audio_producer_thread = SDL_CreateThread(pc_audio_producer_func, "AudioProducer", NULL);
+    if (audio_producer_thread) {
+        printf("[AUDIO] Producer thread started\n");
+    } else {
+        printf("[AUDIO] Failed to create producer thread: %s\n", SDL_GetError());
+    }
+}
+
+/* --- SDL audio callback (runs on SDL's audio device thread) --- */
 static void pc_audio_callback(void* userdata, Uint8* stream, int len) {
     s16* out = (s16*)stream;
     int total_samples = len / sizeof(s16);
@@ -144,6 +187,12 @@ int pc_audio_is_active(void) {
 }
 
 void pc_audio_shutdown(void) {
+    /* Stop producer thread first */
+    SDL_AtomicSet(&audio_thread_running, 0);
+    if (audio_producer_thread) {
+        SDL_WaitThread(audio_producer_thread, NULL);
+        audio_producer_thread = NULL;
+    }
     if (audio_device != 0) {
         SDL_CloseAudioDevice(audio_device);
         audio_device = 0;

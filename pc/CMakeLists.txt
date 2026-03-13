@@ -263,6 +263,7 @@ set(PC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_os.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_dvd.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_pad.c
+    ${DECOMP_ROOT}/src/static/dolphin/pad/Padclamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_card.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_vi.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_audio.c
@@ -274,9 +275,9 @@ set(PC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_model_viewer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_texture_pack.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_settings.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_keybindings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_stubs.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_stubs_cpp.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_fontdata.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_assets.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_disc.c
 )
@@ -339,12 +340,20 @@ set_source_files_properties(${PC_CXX_SOURCES}
 )
 
 # =============================================================================
+# Windows resource file (sets process name in Task Manager)
+# =============================================================================
+if(WIN32)
+    set(RC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/res/app.rc")
+endif()
+
+# =============================================================================
 # Build executable
 # =============================================================================
 add_executable(ac_pc
     ${PC_SOURCES}
     ${GAME_C_SOURCES}
     ${GAME_CXX_SOURCES}
+    ${RC_FILE}
 )
 
 # Link SDL2 without SDL2main (we define SDL_MAIN_HANDLED)
@@ -395,8 +404,19 @@ if(WIN32)
 endif()
 
 # Static link MinGW runtime (no libgcc_s_dw2-1.dll, libstdc++-6.dll, libwinpthread-1.dll)
+# Strip version.o from winpthread to prevent its version resource from overriding app.rc
 if(MINGW)
-    target_link_options(ac_pc PRIVATE -static-libgcc -static-libstdc++ -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,-Bdynamic,--no-whole-archive)
+    find_file(WINPTHREAD_LIB libwinpthread.a PATHS ${CMAKE_C_IMPLICIT_LINK_DIRECTORIES} /mingw32/lib NO_DEFAULT_PATH)
+    if(NOT WINPTHREAD_LIB)
+        find_file(WINPTHREAD_LIB libwinpthread.a)
+    endif()
+    set(WINPTHREAD_STRIPPED "${CMAKE_CURRENT_BINARY_DIR}/libwinpthread_stripped.a")
+    if(WINPTHREAD_LIB AND NOT EXISTS "${WINPTHREAD_STRIPPED}")
+        file(COPY_FILE ${WINPTHREAD_LIB} ${WINPTHREAD_STRIPPED})
+        execute_process(COMMAND ${CMAKE_AR} d "${WINPTHREAD_STRIPPED}" version.o)
+        message(STATUS "Stripped version.o from winpthread: ${WINPTHREAD_STRIPPED}")
+    endif()
+    target_link_options(ac_pc PRIVATE -static-libgcc -static-libstdc++ -Wl,-Bstatic,--whole-archive "${WINPTHREAD_STRIPPED}" -Wl,-Bdynamic,--no-whole-archive)
 endif()
 
 # Hide console window on Windows (GUI subsystem)

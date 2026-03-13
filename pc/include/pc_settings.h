@@ -11,6 +11,7 @@ typedef struct {
     int fullscreen;       /* 0=windowed, 1=fullscreen, 2=borderless */
     int vsync;            /* 0=off, 1=on */
     int msaa;             /* 0=off, 2/4/8=samples */
+    int preload_textures; /* 0=off (load on demand), 1=on (load all at startup), 2=on + cache file */
 } PCSettings;
 
 extern PCSettings g_pc_settings;

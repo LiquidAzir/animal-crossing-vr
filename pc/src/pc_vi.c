@@ -11,7 +11,6 @@ static u32 retrace_count = 0;
 u32 pc_frame_counter = 0;
 static Uint64 frame_start_time = 0;
 static Uint64 perf_freq = 0;
-#define TARGET_FRAME_TIME_MS 16 /* ~60 FPS (16.67ms per frame) */
 static void (*vi_pre_callback)(u32) = NULL;
 static void (*vi_post_callback)(u32) = NULL;
 
@@ -23,37 +22,54 @@ void VISetNextFrameBuffer(void* fb) { (void)fb; }
 
 void VIFlush(void) {}
 
-/* throttle threshold: ~3072 stereo frames = ~96ms at 32kHz */
-#define AUDIO_THROTTLE_FILL 6144
-
 void VIWaitForRetrace(void) {
     if (!perf_freq) perf_freq = SDL_GetPerformanceFrequency();
+
+    /* --- frame time diagnostic --- */
+    Uint64 vi_enter = SDL_GetPerformanceCounter();
+    double frame_ms = 0.0;
+    if (frame_start_time) {
+        frame_ms = (double)(vi_enter - frame_start_time) * 1000.0 / (double)perf_freq;
+    }
 
     if (!pc_platform_poll_events()) {
         g_pc_running = 0;
         return;
     }
 
+    Uint64 t_before_swap = SDL_GetPerformanceCounter();
     pc_platform_swap_buffers();
+    Uint64 t_after_swap = SDL_GetPerformanceCounter();
 
+    Uint64 t_before_pace = SDL_GetPerformanceCounter();
     if (!g_pc_no_framelimit) {
-        if (pc_audio_is_active()) {
-            /* audio-clock pacing: hold until ring buffer drains, locks game to 32kHz audio clock */
-            Uint64 spin_start = SDL_GetPerformanceCounter();
-            while (pc_audio_get_buffer_fill() > AUDIO_THROTTLE_FILL) {
-                SDL_Delay(1);
-                /* safety timeout: ~2 frames */
-                Uint64 elapsed = SDL_GetPerformanceCounter() - spin_start;
-                if (elapsed * 1000 / perf_freq > 34) break;
-            }
-        } else {
-            /* fallback before audio starts */
+        /* Timer-based pacing: sleep until 16ms per frame (~60 FPS).
+         * Audio production runs on a dedicated thread and is no longer
+         * tied to game frame timing. */
+        if (frame_start_time) {
             Uint64 now = SDL_GetPerformanceCounter();
-            Uint64 elapsed_ms = (now - frame_start_time) * 1000 / perf_freq;
-            if (elapsed_ms < TARGET_FRAME_TIME_MS) {
-                SDL_Delay((Uint32)(TARGET_FRAME_TIME_MS - elapsed_ms));
+            Uint64 elapsed_us = (now - frame_start_time) * 1000000 / perf_freq;
+            /* 16667us = 60.0 Hz (NTSC). Spin for sub-ms precision. */
+            while (elapsed_us < 16667) {
+                Uint64 remain_us = 16667 - elapsed_us;
+                if (remain_us > 2000) {
+                    SDL_Delay(1);
+                }
+                now = SDL_GetPerformanceCounter();
+                elapsed_us = (now - frame_start_time) * 1000000 / perf_freq;
             }
         }
+    }
+    Uint64 t_after_pace = SDL_GetPerformanceCounter();
+
+    /* report slow frames (>20ms = missed 60fps by >4ms) */
+    if (frame_ms > 20.0 && g_pc_verbose) {
+        double swap_ms = (double)(t_after_swap - t_before_swap) * 1000.0 / (double)perf_freq;
+        double pace_ms = (double)(t_after_pace - t_before_pace) * 1000.0 / (double)perf_freq;
+        double work_ms = (double)(vi_enter - frame_start_time) * 1000.0 / (double)perf_freq;
+        int audio_fill = pc_audio_get_buffer_fill();
+        printf("[STUTTER] frame %u: total=%.1fms work=%.1fms swap=%.1fms pace=%.1fms audio_fill=%d\n",
+               pc_frame_counter, frame_ms, work_ms - swap_ms - pace_ms, swap_ms, pace_ms, audio_fill);
     }
 
     {

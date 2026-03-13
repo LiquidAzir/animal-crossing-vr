@@ -124,7 +124,14 @@ static void aNPC_think_wander_decide_next(NPC_ACTOR* nactorx) {
         int* boarder_p;
 
         if (aNPC_IS_NRM_NPC(nactorx)) {
-            boarder_p = decide_boarder[mNpc_GetNpcLooks((ACTOR*)nactorx)];
+            int looks = mNpc_GetNpcLooks((ACTOR*)nactorx);
+
+#ifdef TARGET_PC
+            if (looks < 0 || looks >= ARRAY_COUNT(decide_boarder)) {
+                looks = mNpc_LOOKS_BOY;
+            }
+#endif
+            boarder_p = decide_boarder[looks];
         } else {
             boarder_p = s_npc_decide_boarder;
         }

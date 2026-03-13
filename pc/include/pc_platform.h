@@ -25,13 +25,8 @@
 /* --- Configuration --- */
 #define PC_GC_WIDTH       640
 #define PC_GC_HEIGHT      480
-#ifdef PC_ENHANCEMENTS
-#define PC_SCREEN_WIDTH   1280
-#define PC_SCREEN_HEIGHT  720
-#else
 #define PC_SCREEN_WIDTH   PC_GC_WIDTH
 #define PC_SCREEN_HEIGHT  PC_GC_HEIGHT
-#endif
 #define PC_WINDOW_TITLE   "Animal Crossing"
 
 #define PC_MAIN_MEMORY_SIZE   (24 * 1024 * 1024)
@@ -122,8 +117,13 @@ extern int pc_emu64_frame_cull_rejected;
 extern int pc_gx_draw_call_count;
 
 /* --- Audio --- */
+extern int pc_save_loaded;
 int  pc_audio_get_buffer_fill(void);
 int  pc_audio_is_active(void);
+void pc_audio_shutdown(void);
+void pc_audio_start_producer_thread(void);
+void pc_audio_mq_init(void);
+void pc_audio_mq_shutdown(void);
 
 #ifdef __cplusplus
 }

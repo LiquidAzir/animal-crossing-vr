@@ -1,15 +1,8 @@
 /* pc_stubs.c - stub definitions for symbols the decomp declares but we don't need */
 #include <stdarg.h>
 #include <stddef.h>  /* size_t */
+#include "types.h"
 
-typedef unsigned int u32;
-typedef unsigned short u16;
-typedef unsigned char u8;
-typedef signed int s32;
-typedef signed short s16;
-typedef signed char s8;
-typedef long long s64;
-typedef int BOOL;
 typedef s32 OSPriority;
 
 /* data symbols */

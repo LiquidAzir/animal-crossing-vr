@@ -727,6 +727,7 @@ extern s32 CreateAudioTask(Acmd* cmds, s16* pSamples, u32 nSamples, s32 param_4)
         }
 
         Nas_smzAudioFrame(cmds, &processed_cmds, pSamples, nSamples);
+
         return processed_cmds;
     }
 }

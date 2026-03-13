@@ -8,6 +8,7 @@ PCSettings g_pc_settings = {
     .fullscreen    = 0,
     .vsync         = 0,
     .msaa          = 4,
+    .preload_textures = 0,
 };
 
 static const char* SETTINGS_FILE = "settings.ini";
@@ -15,8 +16,8 @@ static const char* SETTINGS_FILE = "settings.ini";
 static const char* DEFAULT_SETTINGS =
     "[Graphics]\n"
     "# Window size (ignored in fullscreen)\n"
-    "window_width = 1280\n"
-    "window_height = 720\n"
+    "window_width = 640\n"
+    "window_height = 480\n"
     "\n"
     "# 0 = windowed, 1 = fullscreen, 2 = borderless fullscreen\n"
     "fullscreen = 0\n"
@@ -25,7 +26,11 @@ static const char* DEFAULT_SETTINGS =
     "vsync = 0\n"
     "\n"
     "# Anti-aliasing samples: 0 = off, 2, 4, or 8\n"
-    "msaa = 4\n";
+    "msaa = 4\n"
+    "\n"
+    "[Enhancements]\n"
+    "# Preload HD textures at startup: 0 = off (load on demand), 1 = preload, 2 = preload + cache file (fastest)\n"
+    "preload_textures = 0\n";
 
 static const char* skip_ws(const char* s) {
     while (*s == ' ' || *s == '\t') s++;
@@ -54,6 +59,8 @@ static void apply_setting(const char* key, const char* value) {
     } else if (strcmp(key, "msaa") == 0) {
         if (val == 0 || val == 2 || val == 4 || val == 8)
             g_pc_settings.msaa = val;
+    } else if (strcmp(key, "preload_textures") == 0) {
+        if (val >= 0 && val <= 2) g_pc_settings.preload_textures = val;
     }
 }
 
@@ -84,12 +91,15 @@ void pc_settings_save(void) {
     fprintf(f, "\n");
     fprintf(f, "# Anti-aliasing samples: 0 = off, 2, 4, or 8\n");
     fprintf(f, "msaa = %d\n", g_pc_settings.msaa);
+    fprintf(f, "\n");
+    fprintf(f, "[Enhancements]\n");
+    fprintf(f, "# Preload HD textures at startup: 0 = off (load on demand), 1 = preload, 2 = preload + cache file (fastest)\n");
+    fprintf(f, "preload_textures = %d\n", g_pc_settings.preload_textures);
     fclose(f);
     printf("[Settings] Saved %s\n", SETTINGS_FILE);
 }
 
 void pc_settings_apply(void) {
-    extern SDL_Window* g_pc_window;
     if (!g_pc_window) return;
 
     if (g_pc_settings.fullscreen == 1) {
@@ -138,7 +148,8 @@ void pc_settings_load(void) {
         }
     }
     fclose(f);
-    printf("[Settings] Loaded %s: %dx%d fullscreen=%d vsync=%d msaa=%d\n",
+    printf("[Settings] Loaded %s: %dx%d fullscreen=%d vsync=%d msaa=%d preload_textures=%d\n",
            SETTINGS_FILE, g_pc_settings.window_width, g_pc_settings.window_height,
-           g_pc_settings.fullscreen, g_pc_settings.vsync, g_pc_settings.msaa);
+           g_pc_settings.fullscreen, g_pc_settings.vsync, g_pc_settings.msaa,
+           g_pc_settings.preload_textures);
 }

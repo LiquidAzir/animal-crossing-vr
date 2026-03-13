@@ -43,8 +43,16 @@ extern void NeosSync(void) {
     /* no-op on PC */
 }
 
+/* Defined in os.c — must be called before audio thread starts */
+extern void pc_audio_mq_init(void);
+/* Defined in pc_audio.c — starts the audio producer thread */
+extern void pc_audio_start_producer_thread(void);
+
 extern void StartAudioThread(void* pHeap, s32 heapSize, u32 aramSize, u32 flags) {
     u32 neos_flag;
+
+    /* Init thread-safe message queues before any audio processing */
+    pc_audio_mq_init();
 
     Jac_HeapSetup(pHeap, heapSize);
     Jac_SetAudioARAMSize(aramSize);
@@ -75,9 +83,12 @@ extern void StartAudioThread(void* pHeap, s32 heapSize, u32 aramSize, u32 flags)
     }
 
     pc_audio_initialized = TRUE;
+
+    /* Start dedicated audio producer thread — decouples audio from game frame */
+    pc_audio_start_producer_thread();
 }
 
-/* Called each game frame to drive audio processing */
+/* Called by the audio producer thread to generate samples */
 void pc_audio_process_frame(void) {
     if (!pc_audio_initialized) return;
 

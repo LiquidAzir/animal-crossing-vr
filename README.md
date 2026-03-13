@@ -25,7 +25,7 @@ pacman -S mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-SDL2
 
 1. Clone the repository:
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/flyngmt/ACGC-PC-Port.git
    cd ac-decomp
    ```
 
@@ -47,8 +47,10 @@ pacman -S mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-SDL2
 The game reads all assets directly from the disc image at startup. No extraction or preprocessing step is needed.
 
 ## Controls
-Keybinding support is planned.
-### Keyboard
+
+Keyboard bindings are customizable via `pc/build32/bin/keybindings.ini`.
+
+### Keyboard (defaults)
 
 | Key | Action |
 |-----|--------|
@@ -65,7 +67,7 @@ Keybinding support is planned.
 
 ### Gamepad
 
-SDL2 game controllers are supported with automatic hotplug detection. Button mapping follows the standard GameCube layout. Rumble is supported.
+SDL2 game controllers are supported with automatic hotplug detection. Button mapping follows the standard GameCube layout.
 
 ## Command Line Options
 
@@ -84,15 +86,21 @@ Graphics settings are stored in `pc/build32/bin/settings.ini` and can be edited 
 - Fullscreen toggle
 - VSync
 - MSAA (anti-aliasing)
+- Texture Loading/Caching (No need to enable if you aren't using a texture pack)
 
 ## Texture Packs
 
 Custom textures can be placed in `pc/build32/bin/texture_pack/`. Dolphin-compatible format (XXHash64, DDS).
 
+
 ## Save Data
 
-Save files are stored in `pc/build32/bin/save/` using the standard GCI format, compatible with Dolphin emulator saves. Place a Dolphin GCI export in the save directory to import an existing save. Slot A and B support is planned.
+Save files are stored in `pc/build32/bin/save/` using the standard GCI format, compatible with Dolphin emulator saves. Place a Dolphin GCI export in the save directory to import an existing save.
 
 ## Credits
 
-This project would not be possible without the work of the [ACreTeam](https://github.com/ACreTeam) decompilation team. Their near-complete C decompilation of Animal Crossing is the foundation this port is built on.
+This project would not be possible without the work of the [ACreTeam](https://github.com/ACreTeam) decompilation team. Their complete C decompilation of Animal Crossing is the foundation this port is built on.
+
+## AI Notice
+
+AI tools such as Claude were used in this project (PC port code only).

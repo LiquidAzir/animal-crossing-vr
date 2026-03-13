@@ -115,16 +115,6 @@ static void Nas_smzSetParam(channel* chan, drvparam* param) {
     chan->common_ch.target_volume_left = (s32)((velocity * volL) * (0x1000 - 0.001f));
     chan->common_ch.target_volume_right = (s32)((velocity * volR) * (0x1000 - 0.001f));
 
-    {
-        static u32 param_log_count = 0;
-        if ((param_log_count++ % 200) == 0) {
-            printf("[PAN] pan=%d panScale=%d volL=%.4f volR=%.4f tgtL=%d tgtR=%d vel=%.4f mode=%d\n",
-                   pan, panScale, volL, volR,
-                   chan->common_ch.target_volume_left, chan->common_ch.target_volume_right,
-                   velocity, AG.sound_mode);
-        }
-    }
-
     chan->common_ch.gain = param->playback.gain;
     chan->common_ch.filter = param->playback.filter_buf;
     chan->common_ch.comb_filter_size = param->comb_filter_size;

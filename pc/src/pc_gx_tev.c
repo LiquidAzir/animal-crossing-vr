@@ -118,14 +118,6 @@ void pc_gx_tev_shutdown(void) {
         default_program = 0;
     }
 
-    if (g_gx.shader_cache) {
-        for (int i = 0; i < g_gx.shader_cache_count; i++) {
-            glDeleteProgram(g_gx.shader_cache[i].program);
-        }
-        free(g_gx.shader_cache);
-        g_gx.shader_cache = NULL;
-        g_gx.shader_cache_count = 0;
-    }
 }
 
 GLuint pc_gx_tev_get_shader(PCGXState* state) {

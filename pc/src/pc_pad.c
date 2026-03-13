@@ -1,47 +1,17 @@
 /* pc_pad.c - GC controller input via SDL gamepad + keyboard */
 #include "pc_platform.h"
-
-typedef struct {
-    u16 button;
-    s8  stickX;
-    s8  stickY;
-    s8  substickX;
-    s8  substickY;
-    u8  triggerL;
-    u8  triggerR;
-    u8  analogA;
-    u8  analogB;
-    s8  err;
-} PADStatus;
-
-#define PAD_CHAN0_BIT 0x80000000
-#define PAD_CHAN1_BIT 0x40000000
-#define PAD_CHAN2_BIT 0x20000000
-#define PAD_CHAN3_BIT 0x10000000
-
-#define PAD_BUTTON_LEFT   0x0001
-#define PAD_BUTTON_RIGHT  0x0002
-#define PAD_BUTTON_DOWN   0x0004
-#define PAD_BUTTON_UP     0x0008
-#define PAD_TRIGGER_Z     0x0010
-#define PAD_TRIGGER_R     0x0020
-#define PAD_TRIGGER_L     0x0040
-#define PAD_BUTTON_A      0x0100
-#define PAD_BUTTON_B      0x0200
-#define PAD_BUTTON_X      0x0400
-#define PAD_BUTTON_Y      0x0800
-#define PAD_BUTTON_START  0x1000
+#include "pc_keybindings.h"
+#include <dolphin/pad.h>
 
 /* analog stick constants */
 #define STICK_MAGNITUDE     80
-#define AXIS_DEADZONE       500
-#define AXIS_CLAMP_MIN      (-32767) /* prevent s16 overflow on negate */
+#define AXIS_DEADZONE       4000
 #define TRIGGER_THRESHOLD   100
 #define RUMBLE_DURATION_MS  200
 
 static SDL_GameController* g_controller = NULL;
 
-void PADInit(void) {
+BOOL PADInit(void) {
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
             g_controller = SDL_GameControllerOpen(i);
@@ -50,6 +20,7 @@ void PADInit(void) {
             }
         }
     }
+    return TRUE;
 }
 
 u32 PADRead(PADStatus* status) {
@@ -60,32 +31,34 @@ u32 PADRead(PADStatus* status) {
     s8 stickX = 0, stickY = 0;
     s8 cstickX = 0, cstickY = 0;
 
-    if (keys[SDL_SCANCODE_SPACE])   buttons |= PAD_BUTTON_A;
-    if (keys[SDL_SCANCODE_LSHIFT])  buttons |= PAD_BUTTON_B;
-    if (keys[SDL_SCANCODE_X])       buttons |= PAD_BUTTON_X;
-    if (keys[SDL_SCANCODE_Y])       buttons |= PAD_BUTTON_Y;
-    if (keys[SDL_SCANCODE_RETURN])  buttons |= PAD_BUTTON_START;
-    if (keys[SDL_SCANCODE_Z])       buttons |= PAD_TRIGGER_Z;
-    if (keys[SDL_SCANCODE_Q])       buttons |= PAD_TRIGGER_L;
-    if (keys[SDL_SCANCODE_E])       buttons |= PAD_TRIGGER_R;
+    /* buttons (from keybindings.ini) */
+    PCKeybindings* kb = &g_pc_keybindings;
+    if (keys[kb->a])     buttons |= PAD_BUTTON_A;
+    if (keys[kb->b])     buttons |= PAD_BUTTON_B;
+    if (keys[kb->x])     buttons |= PAD_BUTTON_X;
+    if (keys[kb->y])     buttons |= PAD_BUTTON_Y;
+    if (keys[kb->start]) buttons |= PAD_BUTTON_START;
+    if (keys[kb->z])     buttons |= PAD_TRIGGER_Z;
+    if (keys[kb->l])     buttons |= PAD_TRIGGER_L;
+    if (keys[kb->r])     buttons |= PAD_TRIGGER_R;
 
-    /* WASD = main stick */
-    if (keys[SDL_SCANCODE_W]) stickY += STICK_MAGNITUDE;
-    if (keys[SDL_SCANCODE_S]) stickY -= STICK_MAGNITUDE;
-    if (keys[SDL_SCANCODE_A]) stickX -= STICK_MAGNITUDE;
-    if (keys[SDL_SCANCODE_D]) stickX += STICK_MAGNITUDE;
+    /* main stick */
+    if (keys[kb->stick_up])    stickY += STICK_MAGNITUDE;
+    if (keys[kb->stick_down])  stickY -= STICK_MAGNITUDE;
+    if (keys[kb->stick_left])  stickX -= STICK_MAGNITUDE;
+    if (keys[kb->stick_right]) stickX += STICK_MAGNITUDE;
 
-    /* arrows = C-stick */
-    if (keys[SDL_SCANCODE_UP])    cstickY += STICK_MAGNITUDE;
-    if (keys[SDL_SCANCODE_DOWN])  cstickY -= STICK_MAGNITUDE;
-    if (keys[SDL_SCANCODE_LEFT])  cstickX -= STICK_MAGNITUDE;
-    if (keys[SDL_SCANCODE_RIGHT]) cstickX += STICK_MAGNITUDE;
+    /* C-stick */
+    if (keys[kb->cstick_up])    cstickY += STICK_MAGNITUDE;
+    if (keys[kb->cstick_down])  cstickY -= STICK_MAGNITUDE;
+    if (keys[kb->cstick_left])  cstickX -= STICK_MAGNITUDE;
+    if (keys[kb->cstick_right]) cstickX += STICK_MAGNITUDE;
 
-    /* IJKL = D-pad */
-    if (keys[SDL_SCANCODE_I]) buttons |= PAD_BUTTON_UP;
-    if (keys[SDL_SCANCODE_K]) buttons |= PAD_BUTTON_DOWN;
-    if (keys[SDL_SCANCODE_J]) buttons |= PAD_BUTTON_LEFT;
-    if (keys[SDL_SCANCODE_L]) buttons |= PAD_BUTTON_RIGHT;
+    /* D-pad */
+    if (keys[kb->dpad_up])    buttons |= PAD_BUTTON_UP;
+    if (keys[kb->dpad_down])  buttons |= PAD_BUTTON_DOWN;
+    if (keys[kb->dpad_left])  buttons |= PAD_BUTTON_LEFT;
+    if (keys[kb->dpad_right]) buttons |= PAD_BUTTON_RIGHT;
 
     /* hotplug */
     if (!g_controller) {
@@ -109,6 +82,9 @@ u32 PADRead(PADStatus* status) {
         if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_X)) buttons |= PAD_BUTTON_X;
         if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_Y)) buttons |= PAD_BUTTON_Y;
         if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_START)) buttons |= PAD_BUTTON_START;
+        if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_BACK))  buttons |= PAD_BUTTON_START;
+        if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER))  buttons |= PAD_TRIGGER_L;
+        if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER)) buttons |= PAD_TRIGGER_Z;
         if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_DPAD_UP))    buttons |= PAD_BUTTON_UP;
         if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  buttons |= PAD_BUTTON_DOWN;
         if (SDL_GameControllerGetButton(g_controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  buttons |= PAD_BUTTON_LEFT;
@@ -116,24 +92,36 @@ u32 PADRead(PADStatus* status) {
 
         s16 lx = SDL_GameControllerGetAxis(g_controller, SDL_CONTROLLER_AXIS_LEFTX);
         s16 ly = SDL_GameControllerGetAxis(g_controller, SDL_CONTROLLER_AXIS_LEFTY);
-        if (lx < AXIS_CLAMP_MIN) lx = AXIS_CLAMP_MIN;
-        if (ly < AXIS_CLAMP_MIN) ly = AXIS_CLAMP_MIN;
-        if (abs(lx) > AXIS_DEADZONE) stickX = (s8)(lx >> 8);
-        if (abs(ly) > AXIS_DEADZONE) stickY = (s8)(-(ly >> 8));
+        if (abs(lx) > AXIS_DEADZONE) {
+            int sx = lx >> 8;
+            if (sx > 127) sx = 127; else if (sx < -128) sx = -128;
+            stickX = (s8)sx;
+        }
+        if (abs(ly) > AXIS_DEADZONE) {
+            int sy = -(ly >> 8);
+            if (sy > 127) sy = 127; else if (sy < -128) sy = -128;
+            stickY = (s8)sy;
+        }
 
         s16 rx = SDL_GameControllerGetAxis(g_controller, SDL_CONTROLLER_AXIS_RIGHTX);
         s16 ry = SDL_GameControllerGetAxis(g_controller, SDL_CONTROLLER_AXIS_RIGHTY);
-        if (rx < AXIS_CLAMP_MIN) rx = AXIS_CLAMP_MIN;
-        if (ry < AXIS_CLAMP_MIN) ry = AXIS_CLAMP_MIN;
-        if (abs(rx) > AXIS_DEADZONE) cstickX = (s8)(rx >> 8);
-        if (abs(ry) > AXIS_DEADZONE) cstickY = (s8)(-(ry >> 8));
+        if (abs(rx) > AXIS_DEADZONE) {
+            int srx = rx >> 8;
+            if (srx > 127) srx = 127; else if (srx < -128) srx = -128;
+            cstickX = (s8)srx;
+        }
+        if (abs(ry) > AXIS_DEADZONE) {
+            int sry = -(ry >> 8);
+            if (sry > 127) sry = 127; else if (sry < -128) sry = -128;
+            cstickY = (s8)sry;
+        }
 
         u8 lt = (u8)(SDL_GameControllerGetAxis(g_controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) >> 7);
         u8 rt = (u8)(SDL_GameControllerGetAxis(g_controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT) >> 7);
         if (lt > TRIGGER_THRESHOLD) buttons |= PAD_TRIGGER_L;
         if (rt > TRIGGER_THRESHOLD) buttons |= PAD_TRIGGER_R;
-        status[0].triggerL = lt;
-        status[0].triggerR = rt;
+        status[0].triggerLeft = lt;
+        status[0].triggerRight = rt;
     }
 
     status[0].button = buttons;
@@ -146,7 +134,7 @@ u32 PADRead(PADStatus* status) {
     return PAD_CHAN0_BIT; /* Controller 1 connected */
 }
 
-void PADControlMotor(int chan, u32 command) {
+void PADControlMotor(s32 chan, u32 command) {
     if (g_controller && chan == 0) {
         u16 intensity = (command == 1) ? 0xFFFF : 0;
         SDL_GameControllerRumble(g_controller, intensity, intensity, RUMBLE_DURATION_MS);
@@ -164,10 +152,10 @@ void PADCleanup(void) {
     }
 }
 
-void PADReset(u32 mask) { (void)mask; }
-void PADRecalibrate(u32 mask) { (void)mask; }
-u32  PADSync(void) { return 0; }
+BOOL PADReset(u32 mask) { (void)mask; return TRUE; }
+BOOL PADRecalibrate(u32 mask) { (void)mask; return TRUE; }
+BOOL PADSync(void) { return TRUE; }
 void PADSetSpec(u32 spec) { (void)spec; }
-BOOL PADSetAnalogMode(u32 mode) { return TRUE; }
-void PADClamp(void* status) { (void)status; }
-u32  PADGetType(s32 chan, u32* type) { if (type) *type = 0x09000000; return 0; }
+void PADSetAnalogMode(u32 mode) { (void)mode; }
+/* PADClamp compiled from decomp: src/static/dolphin/pad/Padclamp.c */
+BOOL PADGetType(s32 chan, u32* type) { if (type) *type = 0x09000000; return TRUE; }

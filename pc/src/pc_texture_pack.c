@@ -6,6 +6,7 @@
  * DDS: BC7, BC1/DXT1, BC3/DXT5, or uncompressed RGBA. */
 #include "pc_texture_pack.h"
 #include "pc_gx_internal.h"
+#include "pc_settings.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -601,7 +602,7 @@ static int gc_texture_data_size(int w, int h, unsigned int fmt) {
 }
 
 /* --- Loaded texture cache (GL ID, avoids re-reading DDS from disk) --- */
-#define LOADED_CACHE_SIZE 4096
+#define LOADED_CACHE_SIZE 32768
 #define LOADED_CACHE_MASK (LOADED_CACHE_SIZE - 1)
 
 typedef struct {
@@ -720,6 +721,376 @@ void pc_texture_pack_init(void) {
     } else {
         printf("[TexturePack] No texture pack found in texture_pack/\n");
     }
+}
+
+/* --- Texture preload cache file ---
+ * Packs all parsed DDS pixel data into one file so subsequent launches
+ * only open a single file (avoids antivirus scanning 17K+ individual DDS files).
+ *
+ * Format:
+ *   Header: magic(4) version(4) entry_count(4) texpack_count(4)
+ *   Entry[]:  cache_key(8) gl_internal(4) compressed(4) width(4) height(4) data_size(4)
+ *   Pixel data follows each entry header immediately.
+ */
+#define TPC_MAGIC   0x43505431  /* "TPC1" */
+#define TPC_VERSION 1
+#define TPC_FILE    "texture_pack/texture_cache.bin"
+
+typedef struct {
+    xxh_u64 cache_key;
+    xxh_u32 gl_internal;
+    xxh_u32 compressed;
+    xxh_u32 width;
+    xxh_u32 height;
+    xxh_u32 data_size;
+} TPCEntryHeader;
+
+/* Upload a single cached texture entry to GL and insert into loaded_cache */
+static int tpc_upload_entry(const TPCEntryHeader* eh, const unsigned char* pixels) {
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    if (eh->compressed) {
+        glCompressedTexImage2D(GL_TEXTURE_2D, 0, (GLenum)eh->gl_internal,
+                               (GLsizei)eh->width, (GLsizei)eh->height,
+                               0, (GLsizei)eh->data_size, pixels);
+    } else {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                     (GLsizei)eh->width, (GLsizei)eh->height,
+                     0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    }
+
+    if (glGetError() != GL_NO_ERROR) {
+        glDeleteTextures(1, &tex);
+        return 0;
+    }
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    loaded_cache_insert(eh->cache_key, tex, (int)eh->width, (int)eh->height);
+    return 1;
+}
+
+/* Try loading from binary cache file. Returns 1 on success, 0 if cache missing/stale. */
+static int preload_from_cache(int expected_count) {
+    extern SDL_Window* g_pc_window;
+    FILE* f = fopen(TPC_FILE, "rb");
+    if (!f) return 0;
+
+    xxh_u32 header[4];
+    if (fread(header, 4, 4, f) != 4) { fclose(f); return 0; }
+    if (header[0] != TPC_MAGIC || header[1] != TPC_VERSION) { fclose(f); return 0; }
+
+    int entry_count = (int)header[2];
+    int stored_texpack_count = (int)header[3];
+
+    /* Invalidate if texture pack file count changed */
+    if (stored_texpack_count != expected_count) {
+        printf("[TexturePack] Cache stale (pack has %d entries, cache has %d) — rebuilding\n",
+               expected_count, stored_texpack_count);
+        fclose(f);
+        return 0;
+    }
+
+    int loaded = 0;
+    unsigned char* buf = NULL;
+    int buf_cap = 0;
+
+    for (int i = 0; i < entry_count; i++) {
+        TPCEntryHeader eh;
+        if (fread(&eh, sizeof(eh), 1, f) != 1) break;
+
+        if ((int)eh.data_size > buf_cap) {
+            buf_cap = (int)eh.data_size + 4096;
+            buf = (unsigned char*)realloc(buf, buf_cap);
+            if (!buf) break;
+        }
+        if (fread(buf, 1, eh.data_size, f) != eh.data_size) break;
+
+        if (tpc_upload_entry(&eh, buf)) loaded++;
+
+        if (g_pc_window && (i % 500) == 0) {
+            char title[128];
+            snprintf(title, sizeof(title), "Animal Crossing - Loading textures... %d/%d (%d%%)",
+                     i, entry_count, i * 100 / entry_count);
+            SDL_SetWindowTitle(g_pc_window, title);
+            SDL_PumpEvents();
+        }
+    }
+
+    free(buf);
+    fclose(f);
+
+    if (g_pc_window) SDL_SetWindowTitle(g_pc_window, "Animal Crossing");
+
+    printf("[TexturePack] Loaded %d textures from cache\n", loaded);
+    return 1;
+}
+
+/* Load raw DDS file data without creating a GL texture (for cache building).
+ * Returns malloc'd pixel data, fills out metadata. Caller must free(). */
+static unsigned char* load_dds_raw(const char* filepath, xxh_u32* out_w, xxh_u32* out_h,
+                                    xxh_u32* out_gl_internal, xxh_u32* out_compressed,
+                                    int* out_data_size) {
+    FILE* f = fopen(filepath, "rb");
+    if (!f) return NULL;
+
+    unsigned char header[148];
+    if (fread(header, 1, 128, f) != 128) { fclose(f); return NULL; }
+
+    xxh_u32 magic;
+    memcpy(&magic, header, 4);
+    if (magic != DDS_MAGIC) { fclose(f); return NULL; }
+
+    xxh_u32 dds_height, dds_width;
+    memcpy(&dds_height, header + 12, 4);
+    memcpy(&dds_width, header + 16, 4);
+
+    xxh_u32 pf_flags, pf_fourcc;
+    memcpy(&pf_flags, header + 80, 4);
+    memcpy(&pf_fourcc, header + 84, 4);
+
+    xxh_u32 dxgi_format = 0;
+    GLenum gl_internal = 0;
+    int compressed = 0;
+    int block_size = 0;
+
+    if ((pf_flags & DDPF_FOURCC) && pf_fourcc == 0x30315844) {
+        if (fread(header + 128, 1, 20, f) != 20) { fclose(f); return NULL; }
+        memcpy(&dxgi_format, header + 128, 4);
+        switch (dxgi_format) {
+            case DXGI_FORMAT_BC7_UNORM:
+                if (!g_has_bc7) { fclose(f); return NULL; }
+                gl_internal = GL_COMPRESSED_RGBA_BPTC_UNORM; compressed = 1; block_size = 16; break;
+            case DXGI_FORMAT_BC1_UNORM:
+                if (!g_has_s3tc) { fclose(f); return NULL; }
+                gl_internal = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT; compressed = 1; block_size = 8; break;
+            case DXGI_FORMAT_BC3_UNORM:
+                if (!g_has_s3tc) { fclose(f); return NULL; }
+                gl_internal = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; compressed = 1; block_size = 16; break;
+            case DXGI_FORMAT_R8G8B8A8_UNORM:
+            case DXGI_FORMAT_B8G8R8A8_UNORM:
+                gl_internal = GL_RGBA; compressed = 0; break;
+            default: fclose(f); return NULL;
+        }
+    } else if ((pf_flags & DDPF_FOURCC)) {
+        if (pf_fourcc == 0x31545844) {
+            if (!g_has_s3tc) { fclose(f); return NULL; }
+            gl_internal = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT; compressed = 1; block_size = 8;
+        } else if (pf_fourcc == 0x35545844) {
+            if (!g_has_s3tc) { fclose(f); return NULL; }
+            gl_internal = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; compressed = 1; block_size = 16;
+        } else { fclose(f); return NULL; }
+    } else {
+        xxh_u32 rgb_bit_count;
+        memcpy(&rgb_bit_count, header + 88, 4);
+        if (rgb_bit_count == 32) { gl_internal = GL_RGBA; compressed = 0; }
+        else { fclose(f); return NULL; }
+    }
+
+    int data_size;
+    if (compressed) {
+        int blocks_x = ((int)dds_width + 3) / 4;
+        int blocks_y = ((int)dds_height + 3) / 4;
+        data_size = blocks_x * blocks_y * block_size;
+    } else {
+        data_size = (int)(dds_width * dds_height * 4);
+    }
+
+    unsigned char* pixels = (unsigned char*)malloc(data_size);
+    if (!pixels) { fclose(f); return NULL; }
+    if ((int)fread(pixels, 1, data_size, f) != data_size) { free(pixels); fclose(f); return NULL; }
+    fclose(f);
+
+    if (!compressed && dxgi_format == DXGI_FORMAT_B8G8R8A8_UNORM) {
+        for (int i = 0; i < data_size; i += 4) {
+            unsigned char tmp = pixels[i]; pixels[i] = pixels[i + 2]; pixels[i + 2] = tmp;
+        }
+    }
+
+    *out_w = dds_width;
+    *out_h = dds_height;
+    *out_gl_internal = (xxh_u32)gl_internal;
+    *out_compressed = (xxh_u32)compressed;
+    *out_data_size = data_size;
+    return pixels;
+}
+
+/* Preload entry info for cache building */
+typedef struct {
+    xxh_u64 cache_key;
+    char filepath[260];
+} PreloadEntry;
+
+void pc_texture_pack_preload_all(void) {
+    if (!g_texpack_active) return;
+
+    extern SDL_Window* g_pc_window;
+    Uint64 t_start = SDL_GetPerformanceCounter();
+    Uint64 freq = SDL_GetPerformanceFrequency();
+
+    int use_cache = (g_pc_settings.preload_textures >= 2);
+
+    /* Try binary cache first (mode 2 only) */
+    if (use_cache && preload_from_cache(g_texpack_count)) {
+        Uint64 t_end = SDL_GetPerformanceCounter();
+        double elapsed = (double)(t_end - t_start) * 1000.0 / (double)freq;
+        printf("[TexturePack] Preload from cache took %.0fms\n", elapsed);
+        return;
+    }
+
+    /* Load all DDS files individually */
+    int total = 0, processed = 0, loaded = 0, failed = 0;
+    for (int i = 0; i < TEXPACK_MAP_SIZE; i++)
+        if (g_texpack_map[i].occupied) total++;
+    for (int i = 0; i < TEXPACK_WC_SIZE; i++)
+        if (g_texpack_wc_map[i].occupied) total++;
+
+    /* Collect entries and load DDS + upload to GL + write cache simultaneously */
+    FILE* cache_f = NULL;
+    if (use_cache) {
+        cache_f = fopen(TPC_FILE, "wb");
+        if (cache_f) {
+            xxh_u32 header[4] = { TPC_MAGIC, TPC_VERSION, 0, (xxh_u32)g_texpack_count };
+            fwrite(header, 4, 4, cache_f); /* entry_count placeholder, patched later */
+        }
+    }
+
+    int cache_entries = 0;
+
+    /* Exact-match entries */
+    for (int i = 0; i < TEXPACK_MAP_SIZE; i++) {
+        if (!g_texpack_map[i].occupied) continue;
+        processed++;
+
+        xxh_u64 key = loaded_cache_key(g_texpack_map[i].data_hash,
+                                        g_texpack_map[i].tlut_hash,
+                                        g_texpack_map[i].gc_fmt,
+                                        g_texpack_map[i].orig_w,
+                                        g_texpack_map[i].orig_h);
+        if (loaded_cache_find(key)) continue;
+
+        xxh_u32 dds_w, dds_h, gl_int, comp;
+        int data_size;
+        unsigned char* pixels = load_dds_raw(g_texpack_map[i].filepath,
+                                              &dds_w, &dds_h, &gl_int, &comp, &data_size);
+        if (pixels) {
+            TPCEntryHeader eh = { key, gl_int, comp, dds_w, dds_h, (xxh_u32)data_size };
+
+            /* Upload to GL */
+            GLuint tex;
+            glGenTextures(1, &tex);
+            glBindTexture(GL_TEXTURE_2D, tex);
+            if (comp)
+                glCompressedTexImage2D(GL_TEXTURE_2D, 0, (GLenum)gl_int,
+                                       (GLsizei)dds_w, (GLsizei)dds_h, 0, data_size, pixels);
+            else
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                             (GLsizei)dds_w, (GLsizei)dds_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+            if (glGetError() == GL_NO_ERROR) {
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                loaded_cache_insert(key, tex, (int)dds_w, (int)dds_h);
+                loaded++;
+
+                if (cache_f) {
+                    fwrite(&eh, sizeof(eh), 1, cache_f);
+                    fwrite(pixels, 1, data_size, cache_f);
+                    cache_entries++;
+                }
+            } else {
+                glDeleteTextures(1, &tex);
+                failed++;
+            }
+            free(pixels);
+        } else {
+            failed++;
+        }
+
+        if (g_pc_window && (processed % 100) == 0) {
+            char title[128];
+            snprintf(title, sizeof(title), "Animal Crossing - Building texture cache... %d/%d (%d%%)",
+                     processed, total, processed * 100 / total);
+            SDL_SetWindowTitle(g_pc_window, title);
+            SDL_PumpEvents();
+        }
+    }
+
+    /* Wildcard entries */
+    for (int i = 0; i < TEXPACK_WC_SIZE; i++) {
+        if (!g_texpack_wc_map[i].occupied) continue;
+        processed++;
+
+        xxh_u64 key = loaded_cache_key(g_texpack_wc_map[i].data_hash, 0,
+                                        g_texpack_wc_map[i].gc_fmt,
+                                        g_texpack_wc_map[i].orig_w,
+                                        g_texpack_wc_map[i].orig_h);
+        if (loaded_cache_find(key)) continue;
+
+        xxh_u32 dds_w, dds_h, gl_int, comp;
+        int data_size;
+        unsigned char* pixels = load_dds_raw(g_texpack_wc_map[i].filepath,
+                                              &dds_w, &dds_h, &gl_int, &comp, &data_size);
+        if (pixels) {
+            TPCEntryHeader eh = { key, gl_int, comp, dds_w, dds_h, (xxh_u32)data_size };
+
+            GLuint tex;
+            glGenTextures(1, &tex);
+            glBindTexture(GL_TEXTURE_2D, tex);
+            if (comp)
+                glCompressedTexImage2D(GL_TEXTURE_2D, 0, (GLenum)gl_int,
+                                       (GLsizei)dds_w, (GLsizei)dds_h, 0, data_size, pixels);
+            else
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                             (GLsizei)dds_w, (GLsizei)dds_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+            if (glGetError() == GL_NO_ERROR) {
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                loaded_cache_insert(key, tex, (int)dds_w, (int)dds_h);
+                loaded++;
+
+                if (cache_f) {
+                    fwrite(&eh, sizeof(eh), 1, cache_f);
+                    fwrite(pixels, 1, data_size, cache_f);
+                    cache_entries++;
+                }
+            } else {
+                glDeleteTextures(1, &tex);
+                failed++;
+            }
+            free(pixels);
+        } else {
+            failed++;
+        }
+
+        if (g_pc_window && (processed % 100) == 0) {
+            char title[128];
+            snprintf(title, sizeof(title), "Animal Crossing - Building texture cache... %d/%d (%d%%)",
+                     processed, total, processed * 100 / total);
+            SDL_SetWindowTitle(g_pc_window, title);
+            SDL_PumpEvents();
+        }
+    }
+
+    /* Patch entry count in cache header and close */
+    if (cache_f) {
+        fseek(cache_f, 8, SEEK_SET);
+        xxh_u32 count32 = (xxh_u32)cache_entries;
+        fwrite(&count32, 4, 1, cache_f);
+        fclose(cache_f);
+        printf("[TexturePack] Wrote cache: %d textures to %s\n", cache_entries, TPC_FILE);
+    }
+
+    if (g_pc_window) SDL_SetWindowTitle(g_pc_window, "Animal Crossing");
+
+    Uint64 t_end = SDL_GetPerformanceCounter();
+    double elapsed = (double)(t_end - t_start) * 1000.0 / (double)freq;
+    printf("[TexturePack] Preloaded %d/%d textures in %.0fms (%d failed)\n",
+           loaded, total, elapsed, failed);
 }
 
 void pc_texture_pack_shutdown(void) {

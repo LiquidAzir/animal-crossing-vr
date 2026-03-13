@@ -3,6 +3,7 @@
 #include "pc_gx_internal.h"
 #include "pc_texture_pack.h"
 #include "pc_settings.h"
+#include "pc_keybindings.h"
 #include "pc_assets.h"
 #include "pc_disc.h"
 
@@ -170,11 +171,18 @@ void pc_platform_init(void) {
 
     pc_gx_init();
     pc_texture_pack_init();
+#ifdef PC_ENHANCEMENTS
+    if (g_pc_settings.preload_textures) {
+        pc_texture_pack_preload_all();
+    }
+#endif
 }
 
 extern void PADCleanup(void);
 
 void pc_platform_shutdown(void) {
+    pc_audio_shutdown();
+    pc_audio_mq_shutdown();
     PADCleanup();
     pc_texture_pack_shutdown();
     pc_gx_shutdown();
@@ -200,13 +208,32 @@ void pc_platform_swap_buffers(void) {
     SDL_GL_SwapWindow(g_pc_window);
 }
 
+static int pc_confirm_quit(void) {
+    const SDL_MessageBoxButtonData buttons[] = {
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Cancel" },
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Quit" },
+    };
+    const SDL_MessageBoxData data = {
+        SDL_MESSAGEBOX_INFORMATION, g_pc_window,
+        "Animal Crossing", "Are you sure you want to quit?",
+        2, buttons, NULL
+    };
+    int button = 0;
+    if (SDL_ShowMessageBox(&data, &button) < 0)
+        return 1; /* on error, just quit */
+    return button == 1;
+}
+
 int pc_platform_poll_events(void) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
             case SDL_QUIT:
-                g_pc_running = 0;
-                return 0;
+                if (pc_confirm_quit()) {
+                    g_pc_running = 0;
+                    return 0;
+                }
+                break;
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
                     pc_platform_update_window_size();
@@ -214,8 +241,10 @@ int pc_platform_poll_events(void) {
                 break;
             case SDL_KEYDOWN:
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
-                    g_pc_running = 0;
-                    return 0;
+                    if (pc_confirm_quit()) {
+                        g_pc_running = 0;
+                        return 0;
+                    }
                 }
                 if (event.key.keysym.sym == SDLK_F3 && !event.key.repeat) {
                     g_pc_no_framelimit ^= 1;
@@ -308,6 +337,7 @@ int main(int argc, char* argv[]) {
 
     SDL_SetMainReady();
     pc_settings_load();
+    pc_keybindings_load();
     pc_platform_init();
     pc_disc_init();
     pc_assets_init();

@@ -10,9 +10,6 @@
 #include "sys_math.h"
 #include "jaudio_NES/kappa.h"
 #include "jaudio_NES/staff.h"
-#ifdef TARGET_PC
-#include "jaudio_NES/audiothread.h"
-#endif
 
 int S_ongenpos_refuse_fg;
 
@@ -46,19 +43,8 @@ extern void sAdo_Calc_MicPosition_forLevel(f32* fcalc, u16* scalc, const xyz_t* 
 }
 
 extern void sAdo_GameFrame() {
-#ifdef TARGET_PC
-    {
-        static int _gf_count = 0;
-        u32 t0 = SDL_GetTicks();
-        Na_GameFrame();
-        pc_audio_process_frame();
-        u32 t1 = SDL_GetTicks();
-        if ((_gf_count++ % 300) == 0 || (t1 - t0) > 50)
-            printf("[PC/Audio] sAdo_GameFrame #%d: %ums\n", _gf_count, t1 - t0);
-    }
-#else
     Na_GameFrame();
-#endif
+    /* pc_audio_process_frame() now runs on dedicated audio producer thread */
 }
 
 extern void sAdo_BgmStart(u8 id) {

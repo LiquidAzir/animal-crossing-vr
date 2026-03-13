@@ -2135,6 +2135,7 @@ extern void Nas_MySeqMain(u32 frames_left) {
     main_grp = &AG.main_group;
     Nas_GroupSeq(main_grp);
     Nas_MainCtrl(main_grp);
+
     Nas_UpdateChannel();
 }
 

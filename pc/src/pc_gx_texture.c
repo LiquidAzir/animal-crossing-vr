@@ -86,8 +86,8 @@ static u32 tlut_content_hash(const void* data, int tlut_fmt, int n_entries, int 
 
 static TexCacheEntry tex_cache[TEX_CACHE_SIZE];
 static int tex_cache_count = 0;
-int tex_cache_hits = 0;
-int tex_cache_misses = 0;
+static int tex_cache_hits = 0;
+static int tex_cache_misses = 0;
 
 /* Linear scan. Fine for <=2048 entries at ~100% hit rate. */
 static TexCacheEntry* tex_cache_find(u32 data_ptr, int w, int h, u32 fmt, u32 tlut_name,

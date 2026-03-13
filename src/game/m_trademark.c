@@ -57,7 +57,7 @@ static mNpc_demo_npc_c demo_npc_list[] = {
     DEMO_NPC(BIFF, 4, 6, 5, 6),    DEMO_NPC(SAMSON, 5, 2, 12, 4), DEMO_NPC(JANE, 5, 2, 9, 11),
     DEMO_NPC(TYBALT, 5, 4, 11, 4),
 /* @BUG - mNpc_SetAnimalTitleDemo uses ANIMAL_NUM_MAX (15) but only 14 are set */
-#ifndef BUGFIXES
+#if !defined(BUGFIXES) && !defined(TARGET_PC)
     DEMO_NPC(CUBE, 5, 5, 5, 11)
 #else
     DEMO_NPC(CUBE, 5, 5, 5, 11),   { EMPTY_NO, 0, 0, 0, 0 }
@@ -69,6 +69,9 @@ static int demo_npc_num = sizeof(demo_npc_list) / sizeof(mNpc_demo_npc_c);
 static int set_npc_4_title_demo(GAME_TRADEMARK* trademark) {
     Animal_c* animals = Save_Get(animals);
 
+#ifdef TARGET_PC
+    mNpc_InitNpcList(Common_Get(npclist), ANIMAL_NUM_MAX);
+#endif
     mNpc_SetAnimalTitleDemo(demo_npc_list, animals, (GAME*)trademark);
     mNpc_SetNpcList(Common_Get(npclist), animals, demo_npc_num, 0);
 
