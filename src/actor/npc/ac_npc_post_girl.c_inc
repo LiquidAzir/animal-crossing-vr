@@ -13,7 +13,11 @@ void aPG_set_mail_address(Mail_c *mail) {
 }
 
 void aPG_set_loan_balance() {
+#ifdef TARGET_PC
+    u8 str[aPG_LOAN_STR_LEN]; /* BUGFIX: original declares str[2] but writes 7 bytes → stack overflow on GCC */
+#else
     u8 str[2];
+#endif
     int length;
     u32 loan = 0;
     mMsg_Window_c *msg_p = mMsg_Get_base_window_p();
