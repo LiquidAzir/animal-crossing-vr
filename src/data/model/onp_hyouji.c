@@ -224,6 +224,6 @@ Gfx onp_hyouji_moji_mode[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_onp_hyouji_c(void) {
-    pc_load_asset("assets/onp_hyouji/onp_hyouji_v.bin", onp_hyouji_v, 0x1C0, 0x781140, 0, 2);
+    pc_load_asset("assets/onp_hyouji/onp_hyouji_v.bin", onp_hyouji_v, 0x180, 0x77F580, 0, 2);
 }
 #endif

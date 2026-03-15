@@ -61,8 +61,8 @@ Gfx act_m_danna2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_danna_c(void) {
-    pc_load_asset("assets/act_m_danna/act_m_danna_pal.bin", act_m_danna_pal, 0x20, 0xB4A300, 0, 1);
-    pc_load_asset("assets/act_m_danna/act_m_danna.bin", act_m_danna, 0x200, 0xB4A320, 0, 0);
-    pc_load_asset("assets/act_m_danna/act_m_danna_v.bin", act_m_danna_v, 0xC0, 0xB4A240, 0, 2);
+    pc_load_asset("assets/act_m_danna/act_m_danna_pal.bin", act_m_danna_pal, 0x20, 0x5404C0, 0, 1);
+    pc_load_asset("assets/act_m_danna/act_m_danna.bin", act_m_danna, 0x200, 0x5404E0, 0, 0);
+    pc_load_asset("assets/act_m_danna/act_m_danna_v.bin", act_m_danna_v, 0xC0, 0x5406E0, 0, 2);
 }
 #endif

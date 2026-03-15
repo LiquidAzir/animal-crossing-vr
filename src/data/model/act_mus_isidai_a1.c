@@ -76,6 +76,6 @@ cKF_Skeleton_R_c cKF_bs_r_act_mus_isidai_a1 = { ARRAY_COUNT(cKF_je_r_act_mus_isi
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_mus_isidai_a1_c(void) {
-    pc_load_asset("assets/act_mus_isidai_a1/int_nog_isidai_pal.bin", int_nog_isidai_pal, 0x20, 0xBD8820, 0, 1);
+    pc_load_asset("assets/act_mus_isidai_a1/int_nog_isidai_pal.bin", int_nog_isidai_pal, 0x20, 0x95CF00, 0, 1);
 }
 #endif

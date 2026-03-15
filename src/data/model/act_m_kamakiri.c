@@ -62,8 +62,8 @@ Gfx act_m_kamakiri2_2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_kamakiri_c(void) {
-    pc_load_asset("assets/act_m_kamakiri/act_m_kamakiri_pal.bin", act_m_kamakiri_pal, 0x20, 0xB4DBB8, 0, 1);
-    pc_load_asset("assets/act_m_kamakiri/act_m_kamakiri.bin", act_m_kamakiri, 0x200, 0xB4DBD8, 0, 0);
-    pc_load_asset("assets/act_m_kamakiri/act_m_kamakiri_v.bin", act_m_kamakiri_v, 0x120, 0xB4DA98, 0, 2);
+    pc_load_asset("assets/act_m_kamakiri/act_m_kamakiri_pal.bin", act_m_kamakiri_pal, 0x20, 0x5429A0, 0, 1);
+    pc_load_asset("assets/act_m_kamakiri/act_m_kamakiri.bin", act_m_kamakiri, 0x200, 0x5429C0, 0, 0);
+    pc_load_asset("assets/act_m_kamakiri/act_m_kamakiri_v.bin", act_m_kamakiri_v, 0x120, 0x542BC0, 0, 2);
 }
 #endif

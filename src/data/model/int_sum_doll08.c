@@ -71,6 +71,6 @@ Gfx int_sum_doll08_on_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_sum_doll08_c(void) {
-    pc_load_asset("assets/int_sum_doll08/int_sum_doll09_pal.bin", int_sum_doll09_pal, 0x20, 0xCB7860, 0, 1);
+    pc_load_asset("assets/int_sum_doll08/int_sum_doll09_pal.bin", int_sum_doll09_pal, 0x20, 0xCB6E40, 0, 1);
 }
 #endif

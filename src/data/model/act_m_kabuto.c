@@ -61,8 +61,8 @@ Gfx act_m_kabuto2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_kabuto_c(void) {
-    pc_load_asset("assets/act_m_kabuto/act_m_kabuto_pal.bin", act_m_kabuto_pal, 0x20, 0xB4D7A8, 0, 1);
-    pc_load_asset("assets/act_m_kabuto/act_m_kabuto.bin", act_m_kabuto, 0x200, 0xB4D7C8, 0, 0);
-    pc_load_asset("assets/act_m_kabuto/act_m_kabuto_v.bin", act_m_kabuto_v, 0xE0, 0xB4D6C8, 0, 2);
+    pc_load_asset("assets/act_m_kabuto/act_m_kabuto_pal.bin", act_m_kabuto_pal, 0x20, 0x5425E0, 0, 1);
+    pc_load_asset("assets/act_m_kabuto/act_m_kabuto.bin", act_m_kabuto, 0x200, 0x542600, 0, 0);
+    pc_load_asset("assets/act_m_kabuto/act_m_kabuto_v.bin", act_m_kabuto_v, 0xE0, 0x542800, 0, 2);
 }
 #endif

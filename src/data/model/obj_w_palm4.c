@@ -61,7 +61,7 @@ Gfx obj_w_palm4_trunkT_gfx_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_w_palm4_c(void) {
-    pc_load_asset("assets/obj_w_palm4/obj_w_palm_leaf_tex.bin", obj_w_palm_leaf_tex, 0x800, 0x3F7100, 0, 0);
-    pc_load_asset("assets/obj_w_palm4/obj_w_palm_trunk_tex.bin", obj_w_palm_trunk_tex, 0x800, 0x3F7900, 0, 0);
+    pc_load_asset("assets/obj_w_palm4/obj_w_palm_leaf_tex.bin", obj_w_palm_leaf_tex, 0x800, 0x3F5DE0, 0, 0);
+    pc_load_asset("assets/obj_w_palm4/obj_w_palm_trunk_tex.bin", obj_w_palm_trunk_tex, 0x800, 0x3F65E0, 0, 0);
 }
 #endif

@@ -60,6 +60,6 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_shop_akican_c(void) {
-    pc_load_asset("assets/obj_shop_akican/obj_shop_akican_pal.bin", obj_shop_akican_pal, 0x20, 0x678240, 0, 1);
+    pc_load_asset("assets/obj_shop_akican/obj_shop_akican_pal.bin", obj_shop_akican_pal, 0x20, 0x677C40, 0, 1);
 }
 #endif

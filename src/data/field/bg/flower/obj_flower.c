@@ -108,7 +108,7 @@ extern Gfx obj_flower_cT_gfx_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_field_bg_flower_obj_flower_c(void) {
-    pc_load_asset("assets/flower/obj_flower_tex.bin", obj_flower_tex, 0x800, 0x3E0700, 0, 0);
+    pc_load_asset("assets/flower/obj_flower_tex.bin", obj_flower_tex, 0x800, 0x3DFCC0, 0, 0);
     pc_load_asset("assets/flower/obj_flower_a_v.bin", obj_flower_a_v, 0x80, 0x3E04C0, 0, 2);
     pc_load_asset("assets/flower/obj_flower_b_v.bin", obj_flower_b_v, 0x80, 0x3E0540, 0, 2);
     pc_load_asset("assets/flower/obj_flower_c_v.bin", obj_flower_c_v, 0x80, 0x3E05C0, 0, 2);

@@ -91,6 +91,6 @@ Gfx act_f36_kaeru_cT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_f36_kaeru_c(void) {
-    pc_load_asset("assets/act_f36_kaeru/int_nog_kaeru_pal.bin", int_nog_kaeru_pal, 0x20, 0xBDA520, 0, 1);
+    pc_load_asset("assets/act_f36_kaeru/int_nog_kaeru_pal.bin", int_nog_kaeru_pal, 0x20, 0x51A920, 0, 1);
 }
 #endif

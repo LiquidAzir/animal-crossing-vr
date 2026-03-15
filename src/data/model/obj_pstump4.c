@@ -34,6 +34,6 @@ Gfx obj_pstump4_shadowT_gfx_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_pstump4_c(void) {
-    pc_load_asset("assets/obj_pstump4/obj_pstump_shadow_tex.bin", obj_pstump_shadow_tex, 0x200, 0x3E44A0, 0, 0);
+    pc_load_asset("assets/obj_pstump4/obj_pstump_shadow_tex.bin", obj_pstump_shadow_tex, 0x200, 0x3E4220, 0, 0);
 }
 #endif

@@ -50,6 +50,6 @@ Gfx leaf_DL_vtx[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_item_leaf_c(void) {
-    pc_load_asset("assets/obj_item_leaf/obj_item_peach_pal.bin", obj_item_peach_pal, 0x20, 0xB71900, 0, 1);
+    pc_load_asset("assets/obj_item_leaf/obj_item_peach_pal.bin", obj_item_peach_pal, 0x20, 0xB70040, 0, 1);
 }
 #endif

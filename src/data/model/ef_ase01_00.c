@@ -39,6 +39,6 @@ Gfx ef_ase01_00_modelT[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_ef_ase01_00_c(void) {
-    pc_load_asset("assets/ef_ase01_00/ef_ase01_0.bin", ef_ase01_0, 0x80, 0x93D480, 0, 0);
+    pc_load_asset("assets/ef_ase01_00/ef_ase01_0.bin", ef_ase01_0, 0x100, 0x93D2E0, 0, 0);
 }
 #endif

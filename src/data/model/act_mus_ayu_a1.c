@@ -75,7 +75,7 @@ cKF_Skeleton_R_c cKF_bs_r_act_mus_ayu_a1 = { ARRAY_COUNT(cKF_je_r_act_mus_ayu_a1
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_mus_ayu_a1_c(void) {
-    pc_load_asset("assets/act_mus_ayu_a1/int_sum_ayu_pal.bin", int_sum_ayu_pal, 0x20, 0xC75D20, 0, 1);
-    pc_load_asset("assets/act_mus_ayu_a1/act_mus_ayu_body_txt.bin", act_mus_ayu_body_txt, 0x300, 0xB27100, 0, 0);
+    pc_load_asset("assets/act_mus_ayu_a1/int_sum_ayu_pal.bin", int_sum_ayu_pal, 0x20, 0x957380, 0, 1);
+    pc_load_asset("assets/act_mus_ayu_a1/act_mus_ayu_body_txt.bin", act_mus_ayu_body_txt, 0x300, 0x9573A0, 0, 0);
 }
 #endif

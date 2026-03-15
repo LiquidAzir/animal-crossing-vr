@@ -45,6 +45,6 @@ Gfx obj_s_melodyT_gfx_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_s_melody_c(void) {
-    pc_load_asset("assets/obj_s_melody/obj_melody_pal.bin", obj_melody_pal, 0x20, 0x3F2DA0, 0, 1);
+    pc_load_asset("assets/obj_s_melody/obj_melody_pal.bin", obj_melody_pal, 0x20, 0x3E2540, 0, 1);
 }
 #endif

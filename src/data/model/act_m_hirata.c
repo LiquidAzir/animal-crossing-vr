@@ -61,8 +61,8 @@ Gfx act_m_hirata2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_hirata_c(void) {
-    pc_load_asset("assets/act_m_hirata/act_m_hirata_pal.bin", act_m_hirata_pal, 0x20, 0xB4C268, 0, 1);
-    pc_load_asset("assets/act_m_hirata/act_m_hirata.bin", act_m_hirata, 0x200, 0xB4C288, 0, 0);
-    pc_load_asset("assets/act_m_hirata/act_m_hirata_v.bin", act_m_hirata_v, 0xC0, 0xB4C1A8, 0, 2);
+    pc_load_asset("assets/act_m_hirata/act_m_hirata_pal.bin", act_m_hirata_pal, 0x20, 0x5418E0, 0, 1);
+    pc_load_asset("assets/act_m_hirata/act_m_hirata.bin", act_m_hirata, 0x200, 0x541900, 0, 0);
+    pc_load_asset("assets/act_m_hirata/act_m_hirata_v.bin", act_m_hirata_v, 0xC0, 0x541B00, 0, 2);
 }
 #endif

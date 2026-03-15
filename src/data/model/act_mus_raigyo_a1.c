@@ -75,6 +75,6 @@ cKF_Skeleton_R_c cKF_bs_r_act_mus_raigyo_a1 = { ARRAY_COUNT(cKF_je_r_act_mus_rai
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_mus_raigyo_a1_c(void) {
-    pc_load_asset("assets/act_mus_raigyo_a1/int_sum_raigyo_pal.bin", int_sum_raigyo_pal, 0x20, 0xD2A820, 0, 1);
+    pc_load_asset("assets/act_mus_raigyo_a1/int_sum_raigyo_pal.bin", int_sum_raigyo_pal, 0x20, 0x968240, 0, 1);
 }
 #endif

@@ -690,6 +690,6 @@ Gfx kai_sousa_spaceT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_kai_sousa_c(void) {
-    pc_load_asset("assets/kai_sousa/kai_sousa_button3_tex.bin", kai_sousa_button3_tex, 0x100, 0x7B14C0, 0, 0);
+    pc_load_asset("assets/kai_sousa/kai_sousa_button3_tex.bin", kai_sousa_button3_tex, 0x100, 0x6F1100, 0, 0);
 }
 #endif

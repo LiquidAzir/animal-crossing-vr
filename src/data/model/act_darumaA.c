@@ -79,6 +79,6 @@ Gfx act_darumaA_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_darumaA_c(void) {
-    pc_load_asset("assets/act_darumaA/act_daruma_pal.bin", act_daruma_pal, 0x20, 0x7C88C8, 0, 1);
+    pc_load_asset("assets/act_darumaA/act_daruma_pal.bin", act_daruma_pal, 0x20, 0x7C8340, 0, 1);
 }
 #endif

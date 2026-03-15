@@ -61,8 +61,8 @@ Gfx act_m_monshiro2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_monshiro_c(void) {
-    pc_load_asset("assets/act_m_monshiro/act_m_monshiro_pal.bin", act_m_monshiro_pal, 0x20, 0xB51D98, 0, 1);
-    pc_load_asset("assets/act_m_monshiro/act_m_monshiro.bin", act_m_monshiro, 0x80, 0xB51DB8, 0, 0);
-    pc_load_asset("assets/act_m_monshiro/act_m_monshiro_v.bin", act_m_monshiro_v, 0xC0, 0xB51CD8, 0, 2);
+    pc_load_asset("assets/act_m_monshiro/act_m_monshiro_pal.bin", act_m_monshiro_pal, 0x20, 0x545B00, 0, 1);
+    pc_load_asset("assets/act_m_monshiro/act_m_monshiro.bin", act_m_monshiro, 0x80, 0x545B20, 0, 0);
+    pc_load_asset("assets/act_m_monshiro/act_m_monshiro_v.bin", act_m_monshiro_v, 0xC0, 0x545BA0, 0, 2);
 }
 #endif

@@ -124,6 +124,6 @@ Gfx int_sum_pl_draca02_onT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_sum_pl_draca02_c(void) {
-    pc_load_asset("assets/int_sum_pl_draca02/int_sum_pl_kuroton_pal.bin", int_sum_pl_kuroton_pal, 0x20, 0xD21840, 0, 1);
+    pc_load_asset("assets/int_sum_pl_draca02/int_sum_pl_kuroton_pal.bin", int_sum_pl_kuroton_pal, 0x20, 0xD1E5C0, 0, 1);
 }
 #endif

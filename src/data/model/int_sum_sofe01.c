@@ -114,9 +114,9 @@ Gfx int_sum_sofe01_on_model[] = {
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_sum_sofe01_c(void) {
     pc_load_asset("assets/int_sum_sofe01/int_sum_sofe01_pal.bin", int_sum_sofe01_pal, 0x20, 0xD3ABC0, 0, 1);
-    pc_load_asset("assets/int_sum_sofe01/int_sofe01_pal.bin", int_sofe01_pal, 0x20, 0xD3ABE0, 0, 1);
-    pc_load_asset("assets/int_sum_sofe01/int_sum_sofe01_facet_txt.bin", int_sum_sofe01_facet_txt, 0x180, 0xD3AF00, 0, 0);
+    pc_load_asset("assets/int_sum_sofe01/int_sofe01_pal.bin", int_sofe01_pal, 0x20, 0xD39E40, 0, 1);
+    pc_load_asset("assets/int_sum_sofe01/int_sum_sofe01_facet_txt.bin", int_sum_sofe01_facet_txt, 0x180, 0xD3A160, 0, 0);
     pc_load_asset("assets/int_sum_sofe01/int_sum_sofe01_side_txt.bin", int_sum_sofe01_side_txt, 0x100, 0xD3B080, 0, 0);
-    pc_load_asset("assets/int_sum_sofe01/int_sum_sofe01_backside_txt.bin", int_sum_sofe01_backside_txt, 0x80, 0xD3B180, 0, 0);
+    pc_load_asset("assets/int_sum_sofe01/int_sum_sofe01_backside_txt.bin", int_sum_sofe01_backside_txt, 0x80, 0xD3A5E0, 0, 0);
 }
 #endif

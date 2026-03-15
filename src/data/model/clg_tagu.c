@@ -239,6 +239,6 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_clg_tagu_c(void) {
-    pc_load_asset("assets/clg_tagu/ctl_win_tagu2_tex.bin", ctl_win_tagu2_tex, 0x200, 0x6CFFA0, 0, 0);
+    pc_load_asset("assets/clg_tagu/ctl_win_tagu2_tex.bin", ctl_win_tagu2_tex, 0x200, 0x6C32A0, 0, 0);
 }
 #endif

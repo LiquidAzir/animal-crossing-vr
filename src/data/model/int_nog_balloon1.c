@@ -185,6 +185,6 @@ cKF_Skeleton_R_c cKF_bs_r_int_nog_balloon1 = { ARRAY_COUNT(cKF_je_r_int_nog_ball
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_nog_balloon1_c(void) {
-    pc_load_asset("assets/int_nog_balloon1/tol_balloon1_wire_tex_txt.bin", tol_balloon1_wire_tex_txt, 0x80, 0xBCBD80, 0, 0);
+    pc_load_asset("assets/int_nog_balloon1/tol_balloon1_wire_tex_txt.bin", tol_balloon1_wire_tex_txt, 0x80, 0xBC3B00, 0, 0);
 }
 #endif

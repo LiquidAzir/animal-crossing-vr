@@ -77,6 +77,6 @@ cKF_Skeleton_R_c cKF_bs_r_act_mus_sake_a1 = { ARRAY_COUNT(cKF_je_r_act_mus_sake_
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_mus_sake_a1_c(void) {
-    pc_load_asset("assets/act_mus_sake_a1/int_sum_sake_pal.bin", int_sum_sake_pal, 0x20, 0xD36560, 0, 1);
+    pc_load_asset("assets/act_mus_sake_a1/int_sum_sake_pal.bin", int_sum_sake_pal, 0x20, 0x968B80, 0, 1);
 }
 #endif

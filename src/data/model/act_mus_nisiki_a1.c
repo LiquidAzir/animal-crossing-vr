@@ -75,6 +75,6 @@ cKF_Skeleton_R_c cKF_bs_r_act_mus_nisiki_a1 = { ARRAY_COUNT(cKF_je_r_act_mus_nis
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_mus_nisiki_a1_c(void) {
-    pc_load_asset("assets/act_mus_nisiki_a1/int_sum_nisiki_pal.bin", int_sum_nisiki_pal, 0x20, 0xD0F0C0, 0, 1);
+    pc_load_asset("assets/act_mus_nisiki_a1/int_sum_nisiki_pal.bin", int_sum_nisiki_pal, 0x20, 0x965000, 0, 1);
 }
 #endif

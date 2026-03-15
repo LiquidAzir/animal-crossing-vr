@@ -352,6 +352,6 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_des_win_c(void) {
-    pc_load_asset("assets/des_win/kei_win_quit_tex.bin", kei_win_quit_tex, 0x200, 0x7A1660, 0, 0);
+    pc_load_asset("assets/des_win/kei_win_quit_tex.bin", kei_win_quit_tex, 0x200, 0x6E1840, 0, 0);
 }
 #endif

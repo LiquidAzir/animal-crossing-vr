@@ -446,11 +446,11 @@ Gfx mra_win_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_mra_win_c(void) {
-    pc_load_asset("assets/mra_win/mra_win_w1_tex.bin", mra_win_w1_tex, 0x400, 0x753520, 0, 0);
-    pc_load_asset("assets/mra_win/mra_win_w2_tex.bin", mra_win_w2_tex, 0x400, 0x753920, 0, 0);
-    pc_load_asset("assets/mra_win/mra_win_w3_tex.bin", mra_win_w3_tex, 0x200, 0x753D20, 0, 0);
-    pc_load_asset("assets/mra_win/mra_win_w4_tex.bin", mra_win_w4_tex, 0x400, 0x753F20, 0, 0);
-    pc_load_asset("assets/mra_win/mra_win_w5_tex.bin", mra_win_w5_tex, 0x400, 0x754320, 0, 0);
-    pc_load_asset("assets/mra_win/mra_win_fuki_tex.bin", mra_win_fuki_tex, 0x800, 0x754720, 0, 0);
+    pc_load_asset("assets/mra_win/mra_win_w1_tex.bin", mra_win_w1_tex, 0x400, 0x742200, 0, 0);
+    pc_load_asset("assets/mra_win/mra_win_w2_tex.bin", mra_win_w2_tex, 0x400, 0x742600, 0, 0);
+    pc_load_asset("assets/mra_win/mra_win_w3_tex.bin", mra_win_w3_tex, 0x200, 0x742A00, 0, 0);
+    pc_load_asset("assets/mra_win/mra_win_w4_tex.bin", mra_win_w4_tex, 0x400, 0x742C00, 0, 0);
+    pc_load_asset("assets/mra_win/mra_win_w5_tex.bin", mra_win_w5_tex, 0x400, 0x743000, 0, 0);
+    pc_load_asset("assets/mra_win/mra_win_fuki_tex.bin", mra_win_fuki_tex, 0x800, 0x743400, 0, 0);
 }
 #endif

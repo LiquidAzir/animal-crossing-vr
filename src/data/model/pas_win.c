@@ -397,10 +397,10 @@ Gfx pas_win_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_pas_win_c(void) {
-    pc_load_asset("assets/pas_win/fkm_win_fuki2_tex.bin", fkm_win_fuki2_tex, 0x800, 0x7B5540, 0, 0);
+    pc_load_asset("assets/pas_win/fkm_win_fuki2_tex.bin", fkm_win_fuki2_tex, 0x800, 0x7B1BA0, 0, 0);
     pc_load_asset("assets/pas_win/fkm_win_w4_tex.bin", fkm_win_w4_tex, 0x80, 0x7B6AC0, 0, 0);
     pc_load_asset("assets/pas_win/fkm_win_w3_tex.bin", fkm_win_w3_tex, 0x200, 0x7B6B40, 0, 0);
     pc_load_asset("assets/pas_win/fkm_win_w2_tex.bin", fkm_win_w2_tex, 0x200, 0x7B6D40, 0, 0);
-    pc_load_asset("assets/pas_win/fkm_win_w1_tex.bin", fkm_win_w1_tex, 0x400, 0x7B6F40, 0, 0);
+    pc_load_asset("assets/pas_win/fkm_win_w1_tex.bin", fkm_win_w1_tex, 0x400, 0x7B3120, 0, 0);
 }
 #endif

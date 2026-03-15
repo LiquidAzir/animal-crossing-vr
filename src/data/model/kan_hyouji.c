@@ -35,6 +35,6 @@ Gfx kan_win_cursorT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_kan_hyouji_c(void) {
-    pc_load_asset("assets/kan_hyouji/kan_hyouji_v.bin", kan_hyouji_v, 0x80, 0x78C540, 0, 2);
+    pc_load_asset("assets/kan_hyouji/kan_hyouji_v.bin", kan_hyouji_v, 0x40, 0x78B9A0, 0, 2);
 }
 #endif

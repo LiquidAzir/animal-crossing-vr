@@ -74,8 +74,8 @@ Gfx inv_uki2_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_tol_uki_2_c(void) {
-    pc_load_asset("assets/tol_uki_2/tol_uki_2_v.bin", tol_uki_2_v, 0x180, 0x8DF1C0, 0, 2);
-    pc_load_asset("assets/tol_uki_2/tol_sao_2_pal.bin", tol_sao_2_pal, 0x20, 0x8DF0A0, 0, 1);
-    pc_load_asset("assets/tol_uki_2/tol_sao_2_uki1_tex_txt.bin", tol_sao_2_uki1_tex_txt, 0x100, 0x8DF0C0, 0, 0);
+    pc_load_asset("assets/tol_uki_2/tol_uki_2_v.bin", tol_uki_2_v, 0x180, 0x7217D0, 0, 2);
+    pc_load_asset("assets/tol_uki_2/tol_sao_2_pal.bin", tol_sao_2_pal, 0x20, 0x721950, 0, 1);
+    pc_load_asset("assets/tol_uki_2/tol_sao_2_uki1_tex_txt.bin", tol_sao_2_uki1_tex_txt, 0x100, 0x721970, 0, 0);
 }
 #endif

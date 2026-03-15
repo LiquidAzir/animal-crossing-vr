@@ -767,6 +767,6 @@ extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, i
 void _pc_load_src_data_model_inv_mwin_c(void) {
     pc_load_asset("assets/inv_mwin/inv_mwin_nwaku_tex.bin", inv_mwin_nwaku_tex, 0x400, 0x7982E0, 0, 0);
     pc_load_asset("assets/inv_mwin/inv_mwin_3Dma_tex.bin", inv_mwin_3Dma_tex, 0x800, 0x717820, 0, 0);
-    pc_load_asset("assets/inv_mwin/inv_mwin_aw5_tex.bin", inv_mwin_aw5_tex, 0x80, 0x71EDC0, 0, 0);
+    pc_load_asset("assets/inv_mwin/inv_mwin_aw5_tex.bin", inv_mwin_aw5_tex, 0x80, 0x718C20, 0, 0);
 }
 #endif

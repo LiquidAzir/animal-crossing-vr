@@ -111,6 +111,6 @@ cKF_Skeleton_R_c cKF_bs_r_obj_museum5_kusa1 = { ARRAY_COUNT(cKF_je_r_obj_museum5
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_museum5_kusa1_c(void) {
-    pc_load_asset("assets/obj_museum5_kusa1/obj_museum5_kusa1_tex_txt.bin", obj_museum5_kusa1_tex_txt, 0x400, 0x9733C0, 0, 0);
+    pc_load_asset("assets/obj_museum5_kusa1/obj_museum5_kusa1_tex_txt.bin", obj_museum5_kusa1_tex_txt, 0x400, 0x9723C0, 0, 0);
 }
 #endif

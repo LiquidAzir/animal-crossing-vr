@@ -78,8 +78,8 @@ Gfx act_m_tukutuku2_2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_tukutuku_c(void) {
-    pc_load_asset("assets/act_m_tukutuku/act_m_tukutuku_pal.bin", act_m_tukutuku_pal, 0x20, 0xB56B38, 0, 1);
-    pc_load_asset("assets/act_m_tukutuku/act_m_tukutuku.bin", act_m_tukutuku, 0x200, 0xB56B58, 0, 0);
-    pc_load_asset("assets/act_m_tukutuku/act_m_tukutuku_v.bin", act_m_tukutuku_v, 0x160, 0xB569D8, 0, 2);
+    pc_load_asset("assets/act_m_tukutuku/act_m_tukutuku_pal.bin", act_m_tukutuku_pal, 0x20, 0x5486A0, 0, 1);
+    pc_load_asset("assets/act_m_tukutuku/act_m_tukutuku.bin", act_m_tukutuku, 0x200, 0x5486C0, 0, 0);
+    pc_load_asset("assets/act_m_tukutuku/act_m_tukutuku_v.bin", act_m_tukutuku_v, 0x160, 0x5488C0, 0, 2);
 }
 #endif

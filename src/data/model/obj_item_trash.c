@@ -50,6 +50,6 @@ Gfx obj_trashT_gfx_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_item_trash_c(void) {
-    pc_load_asset("assets/obj_item_trash/obj_item_trash_pal.bin", obj_item_trash_pal, 0x20, 0xBD4080, 0, 1);
+    pc_load_asset("assets/obj_item_trash/obj_item_trash_pal.bin", obj_item_trash_pal, 0x20, 0xB72BC0, 0, 1);
 }
 #endif

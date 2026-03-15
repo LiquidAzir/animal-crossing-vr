@@ -121,7 +121,7 @@ Gfx int_iid_mdiary_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_iid_mdiary_c(void) {
-    pc_load_asset("assets/int_iid_mdiary/int_iid_diary.bin", int_iid_diary, 0x20, 0xAF13A0, 0, 1);
+    pc_load_asset("assets/int_iid_mdiary/int_iid_diary.bin", int_iid_diary, 0x20, 0xAF2280, 0, 1);
     pc_load_asset("assets/int_iid_mdiary/int_iid_diary_esaki_tex.bin", int_iid_diary_esaki_tex, 0x20, 0xAF2500, 0, 0);
 }
 #endif

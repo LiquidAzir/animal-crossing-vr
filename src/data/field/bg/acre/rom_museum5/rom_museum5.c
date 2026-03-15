@@ -391,11 +391,11 @@ extern Gfx rom_museum5_model[] = {
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_field_bg_acre_rom_museum5_rom_museum5_c(void) {
     pc_load_asset("assets/field/bg/rom_museum5_on_pal.bin", rom_museum5_on_pal, 0x20, 0xBA9C00, 0, 1);
-    pc_load_asset("assets/field/bg/rom_museum5_wall_pal.bin", rom_museum5_wall_pal, 0x20, 0xBACAE0, 0, 1);
+    pc_load_asset("assets/field/bg/rom_museum5_wall_pal.bin", rom_museum5_wall_pal, 0x20, 0xBA9C20, 0, 1);
     pc_load_asset("assets/field/bg/rom_museum5_floor_pal.bin", rom_museum5_floor_pal, 0x20, 0xBA9C40, 0, 1);
     pc_load_asset("assets/field/bg/rom_museum5_step_pal.bin", rom_museum5_step_pal, 0x20, 0xBA9C60, 0, 1);
     pc_load_asset("assets/field/bg/rom_museum5_ki_tex.bin", rom_museum5_ki_tex, 0x200, 0xBA9C80, 0, 0);
-    pc_load_asset("assets/field/bg/rom_museum5_wallA_tex.bin", rom_museum5_wallA_tex, 0x800, 0xBACB00, 0, 0);
+    pc_load_asset("assets/field/bg/rom_museum5_wallA_tex.bin", rom_museum5_wallA_tex, 0x800, 0xBA9E80, 0, 0);
     pc_load_asset("assets/field/bg/rom_museum5_floor_tex.bin", rom_museum5_floor_tex, 0x800, 0xBAA680, 0, 0);
     pc_load_asset("assets/field/bg/rom_museum5_step_tex.bin", rom_museum5_step_tex, 0x800, 0xBAAE80, 0, 0);
     pc_load_asset("assets/field/bg/rom_museum5_isi_tex.bin", rom_museum5_isi_tex, 0x200, 0xBAB680, 0, 0);

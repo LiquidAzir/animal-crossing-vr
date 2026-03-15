@@ -101,6 +101,6 @@ Gfx int_sum_popchair01_onT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_sum_popchair01_c(void) {
-    pc_load_asset("assets/int_sum_popchair01/int_sum_poptable01_pal.bin", int_sum_poptable01_pal, 0x20, 0xD27760, 0, 1);
+    pc_load_asset("assets/int_sum_popchair01/int_sum_poptable01_pal.bin", int_sum_poptable01_pal, 0x20, 0xD256C0, 0, 1);
 }
 #endif

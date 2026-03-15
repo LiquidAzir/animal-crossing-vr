@@ -52,7 +52,7 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_shop_utiwa2_c(void) {
-    pc_load_asset("assets/obj_shop_utiwa2/tol_fan2_pal.bin", tol_fan2_pal, 0x20, 0x679280, 0, 1);
-    pc_load_asset("assets/obj_shop_utiwa2/tol_fan2_tex_txt.bin", tol_fan2_tex_txt, 0x400, 0x6792A0, 0, 0);
+    pc_load_asset("assets/obj_shop_utiwa2/tol_fan2_pal.bin", tol_fan2_pal, 0x20, 0x463860, 0, 1);
+    pc_load_asset("assets/obj_shop_utiwa2/tol_fan2_tex_txt.bin", tol_fan2_tex_txt, 0x400, 0x463880, 0, 0);
 }
 #endif

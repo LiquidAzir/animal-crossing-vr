@@ -688,7 +688,7 @@ Gfx clg_mwin2_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_clg_win1_c(void) {
-    pc_load_asset("assets/clg_win1/inv_mwin_3Dma_tex.bin", inv_mwin_3Dma_tex, 0x800, 0x717820, 0, 0);
-    pc_load_asset("assets/clg_win1/fri_win_bell_tex.bin", fri_win_bell_tex, 0x100, 0xB73BE0, 0, 0);
+    pc_load_asset("assets/clg_win1/inv_mwin_3Dma_tex.bin", inv_mwin_3Dma_tex, 0x800, 0x6C53E0, 0, 0);
+    pc_load_asset("assets/clg_win1/fri_win_bell_tex.bin", fri_win_bell_tex, 0x100, 0x6C5BE0, 0, 0);
 }
 #endif

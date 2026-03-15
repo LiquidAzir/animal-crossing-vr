@@ -78,6 +78,6 @@ Gfx int_ari_isu01_00T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_ari_isu01_c(void) {
-    pc_load_asset("assets/int_ari_isu01/int_ari_nagaisu1_pal.bin", int_ari_nagaisu1_pal, 0x20, 0x8E88A0, 0, 1);
+    pc_load_asset("assets/int_ari_isu01/int_ari_nagaisu1_pal.bin", int_ari_nagaisu1_pal, 0x20, 0x8E6780, 0, 1);
 }
 #endif

@@ -346,7 +346,7 @@ extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, i
 void _pc_load_src_data_model_req_win_c(void) {
     pc_load_asset("assets/req_win/req_win_w1_tex.bin", req_win_w1_tex, 0x400, 0x750860, 0, 0);
     pc_load_asset("assets/req_win/req_win_w2_tex.bin", req_win_w2_tex, 0x400, 0x750C60, 0, 0);
-    pc_load_asset("assets/req_win/req_win_w3_tex.bin", req_win_w3_tex, 0x200, 0x751060, 0, 0);
-    pc_load_asset("assets/req_win/req_win_w4_tex.bin", req_win_w4_tex, 0x80, 0x751AE0, 0, 0);
+    pc_load_asset("assets/req_win/req_win_w3_tex.bin", req_win_w3_tex, 0x200, 0x74D460, 0, 0);
+    pc_load_asset("assets/req_win/req_win_w4_tex.bin", req_win_w4_tex, 0x80, 0x74EA60, 0, 0);
 }
 #endif

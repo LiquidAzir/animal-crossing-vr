@@ -465,8 +465,8 @@ Gfx save_win1_w_all_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_sav_win1_c(void) {
-    pc_load_asset("assets/sav_win1/inv_original_futa2_tex.bin", inv_original_futa2_tex, 0x200, 0x79D6E0, 0, 0);
-    pc_load_asset("assets/sav_win1/sav_win_waku_tex.bin", sav_win_waku_tex, 0x200, 0x79D4E0, 0, 0);
+    pc_load_asset("assets/sav_win1/inv_original_futa2_tex.bin", inv_original_futa2_tex, 0x200, 0x6CD2A0, 0, 0);
+    pc_load_asset("assets/sav_win1/sav_win_waku_tex.bin", sav_win_waku_tex, 0x200, 0x6CDDA0, 0, 0);
     pc_load_asset("assets/sav_win1/ctl_win_tagu2_tex.bin", ctl_win_tagu2_tex, 0x200, 0x6CFFA0, 0, 0);
     pc_load_asset("assets/sav_win1/ctl_win_waku1_tex.bin", ctl_win_waku1_tex, 0x800, 0x6D01A0, 0, 0);
     pc_load_asset("assets/sav_win1/ctl_win_waku2_tex.bin", ctl_win_waku2_tex, 0x800, 0x6D09A0, 0, 0);

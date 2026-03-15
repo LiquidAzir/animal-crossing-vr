@@ -61,8 +61,8 @@ Gfx act_m_tamamushi2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_tamamushi_c(void) {
-    pc_load_asset("assets/act_m_tamamushi/act_m_tamamushi_pal.bin", act_m_tamamushi_pal, 0x20, 0xB55D38, 0, 1);
-    pc_load_asset("assets/act_m_tamamushi/act_m_tamamushi.bin", act_m_tamamushi, 0x200, 0xB55D58, 0, 0);
-    pc_load_asset("assets/act_m_tamamushi/act_m_tamamushi_v.bin", act_m_tamamushi_v, 0xC0, 0xB55C78, 0, 2);
+    pc_load_asset("assets/act_m_tamamushi/act_m_tamamushi_pal.bin", act_m_tamamushi_pal, 0x20, 0x547B20, 0, 1);
+    pc_load_asset("assets/act_m_tamamushi/act_m_tamamushi.bin", act_m_tamamushi, 0x200, 0x547B40, 0, 0);
+    pc_load_asset("assets/act_m_tamamushi/act_m_tamamushi_v.bin", act_m_tamamushi_v, 0xC0, 0x547D40, 0, 2);
 }
 #endif

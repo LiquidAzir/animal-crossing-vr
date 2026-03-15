@@ -65,8 +65,8 @@ Gfx act_m_tentou2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_tentou_c(void) {
-    pc_load_asset("assets/act_m_tentou/act_m_tentou_pal.bin", act_m_tentou_pal, 0x20, 0xB561F0, 0, 1);
-    pc_load_asset("assets/act_m_tentou/act_m_tentou.bin", act_m_tentou, 0x100, 0xB56210, 0, 0);
-    pc_load_asset("assets/act_m_tentou/act_m_tentou_v.bin", act_m_tentou_v, 0x1D0, 0xB56020, 0, 2);
+    pc_load_asset("assets/act_m_tentou/act_m_tentou_pal.bin", act_m_tentou_pal, 0x20, 0x547EC0, 0, 1);
+    pc_load_asset("assets/act_m_tentou/act_m_tentou.bin", act_m_tentou, 0x100, 0x547EE0, 0, 0);
+    pc_load_asset("assets/act_m_tentou/act_m_tentou_v.bin", act_m_tentou_v, 0x1D0, 0x547FE0, 0, 2);
 }
 #endif

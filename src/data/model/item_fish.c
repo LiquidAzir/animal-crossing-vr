@@ -61,7 +61,7 @@ Gfx item_fish_modelT[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_item_fish_c(void) {
-    pc_load_asset("assets/item_fish/obj_item_fish_pal.bin", obj_item_fish_pal, 0x20, 0xB6F260, 0, 1);
-    pc_load_asset("assets/item_fish/obj_item_fish_tex.bin", obj_item_fish_tex, 0x200, 0xB6F280, 0, 0);
+    pc_load_asset("assets/item_fish/obj_item_fish_pal.bin", obj_item_fish_pal, 0x20, 0x66BCF8, 0, 1);
+    pc_load_asset("assets/item_fish/obj_item_fish_tex.bin", obj_item_fish_tex, 0x200, 0x66BD18, 0, 0);
 }
 #endif

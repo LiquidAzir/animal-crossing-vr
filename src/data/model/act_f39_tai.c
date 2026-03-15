@@ -94,6 +94,6 @@ Gfx act_f39_tai_cT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_f39_tai_c(void) {
-    pc_load_asset("assets/act_f39_tai/int_nog_tai_pal.bin", int_nog_tai_pal, 0x20, 0xBFA1A0, 0, 1);
+    pc_load_asset("assets/act_f39_tai/int_nog_tai_pal.bin", int_nog_tai_pal, 0x20, 0x521EC0, 0, 1);
 }
 #endif

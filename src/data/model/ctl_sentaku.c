@@ -37,6 +37,6 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_ctl_sentaku_c(void) {
-    pc_load_asset("assets/ctl_sentaku/ctl_win_tagu3_tex.bin", ctl_win_tagu3_tex, 0x200, 0x6CCF60, 0, 0);
+    pc_load_asset("assets/ctl_sentaku/ctl_win_tagu3_tex.bin", ctl_win_tagu3_tex, 0x200, 0x69DD60, 0, 0);
 }
 #endif

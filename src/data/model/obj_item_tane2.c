@@ -50,8 +50,8 @@ Gfx seed_DL_vtx[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_item_tane2_c(void) {
-    pc_load_asset("assets/obj_item_tane2/obj_item_tane_pal.bin", obj_item_tane_pal, 0x20, 0xB72400, 0, 1);
-    pc_load_asset("assets/obj_item_tane2/obj_item_tane_tex.bin", obj_item_tane_tex, 0x80, 0xB72420, 0, 0);
-    pc_load_asset("assets/obj_item_tane2/obj_item_tane_v.bin", obj_item_tane_v, 0x40, 0xB724A0, 0, 2);
+    pc_load_asset("assets/obj_item_tane2/obj_item_tane_pal.bin", obj_item_tane_pal, 0x20, 0x3ECA40, 0, 1);
+    pc_load_asset("assets/obj_item_tane2/obj_item_tane_tex.bin", obj_item_tane_tex, 0x80, 0x3ECA60, 0, 0);
+    pc_load_asset("assets/obj_item_tane2/obj_item_tane_v.bin", obj_item_tane_v, 0x40, 0x3ECAE0, 0, 2);
 }
 #endif

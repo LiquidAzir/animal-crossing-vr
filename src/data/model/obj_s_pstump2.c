@@ -36,6 +36,6 @@ Gfx obj_s_pstump2T_gfx_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_s_pstump2_c(void) {
-    pc_load_asset("assets/obj_s_pstump2/obj_s_palm_young_tex.bin", obj_s_palm_young_tex, 0x800, 0x3E9600, 0, 0);
+    pc_load_asset("assets/obj_s_pstump2/obj_s_palm_young_tex.bin", obj_s_palm_young_tex, 0x800, 0x3E8D40, 0, 0);
 }
 #endif

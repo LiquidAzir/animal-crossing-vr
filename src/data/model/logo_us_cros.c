@@ -127,7 +127,7 @@ cKF_Skeleton_R_c cKF_bs_r_logo_us_cros = { ARRAY_COUNT(cKF_je_r_logo_us_cros_tbl
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_logo_us_cros_c(void) {
-    pc_load_asset("assets/logo_us_cros/logo_us_pal.bin", logo_us_pal, 0x20, 0x8CEAA0, 0, 1);
-    pc_load_asset("assets/logo_us_cros/logo_us_s_tex_txt.bin", logo_us_s_tex_txt, 0x600, 0x8D04C0, 0, 0);
+    pc_load_asset("assets/logo_us_cros/logo_us_pal.bin", logo_us_pal, 0x20, 0x8CBE80, 0, 1);
+    pc_load_asset("assets/logo_us_cros/logo_us_s_tex_txt.bin", logo_us_s_tex_txt, 0x600, 0x8CBEA0, 0, 0);
 }
 #endif

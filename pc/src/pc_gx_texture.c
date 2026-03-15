@@ -6,6 +6,15 @@
 
 static int pc_gx_tlut_force_be(void);
 static void decode_rgb5a3_entry(u16 val, u8* r, u8* g, u8* b, u8* a);
+static u32 tlut_content_hash(const void* data, int tlut_fmt, int n_entries, int is_be);
+
+/* --- TLUT stale-data detection ---
+ * On GC, gsDPLoadTLUT_Dolphin always re-DMA'd palette data from memory.
+ * emu64 optimizes by skipping reload when the TLUT address hasn't changed.
+ * On PC, the game reuses memory buffers — same address can hold different
+ * palette data (e.g., different NPC clothing). We track the first u16 of
+ * each TLUT slot to detect content changes and force reloads. */
+u16 s_tlut_first_word[16];
 
 /* --- texture cache --- */
 #define TEX_CACHE_SIZE 2048

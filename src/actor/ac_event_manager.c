@@ -4457,10 +4457,18 @@ static int set_today_event(void) {
 
 typedef union {
     struct {
+#ifdef TARGET_PC
+        /* LE: swap so raw = (year << 24) | (month << 16) | (day << 8) | hour */
+        u8 hour;
+        u8 day;
+        u8 month;
+        u8 year;
+#else
         u8 year;
         u8 month;
         u8 day;
         u8 hour;
+#endif
     };
     u32 raw;
 } ymdh;

@@ -68,8 +68,14 @@ enum {
 
 typedef union event_monthday_s {
     struct {
+#ifdef TARGET_PC
+        /* LE: swap so raw/u16 = (month << 8) | day for correct date ordering */
+        u8 day;
+        u8 month;
+#else
         u8 month;
         u8 day;
+#endif
     };
     u16 raw;
 } mEv_MonthDay_u;
@@ -84,10 +90,18 @@ typedef struct event_today_s {
 } mEv_event_today_c;
 
 typedef struct event_date_s {
+#ifdef TARGET_PC
+    /* LE: swap so u16 md = (month << 8) | day for correct date ordering */
+    u8 day;
+    u8 month;
+    u8 hour;
+    u8 _2;
+#else
     u8 month;
     u8 day;
     u8 _2;
     u8 hour;
+#endif
 } mEv_schedule_date_c;
 
 typedef union {

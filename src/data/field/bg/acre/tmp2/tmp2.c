@@ -179,7 +179,7 @@ void _pc_load_src_data_field_bg_acre_tmp2_tmp2_c(void) {
     pc_load_asset("assets/field/bg/grd_s_earth_pal.bin", grd_s_earth_pal, 0x20, 0x8FA728, 0, 1);
     pc_load_asset("assets/field/bg/grd_s_cliff_tex.bin", grd_s_cliff_tex, 0x800, 0x8FA748, 0, 0);
     pc_load_asset("assets/field/bg/grd_s_earth_tex.bin", grd_s_earth_tex, 0x800, 0x8FAF48, 0, 0);
-    pc_load_asset("assets/field/bg/grd_s_grass_tex.bin", grd_s_grass_tex, 0x200, 0x8FD2D8, 0, 0);
+    pc_load_asset("assets/field/bg/grd_s_grass_tex.bin", grd_s_grass_tex, 0x200, 0x8FB748, 0, 0);
     pc_load_asset("assets/field/bg/tmp2_v.bin", tmp2_v, 0xEC0, 0x8FB948, 0, 2);
 }
 #endif

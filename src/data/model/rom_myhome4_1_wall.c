@@ -186,8 +186,8 @@ Gfx rom_myhome4_1_wall_new2_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_rom_myhome4_1_wall_c(void) {
-    pc_load_asset("assets/rom_myhome4_1_wall/rom_myhome_pal.bin", rom_myhome_pal, 0x20, 0xBB86C0, 0, 1);
-    pc_load_asset("assets/rom_myhome4_1_wall/rom_myhome_window_tex.bin", rom_myhome_window_tex, 0x200, 0x59D7A0, 0, 0);
-    pc_load_asset("assets/rom_myhome4_1_wall/rom_myhome_enter2_tex.bin", rom_myhome_enter2_tex, 0x800, 0x59F5C0, 0, 0);
+    pc_load_asset("assets/rom_myhome4_1_wall/rom_myhome_pal.bin", rom_myhome_pal, 0x20, 0x594E40, 0, 1);
+    pc_load_asset("assets/rom_myhome4_1_wall/rom_myhome_window_tex.bin", rom_myhome_window_tex, 0x200, 0x594E60, 0, 0);
+    pc_load_asset("assets/rom_myhome4_1_wall/rom_myhome_enter2_tex.bin", rom_myhome_enter2_tex, 0x800, 0x595060, 0, 0);
 }
 #endif

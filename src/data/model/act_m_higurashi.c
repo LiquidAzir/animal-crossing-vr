@@ -78,8 +78,8 @@ Gfx act_m_higurashi2_2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_higurashi_c(void) {
-    pc_load_asset("assets/act_m_higurashi/act_m_higurashi_pal.bin", act_m_higurashi_pal, 0x20, 0xB4BDF8, 0, 1);
-    pc_load_asset("assets/act_m_higurashi/act_m_higurashi.bin", act_m_higurashi, 0x200, 0xB4BE18, 0, 0);
-    pc_load_asset("assets/act_m_higurashi/act_m_higurashi_v.bin", act_m_higurashi_v, 0x160, 0xB4BC98, 0, 2);
+    pc_load_asset("assets/act_m_higurashi/act_m_higurashi_pal.bin", act_m_higurashi_pal, 0x20, 0x541440, 0, 1);
+    pc_load_asset("assets/act_m_higurashi/act_m_higurashi.bin", act_m_higurashi, 0x200, 0x541460, 0, 0);
+    pc_load_asset("assets/act_m_higurashi/act_m_higurashi_v.bin", act_m_higurashi_v, 0x160, 0x541660, 0, 2);
 }
 #endif

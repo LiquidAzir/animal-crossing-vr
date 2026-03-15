@@ -115,6 +115,6 @@ Gfx int_din_trikera_bodyT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_din_trikera_body_c(void) {
-    pc_load_asset("assets/int_din_trikera_body/int_din_trikera_pal.bin", int_din_trikera_pal, 0x20, 0x91EAC0, 0, 1);
+    pc_load_asset("assets/int_din_trikera_body/int_din_trikera_pal.bin", int_din_trikera_pal, 0x20, 0x91CE20, 0, 1);
 }
 #endif

@@ -46,8 +46,8 @@ Gfx act_m_ariT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_ari_c(void) {
-    pc_load_asset("assets/act_m_ari/act_m_ari_pal.bin", act_m_ari_pal, 0x20, 0xB49C78, 0, 1);
-    pc_load_asset("assets/act_m_ari/act_m_ari_tex.bin", act_m_ari_tex, 0x100, 0xB49C98, 0, 0);
-    pc_load_asset("assets/act_m_ari/act_m_ari_v.bin", act_m_ari_v, 0x60, 0xB49C18, 0, 2);
+    pc_load_asset("assets/act_m_ari/act_m_ari_pal.bin", act_m_ari_pal, 0x20, 0x53FFC0, 0, 1);
+    pc_load_asset("assets/act_m_ari/act_m_ari_tex.bin", act_m_ari_tex, 0x100, 0x53FFE0, 0, 0);
+    pc_load_asset("assets/act_m_ari/act_m_ari_v.bin", act_m_ari_v, 0x60, 0x5400E0, 0, 2);
 }
 #endif

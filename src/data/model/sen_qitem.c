@@ -175,9 +175,9 @@ Gfx sen_qitem_yajirushi6T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_sen_qitem_c(void) {
-    pc_load_asset("assets/sen_qitem/sen_win_yaji2_tex.bin", sen_win_yaji2_tex, 0x100, 0x7BE160, 0, 0);
+    pc_load_asset("assets/sen_qitem/sen_win_yaji2_tex.bin", sen_win_yaji2_tex, 0x100, 0x7BA0C0, 0, 0);
     pc_load_asset("assets/sen_qitem/sen_itemw_yaji2_tex.bin", sen_itemw_yaji2_tex, 0x100, 0x7BA9C0, 0, 0);
     pc_load_asset("assets/sen_qitem/sen_itemw_yaji_tex.bin", sen_itemw_yaji_tex, 0x80, 0x7BAC40, 0, 0);
-    pc_load_asset("assets/sen_qitem/sen_item2_yaji_tex.bin", sen_item2_yaji_tex, 0x80, 0x7BE260, 0, 0);
+    pc_load_asset("assets/sen_qitem/sen_item2_yaji_tex.bin", sen_item2_yaji_tex, 0x80, 0x7BACC0, 0, 0);
 }
 #endif

@@ -62,8 +62,8 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_dia_win2_c(void) {
-    pc_load_asset("assets/dia_win2/lat_letter01_pal.bin", lat_letter01_pal, 0x20, 0x763C00, 0, 1);
-    pc_load_asset("assets/dia_win2/lat_letter01_04_tex.bin", lat_letter01_04_tex, 0x80, 0x7649C0, 0, 0);
-    pc_load_asset("assets/dia_win2/lat_tegami_fusen_tex.bin", lat_tegami_fusen_tex, 0x80, 0x764A40, 0, 0);
+    pc_load_asset("assets/dia_win2/lat_letter01_pal.bin", lat_letter01_pal, 0x20, 0x6E7EE0, 0, 1);
+    pc_load_asset("assets/dia_win2/lat_letter01_04_tex.bin", lat_letter01_04_tex, 0x80, 0x6E7F00, 0, 0);
+    pc_load_asset("assets/dia_win2/lat_tegami_fusen_tex.bin", lat_tegami_fusen_tex, 0x80, 0x6E7F80, 0, 0);
 }
 #endif

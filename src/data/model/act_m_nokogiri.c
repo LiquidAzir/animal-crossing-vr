@@ -61,8 +61,8 @@ Gfx act_m_nokogiri2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_nokogiri_c(void) {
-    pc_load_asset("assets/act_m_nokogiri/act_m_nokogiri_pal.bin", act_m_nokogiri_pal, 0x20, 0xB52568, 0, 1);
-    pc_load_asset("assets/act_m_nokogiri/act_m_nokogiri.bin", act_m_nokogiri, 0x200, 0xB52588, 0, 0);
-    pc_load_asset("assets/act_m_nokogiri/act_m_nokogiri_v.bin", act_m_nokogiri_v, 0xC0, 0xB524A8, 0, 2);
+    pc_load_asset("assets/act_m_nokogiri/act_m_nokogiri_pal.bin", act_m_nokogiri_pal, 0x20, 0x546100, 0, 1);
+    pc_load_asset("assets/act_m_nokogiri/act_m_nokogiri.bin", act_m_nokogiri, 0x200, 0x546120, 0, 0);
+    pc_load_asset("assets/act_m_nokogiri/act_m_nokogiri_v.bin", act_m_nokogiri_v, 0xC0, 0x546320, 0, 2);
 }
 #endif

@@ -472,7 +472,7 @@ Gfx hni_win_modelT[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_hni_win_c(void) {
-    pc_load_asset("assets/hni_win/inv_mwin_nwaku_tex.bin", inv_mwin_nwaku_tex, 0x400, 0x7982E0, 0, 0);
-    pc_load_asset("assets/hni_win/inv_mwin_3Dma_tex.bin", inv_mwin_3Dma_tex, 0x800, 0x717820, 0, 0);
+    pc_load_asset("assets/hni_win/inv_mwin_nwaku_tex.bin", inv_mwin_nwaku_tex, 0x400, 0x70A840, 0, 0);
+    pc_load_asset("assets/hni_win/inv_mwin_3Dma_tex.bin", inv_mwin_3Dma_tex, 0x800, 0x70E340, 0, 0);
 }
 #endif

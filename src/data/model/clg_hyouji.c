@@ -78,6 +78,6 @@ Gfx clg_win_cbT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_clg_hyouji_c(void) {
-    pc_load_asset("assets/clg_hyouji/yaji.bin", yaji, 0x80, 0xB5C980, 0, 0);
+    pc_load_asset("assets/clg_hyouji/yaji.bin", yaji, 0x80, 0x6C2BA0, 0, 0);
 }
 #endif

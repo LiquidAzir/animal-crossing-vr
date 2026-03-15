@@ -84,6 +84,6 @@ Gfx int_tak_cone01_onT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_tak_cone01_c(void) {
-    pc_load_asset("assets/int_tak_cone01/int_tak_cone02_asi_tex_pal.bin", int_tak_cone02_asi_tex_pal, 0x20, 0xD6F240, 0, 1);
+    pc_load_asset("assets/int_tak_cone01/int_tak_cone02_asi_tex_pal.bin", int_tak_cone02_asi_tex_pal, 0x20, 0xD6ED20, 0, 1);
 }
 #endif

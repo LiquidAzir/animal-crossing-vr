@@ -47,8 +47,8 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_kera_c(void) {
-    pc_load_asset("assets/act_m_kera/act_m_kera_pal.bin", act_m_kera_pal, 0x20, 0xB4E3B0, 0, 1);
-    pc_load_asset("assets/act_m_kera/act_m_kera_tex.bin", act_m_kera_tex, 0x100, 0xB4E3D0, 0, 0);
-    pc_load_asset("assets/act_m_kera/act_m_kera_v.bin", act_m_kera_v, 0x60, 0xB4E350, 0, 2);
+    pc_load_asset("assets/act_m_kera/act_m_kera_pal.bin", act_m_kera_pal, 0x20, 0x543140, 0, 1);
+    pc_load_asset("assets/act_m_kera/act_m_kera_tex.bin", act_m_kera_tex, 0x100, 0x543160, 0, 0);
+    pc_load_asset("assets/act_m_kera/act_m_kera_v.bin", act_m_kera_v, 0x60, 0x543260, 0, 2);
 }
 #endif

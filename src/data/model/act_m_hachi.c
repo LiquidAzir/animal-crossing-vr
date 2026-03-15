@@ -78,8 +78,8 @@ Gfx act_m_hachi2_2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_hachi_c(void) {
-    pc_load_asset("assets/act_m_hachi/act_m_hachi_pal.bin", act_m_hachi_pal, 0x20, 0xB4B820, 0, 1);
-    pc_load_asset("assets/act_m_hachi/act_m_hachi.bin", act_m_hachi, 0x200, 0xB4B840, 0, 0);
-    pc_load_asset("assets/act_m_hachi/act_m_hachi_v.bin", act_m_hachi_v, 0x160, 0xB4B6C0, 0, 2);
+    pc_load_asset("assets/act_m_hachi/act_m_hachi_pal.bin", act_m_hachi_pal, 0x20, 0x543D80, 0, 1);
+    pc_load_asset("assets/act_m_hachi/act_m_hachi.bin", act_m_hachi, 0x200, 0x543DA0, 0, 0);
+    pc_load_asset("assets/act_m_hachi/act_m_hachi_v.bin", act_m_hachi_v, 0x160, 0x543FA0, 0, 2);
 }
 #endif

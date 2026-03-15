@@ -62,8 +62,8 @@ Gfx act_m_tonosama2_2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_tonosama_c(void) {
-    pc_load_asset("assets/act_m_tonosama/act_m_tonosama_pal.bin", act_m_tonosama_pal, 0x20, 0xB56620, 0, 1);
-    pc_load_asset("assets/act_m_tonosama/act_m_tonosama.bin", act_m_tonosama, 0x200, 0xB56640, 0, 0);
-    pc_load_asset("assets/act_m_tonosama/act_m_tonosama_v.bin", act_m_tonosama_v, 0x120, 0xB56500, 0, 2);
+    pc_load_asset("assets/act_m_tonosama/act_m_tonosama_pal.bin", act_m_tonosama_pal, 0x20, 0x5482A0, 0, 1);
+    pc_load_asset("assets/act_m_tonosama/act_m_tonosama.bin", act_m_tonosama, 0x200, 0x5482C0, 0, 0);
+    pc_load_asset("assets/act_m_tonosama/act_m_tonosama_v.bin", act_m_tonosama_v, 0x120, 0x5484C0, 0, 2);
 }
 #endif

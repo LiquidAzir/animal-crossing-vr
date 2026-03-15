@@ -65,7 +65,7 @@ Gfx obj_s_palm5_leafT_gfx_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_s_palm5_c(void) {
-    pc_load_asset("assets/obj_s_palm5/obj_s_palm_leaf_tex.bin", obj_s_palm_leaf_tex, 0x800, 0x3E7860, 0, 0);
-    pc_load_asset("assets/obj_s_palm5/obj_s_palm_trunk_tex.bin", obj_s_palm_trunk_tex, 0x800, 0x3E8060, 0, 0);
+    pc_load_asset("assets/obj_s_palm5/obj_s_palm_leaf_tex.bin", obj_s_palm_leaf_tex, 0x800, 0x3E6560, 0, 0);
+    pc_load_asset("assets/obj_s_palm5/obj_s_palm_trunk_tex.bin", obj_s_palm_trunk_tex, 0x800, 0x3E6D60, 0, 0);
 }
 #endif

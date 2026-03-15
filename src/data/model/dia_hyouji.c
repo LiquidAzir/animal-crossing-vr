@@ -132,6 +132,6 @@ void _pc_load_src_data_model_dia_hyouji_c(void) {
     pc_load_asset("assets/dia_hyouji/kei_win_quit_tex.bin", kei_win_quit_tex, 0x200, 0x7A1660, 0, 0);
     pc_load_asset("assets/dia_hyouji/lat_tegami_b2_tex.bin", lat_tegami_b2_tex, 0x800, 0x7A8CE0, 0, 0);
     pc_load_asset("assets/dia_hyouji/lat_tegami_b3_tex.bin", lat_tegami_b3_tex, 0x800, 0x7A94E0, 0, 0);
-    pc_load_asset("assets/dia_hyouji/kei_win_2b1_tex_rgb_i4.bin", kei_win_2b1_tex_rgb_i4, 0x200, 0x7A9CE0, 0, 0);
+    pc_load_asset("assets/dia_hyouji/kei_win_2b1_tex_rgb_i4.bin", kei_win_2b1_tex_rgb_i4, 0x200, 0x6E45E0, 0, 0);
 }
 #endif

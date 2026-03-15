@@ -50,8 +50,8 @@ Gfx kabu_DL_vtx[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_item_kabu2_c(void) {
-    pc_load_asset("assets/obj_item_kabu2/obj_item_kabu_pal.bin", obj_item_kabu_pal, 0x20, 0xB6FD80, 0, 1);
-    pc_load_asset("assets/obj_item_kabu2/obj_item_kabu_tex.bin", obj_item_kabu_tex, 0x200, 0xB6FDA0, 0, 0);
-    pc_load_asset("assets/obj_item_kabu2/obj_item_kabu_v.bin", obj_item_kabu_v, 0x40, 0xB6FFA0, 0, 2);
+    pc_load_asset("assets/obj_item_kabu2/obj_item_kabu_pal.bin", obj_item_kabu_pal, 0x20, 0x66C9A0, 0, 1);
+    pc_load_asset("assets/obj_item_kabu2/obj_item_kabu_tex.bin", obj_item_kabu_tex, 0x200, 0x66C9C0, 0, 0);
+    pc_load_asset("assets/obj_item_kabu2/obj_item_kabu_v.bin", obj_item_kabu_v, 0x40, 0x66CBC0, 0, 2);
 }
 #endif

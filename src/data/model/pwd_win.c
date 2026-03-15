@@ -397,6 +397,6 @@ Gfx pwd_win_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_pwd_win_c(void) {
-    pc_load_asset("assets/pwd_win/fkm_win_fuki2_tex.bin", fkm_win_fuki2_tex, 0x800, 0x7B5540, 0, 0);
+    pc_load_asset("assets/pwd_win/fkm_win_fuki2_tex.bin", fkm_win_fuki2_tex, 0x800, 0x7AD9C0, 0, 0);
 }
 #endif

@@ -33,6 +33,6 @@ Gfx lat_hani_senT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_lat_hani_c(void) {
-    pc_load_asset("assets/lat_hani/lat_fusen_TXT.bin", lat_fusen_TXT, 0x80, 0x704350, 0, 0);
+    pc_load_asset("assets/lat_hani/lat_fusen_TXT.bin", lat_fusen_TXT, 0x80, 0x69DAC0, 0, 0);
 }
 #endif

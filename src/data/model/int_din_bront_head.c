@@ -111,6 +111,6 @@ Gfx int_din_bront_headT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_din_bront_head_c(void) {
-    pc_load_asset("assets/int_din_bront_head/int_din_bront_pal.bin", int_din_bront_pal, 0x20, 0x90F460, 0, 1);
+    pc_load_asset("assets/int_din_bront_head/int_din_bront_pal.bin", int_din_bront_pal, 0x20, 0x90E860, 0, 1);
 }
 #endif

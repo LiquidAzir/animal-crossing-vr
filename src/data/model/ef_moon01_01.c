@@ -53,6 +53,6 @@ Gfx ef_moon01_01_modelT[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_ef_moon01_01_c(void) {
-    pc_load_asset("assets/ef_moon01_01/ef_moon01_1_int_i4.bin", ef_moon01_1_int_i4, 0x200, 0x94A900, 0, 0);
+    pc_load_asset("assets/ef_moon01_01/ef_moon01_1_int_i4.bin", ef_moon01_1_int_i4, 0x200, 0x949620, 0, 0);
 }
 #endif

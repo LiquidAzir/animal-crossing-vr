@@ -94,6 +94,6 @@ Gfx act_f33_medaka_cT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_f33_medaka_c(void) {
-    pc_load_asset("assets/act_f33_medaka/int_nog_medaka_pal.bin", int_nog_medaka_pal, 0x20, 0xBE52A0, 0, 1);
+    pc_load_asset("assets/act_f33_medaka/int_nog_medaka_pal.bin", int_nog_medaka_pal, 0x20, 0x51CD20, 0, 1);
 }
 #endif

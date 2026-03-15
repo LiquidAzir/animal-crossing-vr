@@ -140,6 +140,6 @@ Gfx int_sum_golfbag01_on_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_sum_golfbag01_c(void) {
-    pc_load_asset("assets/int_sum_golfbag01/int_sum_golfbag_pal.bin", int_sum_golfbag_pal, 0x20, 0xCC7C00, 0, 1);
+    pc_load_asset("assets/int_sum_golfbag01/int_sum_golfbag_pal.bin", int_sum_golfbag_pal, 0x20, 0xCC6C60, 0, 1);
 }
 #endif

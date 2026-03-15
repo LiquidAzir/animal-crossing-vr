@@ -111,6 +111,6 @@ Gfx act_f37_kurage_cT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_f37_kurage_c(void) {
-    pc_load_asset("assets/act_f37_kurage/act_f37_kurage_pal.bin", act_f37_kurage_pal, 0x20, 0x9625A0, 0, 1);
+    pc_load_asset("assets/act_f37_kurage/act_f37_kurage_pal.bin", act_f37_kurage_pal, 0x20, 0x51C700, 0, 1);
 }
 #endif

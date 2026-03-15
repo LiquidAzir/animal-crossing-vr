@@ -187,6 +187,6 @@ extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, i
 void _pc_load_src_data_model_logo_us_animal_c(void) {
     pc_load_asset("assets/logo_us_animal/logo_us_pal.bin", logo_us_pal, 0x20, 0x8CEAA0, 0, 1);
     pc_load_asset("assets/logo_us_animal/logo_us_i_tex_txt.bin", logo_us_i_tex_txt, 0x600, 0x8CFEC0, 0, 0);
-    pc_load_asset("assets/logo_us_animal/logo_us_n_tex_txt.bin", logo_us_n_tex_txt, 0x800, 0x8CF6C0, 0, 0);
+    pc_load_asset("assets/logo_us_animal/logo_us_n_tex_txt.bin", logo_us_n_tex_txt, 0x800, 0x8C5D80, 0, 0);
 }
 #endif

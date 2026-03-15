@@ -499,14 +499,14 @@ void _pc_load_src_data_model_inv_mushi_c(void) {
     pc_load_asset("assets/inv_mushi/inv_mushi_aw1_tex.bin", inv_mushi_aw1_tex, 0x200, 0x71CBC0, 0, 0);
     pc_load_asset("assets/inv_mushi/inv_mushi_aw2_tex.bin", inv_mushi_aw2_tex, 0x400, 0x71CDC0, 0, 0);
     pc_load_asset("assets/inv_mushi/inv_mushi_aw3_tex.bin", inv_mushi_aw3_tex, 0x400, 0x71D1C0, 0, 0);
-    pc_load_asset("assets/inv_mushi/inv_mushi_aw4_tex.bin", inv_mushi_aw4_tex, 0x200, 0x71D5C0, 0, 0);
-    pc_load_asset("assets/inv_mushi/inv_mushi_aw7_tex.bin", inv_mushi_aw7_tex, 0x400, 0x71DFC0, 0, 0);
+    pc_load_asset("assets/inv_mushi/inv_mushi_aw4_tex.bin", inv_mushi_aw4_tex, 0x200, 0x712800, 0, 0);
+    pc_load_asset("assets/inv_mushi/inv_mushi_aw7_tex.bin", inv_mushi_aw7_tex, 0x400, 0x713200, 0, 0);
     pc_load_asset("assets/inv_mushi/inv_mushi_w5_tex_rgb_ci4.bin", inv_mushi_w5_tex_rgb_ci4, 0x80, 0x71EE40, 0, 0);
     pc_load_asset("assets/inv_mushi/inv_mushi_w1_tex_rgb_ci4.bin", inv_mushi_w1_tex_rgb_ci4, 0x200, 0x71F0C0, 0, 0);
     pc_load_asset("assets/inv_mushi/inv_mushi_w2_tex_rgb_ci4.bin", inv_mushi_w2_tex_rgb_ci4, 0x400, 0x71F2C0, 0, 0);
     pc_load_asset("assets/inv_mushi/inv_mushi_w3_tex_rgb_ci4.bin", inv_mushi_w3_tex_rgb_ci4, 0x400, 0x71F6C0, 0, 0);
     pc_load_asset("assets/inv_mushi/inv_mushi_w4_tex_rgb_ci4.bin", inv_mushi_w4_tex_rgb_ci4, 0x200, 0x71FAC0, 0, 0);
     pc_load_asset("assets/inv_mushi/inv_mushi_w6_tex_rgb_ci4.bin", inv_mushi_w6_tex_rgb_ci4, 0x400, 0x71FCC0, 0, 0);
-    pc_load_asset("assets/inv_mushi/inv_mushi_w7_tex_rgb_ci4.bin", inv_mushi_w7_tex_rgb_ci4, 0x400, 0x7200C0, 0, 0);
+    pc_load_asset("assets/inv_mushi/inv_mushi_w7_tex_rgb_ci4.bin", inv_mushi_w7_tex_rgb_ci4, 0x400, 0x714B80, 0, 0);
 }
 #endif

@@ -61,8 +61,8 @@ Gfx act_m_monki2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_monki_c(void) {
-    pc_load_asset("assets/act_m_monki/act_m_monki_pal.bin", act_m_monki_pal, 0x20, 0xB51AA8, 0, 1);
-    pc_load_asset("assets/act_m_monki/act_m_monki.bin", act_m_monki, 0x80, 0xB51AC8, 0, 0);
-    pc_load_asset("assets/act_m_monki/act_m_monki_v.bin", act_m_monki_v, 0xC0, 0xB519E8, 0, 2);
+    pc_load_asset("assets/act_m_monki/act_m_monki_pal.bin", act_m_monki_pal, 0x20, 0x5458E0, 0, 1);
+    pc_load_asset("assets/act_m_monki/act_m_monki.bin", act_m_monki, 0x80, 0x545900, 0, 0);
+    pc_load_asset("assets/act_m_monki/act_m_monki_v.bin", act_m_monki_v, 0xC0, 0x545980, 0, 2);
 }
 #endif

@@ -169,8 +169,8 @@ Gfx cal_hyoji_yajiB_gfx[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_cal_hyouji_c(void) {
-    pc_load_asset("assets/cal_hyouji/lat_sousa_2b1_tex.bin", lat_sousa_2b1_tex, 0x200, 0x6ACF00, 0, 0);
-    pc_load_asset("assets/cal_hyouji/std_tex.bin", std_tex, 0x800, 0x7A2060, 0, 0);
+    pc_load_asset("assets/cal_hyouji/lat_sousa_2b1_tex.bin", lat_sousa_2b1_tex, 0x200, 0x6A8940, 0, 0);
+    pc_load_asset("assets/cal_hyouji/std_tex.bin", std_tex, 0x800, 0x6A8F40, 0, 0);
     pc_load_asset("assets/cal_hyouji/lat_tegami_b3_tex.bin", lat_tegami_b3_tex, 0x800, 0x7A94E0, 0, 0);
 }
 #endif

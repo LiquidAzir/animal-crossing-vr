@@ -356,6 +356,6 @@ Gfx hni_den_model[] = {
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_hni_den_c(void) {
     pc_load_asset("assets/hni_den/lat_fusen_TXT.bin", lat_fusen_TXT, 0x80, 0x704350, 0, 0);
-    pc_load_asset("assets/hni_den/inv_mwin_3Dma_tex.bin", inv_mwin_3Dma_tex, 0x800, 0x717820, 0, 0);
+    pc_load_asset("assets/hni_den/inv_mwin_3Dma_tex.bin", inv_mwin_3Dma_tex, 0x800, 0x706BD0, 0, 0);
 }
 #endif

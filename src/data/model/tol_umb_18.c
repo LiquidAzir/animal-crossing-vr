@@ -88,9 +88,9 @@ Gfx e_umb18_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_tol_umb_18_c(void) {
-    pc_load_asset("assets/tol_umb_18/tol_umb18_pal.bin", tol_umb18_pal, 0x20, 0x8B2080, 0, 1);
-    pc_load_asset("assets/tol_umb_18/tol_umb18_kasa1_tex_txt.bin", tol_umb18_kasa1_tex_txt, 0x100, 0x8B20A0, 0, 0);
-    pc_load_asset("assets/tol_umb_18/tol_umb18_kasa2_tex_txt.bin", tol_umb18_kasa2_tex_txt, 0x40, 0x8B21A0, 0, 0);
-    pc_load_asset("assets/tol_umb_18/tol_umb18_tuka_tex_txt.bin", tol_umb18_tuka_tex_txt, 0x200, 0x8B21E0, 0, 0);
+    pc_load_asset("assets/tol_umb_18/tol_umb18_pal.bin", tol_umb18_pal, 0x20, 0x686320, 0, 1);
+    pc_load_asset("assets/tol_umb_18/tol_umb18_kasa1_tex_txt.bin", tol_umb18_kasa1_tex_txt, 0x100, 0x686340, 0, 0);
+    pc_load_asset("assets/tol_umb_18/tol_umb18_kasa2_tex_txt.bin", tol_umb18_kasa2_tex_txt, 0x80, 0x686440, 0, 0);
+    pc_load_asset("assets/tol_umb_18/tol_umb18_tuka_tex_txt.bin", tol_umb18_tuka_tex_txt, 0x200, 0x6864C0, 0, 0);
 }
 #endif

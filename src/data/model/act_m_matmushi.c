@@ -46,8 +46,8 @@ Gfx act_m_matumushi1T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_matmushi_c(void) {
-    pc_load_asset("assets/act_m_matmushi/act_m_matumushi_pal.bin", act_m_matumushi_pal, 0x20, 0xB4FC60, 0, 1);
-    pc_load_asset("assets/act_m_matmushi/act_m_matumushi.bin", act_m_matumushi, 0x180, 0xB4FC80, 0, 0);
-    pc_load_asset("assets/act_m_matmushi/act_m_matumushi_v.bin", act_m_matumushi_v, 0xA0, 0xB4FBC0, 0, 2);
+    pc_load_asset("assets/act_m_matmushi/act_m_matumushi_pal.bin", act_m_matumushi_pal, 0x20, 0x544980, 0, 1);
+    pc_load_asset("assets/act_m_matmushi/act_m_matumushi.bin", act_m_matumushi, 0x180, 0x5449A0, 0, 0);
+    pc_load_asset("assets/act_m_matmushi/act_m_matumushi_v.bin", act_m_matumushi_v, 0xA0, 0x544B20, 0, 2);
 }
 #endif

@@ -73,6 +73,6 @@ Gfx int_kon_isi01_on_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_kon_isi01_c(void) {
-    pc_load_asset("assets/int_kon_isi01/int_kon_isi01_pal.bin", int_kon_isi01_pal, 0x20, 0xB85060, 0, 1);
+    pc_load_asset("assets/int_kon_isi01/int_kon_isi01_pal.bin", int_kon_isi01_pal, 0x20, 0xB827C0, 0, 1);
 }
 #endif

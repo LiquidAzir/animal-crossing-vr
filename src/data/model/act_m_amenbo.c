@@ -61,8 +61,8 @@ Gfx act_m_amenbo2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_amenbo_c(void) {
-    pc_load_asset("assets/act_m_amenbo/act_m_amenbo_pal.bin", act_m_amenbo_pal, 0x20, 0xB498E8, 0, 1);
-    pc_load_asset("assets/act_m_amenbo/act_m_amenbo_tex.bin", act_m_amenbo_tex, 0x180, 0xB49908, 0, 0);
-    pc_load_asset("assets/act_m_amenbo/act_m_amenbo_v.bin", act_m_amenbo_v, 0xE0, 0xB49808, 0, 2);
+    pc_load_asset("assets/act_m_amenbo/act_m_amenbo_pal.bin", act_m_amenbo_pal, 0x20, 0x53FC80, 0, 1);
+    pc_load_asset("assets/act_m_amenbo/act_m_amenbo_tex.bin", act_m_amenbo_tex, 0x180, 0x53FCA0, 0, 0);
+    pc_load_asset("assets/act_m_amenbo/act_m_amenbo_v.bin", act_m_amenbo_v, 0xE0, 0x53FE20, 0, 2);
 }
 #endif

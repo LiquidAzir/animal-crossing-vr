@@ -94,6 +94,6 @@ Gfx act_f34_piraluku_cT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_f34_piraluku_c(void) {
-    pc_load_asset("assets/act_f34_piraluku/int_nog_piraluku_pal.bin", int_nog_piraluku_pal, 0x20, 0xBEC3A0, 0, 1);
+    pc_load_asset("assets/act_f34_piraluku/int_nog_piraluku_pal.bin", int_nog_piraluku_pal, 0x20, 0x51FF00, 0, 1);
 }
 #endif

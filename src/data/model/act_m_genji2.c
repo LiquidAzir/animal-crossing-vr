@@ -83,7 +83,7 @@ Gfx act_m_genji2_a_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_genji2_c(void) {
-    pc_load_asset("assets/act_m_genji2/act_m_genji_h1_txt.bin", act_m_genji_h1_txt, 0x200, 0xB4A9A0, 0, 0);
-    pc_load_asset("assets/act_m_genji2/act_m_genji2_v.bin", act_m_genji2_v, 0x100, 0xB4A8A0, 0, 2);
+    pc_load_asset("assets/act_m_genji2/act_m_genji_h1_txt.bin", act_m_genji_h1_txt, 0x200, 0x540860, 0, 0);
+    pc_load_asset("assets/act_m_genji2/act_m_genji2_v.bin", act_m_genji2_v, 0x100, 0x540A60, 0, 2);
 }
 #endif

@@ -62,8 +62,8 @@ Gfx act_m_syouryou2_2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_syouryou_c(void) {
-    pc_load_asset("assets/act_m_syouryou/act_m_syouryou_pal.bin", act_m_syouryou_pal, 0x20, 0xB558C0, 0, 1);
-    pc_load_asset("assets/act_m_syouryou/act_m_syouryou.bin", act_m_syouryou, 0x200, 0xB558E0, 0, 0);
-    pc_load_asset("assets/act_m_syouryou/act_m_syouryou_v.bin", act_m_syouryou_v, 0x110, 0xB557B0, 0, 2);
+    pc_load_asset("assets/act_m_syouryou/act_m_syouryou_pal.bin", act_m_syouryou_pal, 0x20, 0x547720, 0, 1);
+    pc_load_asset("assets/act_m_syouryou/act_m_syouryou.bin", act_m_syouryou, 0x200, 0x547740, 0, 0);
+    pc_load_asset("assets/act_m_syouryou/act_m_syouryou_v.bin", act_m_syouryou_v, 0x110, 0x547940, 0, 2);
 }
 #endif

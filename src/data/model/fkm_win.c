@@ -369,7 +369,7 @@ extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, i
 void _pc_load_src_data_model_fkm_win_c(void) {
     pc_load_asset("assets/fkm_win/fkm_win_fuki2_tex.bin", fkm_win_fuki2_tex, 0x800, 0x7B5540, 0, 0);
     pc_load_asset("assets/fkm_win/fri_win_cash_tex.bin", fri_win_cash_tex, 0x200, 0x7B5F40, 0, 0);
-    pc_load_asset("assets/fkm_win/fri_win_bell_tex.bin", fri_win_bell_tex, 0x100, 0xB73BE0, 0, 0);
+    pc_load_asset("assets/fkm_win/fri_win_bell_tex.bin", fri_win_bell_tex, 0x100, 0x7B6140, 0, 0);
     pc_load_asset("assets/fkm_win/fkm_win_w4_tex.bin", fkm_win_w4_tex, 0x80, 0x7B6AC0, 0, 0);
     pc_load_asset("assets/fkm_win/fkm_win_w3_tex.bin", fkm_win_w3_tex, 0x200, 0x7B6B40, 0, 0);
     pc_load_asset("assets/fkm_win/fkm_win_w2_tex.bin", fkm_win_w2_tex, 0x200, 0x7B6D40, 0, 0);

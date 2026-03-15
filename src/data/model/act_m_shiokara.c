@@ -78,8 +78,8 @@ Gfx act_m_shiokara2_2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_shiokara_c(void) {
-    pc_load_asset("assets/act_m_shiokara/act_m_shiokara_pal.bin", act_m_shiokara_pal, 0x20, 0xB54F70, 0, 1);
-    pc_load_asset("assets/act_m_shiokara/act_m_shiokara.bin", act_m_shiokara, 0x180, 0xB54F90, 0, 0);
-    pc_load_asset("assets/act_m_shiokara/act_m_shiokara_v.bin", act_m_shiokara_v, 0x120, 0xB54E50, 0, 2);
+    pc_load_asset("assets/act_m_shiokara/act_m_shiokara_pal.bin", act_m_shiokara_pal, 0x20, 0x546FC0, 0, 1);
+    pc_load_asset("assets/act_m_shiokara/act_m_shiokara.bin", act_m_shiokara, 0x180, 0x546FE0, 0, 0);
+    pc_load_asset("assets/act_m_shiokara/act_m_shiokara_v.bin", act_m_shiokara_v, 0x120, 0x547160, 0, 2);
 }
 #endif

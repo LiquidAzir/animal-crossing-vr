@@ -106,7 +106,7 @@ Gfx int_sum_cont_table01_onT_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_sum_cont_table01_c(void) {
-    pc_load_asset("assets/int_sum_cont_table01/int_sum_cont_table01_pal.bin", int_sum_cont_table01_pal, 0x20, 0xCACA80, 0, 1);
-    pc_load_asset("assets/int_sum_cont_table01/int_sum_cont_table01_topside_tex.bin", int_sum_cont_table01_topside_tex, 0x80, 0xCACCA0, 0, 0);
+    pc_load_asset("assets/int_sum_cont_table01/int_sum_cont_table01_pal.bin", int_sum_cont_table01_pal, 0x20, 0xCAC120, 0, 1);
+    pc_load_asset("assets/int_sum_cont_table01/int_sum_cont_table01_topside_tex.bin", int_sum_cont_table01_topside_tex, 0x80, 0xCAC240, 0, 0);
 }
 #endif

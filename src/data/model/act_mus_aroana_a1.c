@@ -75,6 +75,6 @@ cKF_Skeleton_R_c cKF_bs_r_act_mus_aroana_a1 = { ARRAY_COUNT(cKF_je_r_act_mus_aro
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_mus_aroana_a1_c(void) {
-    pc_load_asset("assets/act_mus_aroana_a1/int_sum_aroana_pal.bin", int_sum_aroana_pal, 0x20, 0xC64760, 0, 1);
+    pc_load_asset("assets/act_mus_aroana_a1/int_sum_aroana_pal.bin", int_sum_aroana_pal, 0x20, 0x956B40, 0, 1);
 }
 #endif

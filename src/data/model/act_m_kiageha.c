@@ -61,8 +61,8 @@ Gfx act_m_kiageha2T_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_act_m_kiageha_c(void) {
-    pc_load_asset("assets/act_m_kiageha/act_m_kiageha_pal.bin", act_m_kiageha_pal, 0x20, 0xB4E658, 0, 1);
-    pc_load_asset("assets/act_m_kiageha/act_m_kiageha.bin", act_m_kiageha, 0x200, 0xB4E678, 0, 0);
-    pc_load_asset("assets/act_m_kiageha/act_m_kiageha_v.bin", act_m_kiageha_v, 0xC0, 0xB4E598, 0, 2);
+    pc_load_asset("assets/act_m_kiageha/act_m_kiageha_pal.bin", act_m_kiageha_pal, 0x20, 0x543320, 0, 1);
+    pc_load_asset("assets/act_m_kiageha/act_m_kiageha.bin", act_m_kiageha, 0x200, 0x543340, 0, 0);
+    pc_load_asset("assets/act_m_kiageha/act_m_kiageha_v.bin", act_m_kiageha_v, 0xC0, 0x543540, 0, 2);
 }
 #endif

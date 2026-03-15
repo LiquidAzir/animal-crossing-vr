@@ -367,14 +367,14 @@ extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, i
 void _pc_load_src_data_model_rom_shop2_fuku_c(void) {
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_ent_pal.bin", rom_conveni_ent_pal, 0x20, 0xC2CBC0, 0, 1);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_cooler_pal.bin", rom_conveni_cooler_pal, 0x20, 0xC2CBE0, 0, 1);
-    pc_load_asset("assets/rom_shop2_fuku/rom_shop_kouhaku_pal.bin", rom_shop_kouhaku_pal, 0x20, 0xC4F520, 0, 1);
+    pc_load_asset("assets/rom_shop2_fuku/rom_shop_kouhaku_pal.bin", rom_shop_kouhaku_pal, 0x20, 0xC2CC00, 0, 1);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_tana_pal.bin", rom_conveni_tana_pal, 0x20, 0xC2CC20, 0, 1);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_floor_E_pal.bin", rom_conveni_floor_E_pal, 0x20, 0xC2CC40, 0, 1);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_leji_pal.bin", rom_conveni_leji_pal, 0x20, 0xC2CC60, 0, 1);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_mirror_rgb_ci4_pal.bin", rom_conveni_mirror_rgb_ci4_pal, 0x20, 0xC2CC80, 0, 1);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_ent.bin", rom_conveni_ent, 0x200, 0xC2CCA0, 0, 0);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_maruwaku.bin", rom_conveni_maruwaku, 0x200, 0xC2CEA0, 0, 0);
-    pc_load_asset("assets/rom_shop2_fuku/rom_shop_kouhaku_tex.bin", rom_shop_kouhaku_tex, 0x800, 0xC53740, 0, 0);
+    pc_load_asset("assets/rom_shop2_fuku/rom_shop_kouhaku_tex.bin", rom_shop_kouhaku_tex, 0x800, 0xC2D0A0, 0, 0);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_counter.bin", rom_conveni_counter, 0x200, 0xC2D8A0, 0, 0);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_bou.bin", rom_conveni_bou, 0x80, 0xC2DAA0, 0, 0);
     pc_load_asset("assets/rom_shop2_fuku/rom_conveni_tana_bf2.bin", rom_conveni_tana_bf2, 0x80, 0xC2DB20, 0, 0);

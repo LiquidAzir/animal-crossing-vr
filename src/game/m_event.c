@@ -20,13 +20,40 @@ enum {
 
 typedef union ymdh {
     struct {
+#ifdef TARGET_PC
+        /* LE: swap so raw = (year << 24) | (month << 16) | (day << 8) | hour */
+        u8 hour;
+        u8 day;
+        u8 month;
+        u8 year;
+#else
         u8 year;
         u8 month;
         u8 day;
         u8 hour;
+#endif
     };
     u32 raw;
 } mEv_ymdh_u;
+
+#ifdef TARGET_PC
+/* Fix schedule data after memcpy from event_schedule_data[].
+ * Positional initializers put values in original field order {month,day,_2,hour}
+ * but on LE with swapped struct fields, bytes map to {day,month,hour,_2}.
+ * Swap paired fields to put values in the correct named fields. */
+static void pc_fix_schedule_endian(mEv_schedule_c* s) {
+    u8 tmp;
+    int i;
+    for (i = 0; i < 2; i++) {
+        tmp = s->date[i].d.month;
+        s->date[i].d.month = s->date[i].d.day;
+        s->date[i].d.day = tmp;
+        tmp = s->date[i].d._2;
+        s->date[i].d._2 = s->date[i].d.hour;
+        s->date[i].d.hour = tmp;
+    }
+}
+#endif
 
 static int update_save_area(void);
 
@@ -1716,6 +1743,9 @@ static void update_schedule_today(Event_c* event) {
         /* Process every event */
         for (i = 0; i < ARRAY_COUNT(event_schedule_data); i++) {
             memcpy(sched_p, &event_schedule_data[i], sizeof(mEv_schedule_c));
+#ifdef TARGET_PC
+            pc_fix_schedule_endian(sched_p);
+#endif
 
             /* Perform necessary adjustments */
             update_soncho_event(sched_p);
@@ -2632,6 +2662,9 @@ extern void mEv_make_new_special_event() {
         Save_Get(event_save_common).special_event.flags = 1;
         for (i = 0; i < ARRAY_COUNT(event_schedule_data); i++) {
             memcpy(sched_p, &event_schedule_data[i], sizeof(mEv_schedule_c));
+#ifdef TARGET_PC
+            pc_fix_schedule_endian(sched_p);
+#endif
 
             if (update_special_event(sched_p)) {
                 sched.date[0].raw = decode_date(sched.date[0].raw);

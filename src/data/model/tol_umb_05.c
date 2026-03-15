@@ -76,8 +76,8 @@ Gfx e_umb05_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_tol_umb_05_c(void) {
-    pc_load_asset("assets/tol_umb_05/tol_umb_05_pal.bin", tol_umb_05_pal, 0x20, 0x8AA500, 0, 1);
-    pc_load_asset("assets/tol_umb_05/tol_umb_05_kasa_tex_txt.bin", tol_umb_05_kasa_tex_txt, 0x200, 0x8AA520, 0, 0);
-    pc_load_asset("assets/tol_umb_05/tol_umb_05_tuka_tex_txt.bin", tol_umb_05_tuka_tex_txt, 0x200, 0x8AA720, 0, 0);
+    pc_load_asset("assets/tol_umb_05/tol_umb_05_pal.bin", tol_umb_05_pal, 0x20, 0x67E9C0, 0, 1);
+    pc_load_asset("assets/tol_umb_05/tol_umb_05_kasa_tex_txt.bin", tol_umb_05_kasa_tex_txt, 0x200, 0x67E9E0, 0, 0);
+    pc_load_asset("assets/tol_umb_05/tol_umb_05_tuka_tex_txt.bin", tol_umb_05_tuka_tex_txt, 0x200, 0x67EBE0, 0, 0);
 }
 #endif

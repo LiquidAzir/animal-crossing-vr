@@ -381,6 +381,6 @@ void _pc_load_src_data_model_rom_shop2w_c(void) {
     pc_load_asset("assets/rom_shop2w/rom_conveni_wall_C.bin", rom_conveni_wall_C, 0x400, 0xC2E120, 0, 0);
     pc_load_asset("assets/rom_shop2w/rom_conveni_door.bin", rom_conveni_door, 0x300, 0xC2E520, 0, 0);
     pc_load_asset("assets/rom_shop2w/rom_conveni_tana_bf.bin", rom_conveni_tana_bf, 0x80, 0xC2E820, 0, 0);
-    pc_load_asset("assets/rom_shop2w/rom_conveni_mirror_rgb_ci4.bin", rom_conveni_mirror_rgb_ci4, 0x80, 0xC2E8A0, 0, 0);
+    pc_load_asset("assets/rom_shop2w/rom_conveni_mirror_rgb_ci4.bin", rom_conveni_mirror_rgb_ci4, 0x80, 0xC2AE60, 0, 0);
 }
 #endif

@@ -245,7 +245,7 @@ cKF_Skeleton_R_c cKF_bs_r_int_ike_tent_fire01 = { ARRAY_COUNT(cKF_je_r_int_ike_t
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_int_ike_tent_fire01_c(void) {
-    pc_load_asset("assets/int_ike_tent_fire01/int_sum_ayu_pal.bin", int_sum_ayu_pal, 0x20, 0xC75D20, 0, 1);
+    pc_load_asset("assets/int_ike_tent_fire01/int_sum_ayu_pal.bin", int_sum_ayu_pal, 0x20, 0xB270A0, 0, 1);
     pc_load_asset("assets/int_ike_tent_fire01/int_ike_kama_danro01_pal.bin", int_ike_kama_danro01_pal, 0x20, 0xB270E0, 0, 1);
     pc_load_asset("assets/int_ike_tent_fire01/act_mus_ayu_body_txt.bin", act_mus_ayu_body_txt, 0x300, 0xB27100, 0, 0);
     pc_load_asset("assets/int_ike_tent_fire01/int_ike_kama_danrotree1_tex_txt.bin", int_ike_kama_danrotree1_tex_txt, 0x80, 0xB27580, 0, 0);

@@ -82,9 +82,9 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_shop_kaza3_c(void) {
-    pc_load_asset("assets/obj_shop_kaza3/tol_kaza_3_pal.bin", tol_kaza_3_pal, 0x20, 0x66E2E0, 0, 1);
-    pc_load_asset("assets/obj_shop_kaza3/tol_kaza_3_a_tex_txt.bin", tol_kaza_3_a_tex_txt, 0x200, 0x66E300, 0, 0);
-    pc_load_asset("assets/obj_shop_kaza3/tol_kaza_3_c_tex_txt.bin", tol_kaza_3_c_tex_txt, 0x200, 0x66E500, 0, 0);
-    pc_load_asset("assets/obj_shop_kaza3/tol_kaza_3_b_tex_txt.bin", tol_kaza_3_b_tex_txt, 0x100, 0x66E700, 0, 0);
+    pc_load_asset("assets/obj_shop_kaza3/tol_kaza_3_pal.bin", tol_kaza_3_pal, 0x20, 0x45EB80, 0, 1);
+    pc_load_asset("assets/obj_shop_kaza3/tol_kaza_3_a_tex_txt.bin", tol_kaza_3_a_tex_txt, 0x200, 0x45EBA0, 0, 0);
+    pc_load_asset("assets/obj_shop_kaza3/tol_kaza_3_c_tex_txt.bin", tol_kaza_3_c_tex_txt, 0x200, 0x45EDA0, 0, 0);
+    pc_load_asset("assets/obj_shop_kaza3/tol_kaza_3_b_tex_txt.bin", tol_kaza_3_b_tex_txt, 0x100, 0x45EFA0, 0, 0);
 }
 #endif

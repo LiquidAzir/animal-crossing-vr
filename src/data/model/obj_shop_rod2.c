@@ -73,6 +73,6 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_shop_rod2_c(void) {
-    pc_load_asset("assets/obj_shop_rod2/obj_shop_rod2_pal.bin", obj_shop_rod2_pal, 0x20, 0xB6C340, 0, 1);
+    pc_load_asset("assets/obj_shop_rod2/obj_shop_rod2_pal.bin", obj_shop_rod2_pal, 0x20, 0x677360, 0, 1);
 }
 #endif

@@ -526,6 +526,6 @@ void _pc_load_src_data_model_rom_shop3w_c(void) {
     pc_load_asset("assets/rom_shop3w/rom_shop3_wallC.bin", rom_shop3_wallC, 0x800, 0xC486A0, 0, 0);
     pc_load_asset("assets/rom_shop3w/rom_shop3_wallD.bin", rom_shop3_wallD, 0x800, 0xC48EA0, 0, 0);
     pc_load_asset("assets/rom_shop3w/rom_shop3_floorE.bin", rom_shop3_floorE, 0x200, 0xC496A0, 0, 0);
-    pc_load_asset("assets/rom_shop3w/rom_shop3_kage1.bin", rom_shop3_kage1, 0x80, 0xC498A0, 0, 0);
+    pc_load_asset("assets/rom_shop3w/rom_shop3_kage1.bin", rom_shop3_kage1, 0x80, 0xC441C0, 0, 0);
 }
 #endif

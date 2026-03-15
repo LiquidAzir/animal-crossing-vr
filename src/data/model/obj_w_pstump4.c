@@ -36,6 +36,6 @@ Gfx obj_w_pstump4T_gfx_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_w_pstump4_c(void) {
-    pc_load_asset("assets/obj_w_pstump4/obj_w_palm_stump_tex.bin", obj_w_palm_stump_tex, 0x400, 0x3F9C20, 0, 0);
+    pc_load_asset("assets/obj_w_pstump4/obj_w_palm_stump_tex.bin", obj_w_palm_stump_tex, 0x400, 0x3F9760, 0, 0);
 }
 #endif

@@ -112,6 +112,6 @@ void _pc_load_src_data_model_int_din_ptera_Lwing_c(void) {
     pc_load_asset("assets/int_din_ptera_Lwing/int_din_ptera_pal.bin", int_din_ptera_pal, 0x20, 0x9166A0, 0, 1);
     pc_load_asset("assets/int_din_ptera_Lwing/int_din_ptera_baceA_tex.bin", int_din_ptera_baceA_tex, 0x200, 0x915B20, 0, 0);
     pc_load_asset("assets/int_din_ptera_Lwing/int_din_ptera_poleA_tex.bin", int_din_ptera_poleA_tex, 0x80, 0x915D20, 0, 0);
-    pc_load_asset("assets/int_din_ptera_Lwing/int_din_ptera_Lwing_tex.bin", int_din_ptera_Lwing_tex, 0x100, 0x915F20, 0, 0);
+    pc_load_asset("assets/int_din_ptera_Lwing/int_din_ptera_Lwing_tex.bin", int_din_ptera_Lwing_tex, 0x100, 0x9156C0, 0, 0);
 }
 #endif

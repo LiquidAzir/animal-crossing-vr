@@ -47,8 +47,8 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_item_orange_c(void) {
-    pc_load_asset("assets/obj_item_orange/obj_item_peach_pal.bin", obj_item_peach_pal, 0x20, 0xB71900, 0, 1);
-    pc_load_asset("assets/obj_item_orange/obj_item_orange_tex.bin", obj_item_orange_tex, 0x200, 0xB70E20, 0, 0);
-    pc_load_asset("assets/obj_item_orange/obj_item_orange_v.bin", obj_item_orange_v, 0x40, 0xB71020, 0, 2);
+    pc_load_asset("assets/obj_item_orange/obj_item_peach_pal.bin", obj_item_peach_pal, 0x20, 0x673BE0, 0, 1);
+    pc_load_asset("assets/obj_item_orange/obj_item_orange_tex.bin", obj_item_orange_tex, 0x200, 0x673C00, 0, 0);
+    pc_load_asset("assets/obj_item_orange/obj_item_orange_v.bin", obj_item_orange_v, 0x40, 0x673E00, 0, 2);
 }
 #endif

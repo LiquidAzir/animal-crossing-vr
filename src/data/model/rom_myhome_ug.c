@@ -123,7 +123,7 @@ Gfx rom_myhome_ug_model[] = {
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_rom_myhome_ug_c(void) {
-    pc_load_asset("assets/rom_myhome_ug/rom_myhome_pal.bin", rom_myhome_pal, 0x20, 0xBB86C0, 0, 1);
+    pc_load_asset("assets/rom_myhome_ug/rom_myhome_pal.bin", rom_myhome_pal, 0x20, 0x59EDA0, 0, 1);
     pc_load_asset("assets/rom_myhome_ug/rom_myhome_enter2_tex.bin", rom_myhome_enter2_tex, 0x800, 0x59F5C0, 0, 0);
 }
 #endif

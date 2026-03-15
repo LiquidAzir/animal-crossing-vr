@@ -182,12 +182,12 @@ EVW_ANIME_DATA obj_fallS_evw_anime[] = { { 1, EVW_ANIME_TYPE_SCROLL2, obj_fallS_
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_fallS_c(void) {
-    pc_load_asset("assets/obj_fallS/obj_fall_rainbow_1_tex_rgb_rgba16.bin", obj_fall_rainbow_1_tex_rgb_rgba16, 0x100, 0x801920, 0, 0);
-    pc_load_asset("assets/obj_fallS/obj_fall_rainbowA_tex_rgb_i4.bin", obj_fall_rainbowA_tex_rgb_i4, 0x80, 0x801A20, 0, 0);
-    pc_load_asset("assets/obj_fallS/obj_fallCA1_tex_rgb_ia8.bin", obj_fallCA1_tex_rgb_ia8, 0x400, 0x801AA0, 0, 0);
-    pc_load_asset("assets/obj_fallS/obj_fallA2_tex_rgb_i4.bin", obj_fallA2_tex_rgb_i4, 0x200, 0x801EA0, 0, 0);
-    pc_load_asset("assets/obj_fallS/obj_fallA3_tex_rgb_i4.bin", obj_fallA3_tex_rgb_i4, 0x80, 0x8020A0, 0, 0);
-    pc_load_asset("assets/obj_fallS/obj_fallC2_tex_rgb_i4.bin", obj_fallC2_tex_rgb_i4, 0x200, 0x802120, 0, 0);
-    pc_load_asset("assets/obj_fallS/obj_fallC3_tex_rgb_i4.bin", obj_fallC3_tex_rgb_i4, 0x80, 0x802320, 0, 0);
+    pc_load_asset("assets/obj_fallS/obj_fall_rainbow_1_tex_rgb_rgba16.bin", obj_fall_rainbow_1_tex_rgb_rgba16, 0x100, 0x8006A0, 0, 0);
+    pc_load_asset("assets/obj_fallS/obj_fall_rainbowA_tex_rgb_i4.bin", obj_fall_rainbowA_tex_rgb_i4, 0x80, 0x8007A0, 0, 0);
+    pc_load_asset("assets/obj_fallS/obj_fallCA1_tex_rgb_ia8.bin", obj_fallCA1_tex_rgb_ia8, 0x400, 0x800820, 0, 0);
+    pc_load_asset("assets/obj_fallS/obj_fallA2_tex_rgb_i4.bin", obj_fallA2_tex_rgb_i4, 0x200, 0x800C20, 0, 0);
+    pc_load_asset("assets/obj_fallS/obj_fallA3_tex_rgb_i4.bin", obj_fallA3_tex_rgb_i4, 0x80, 0x800E20, 0, 0);
+    pc_load_asset("assets/obj_fallS/obj_fallC2_tex_rgb_i4.bin", obj_fallC2_tex_rgb_i4, 0x200, 0x800EA0, 0, 0);
+    pc_load_asset("assets/obj_fallS/obj_fallC3_tex_rgb_i4.bin", obj_fallC3_tex_rgb_i4, 0x80, 0x8010A0, 0, 0);
 }
 #endif
