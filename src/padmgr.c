@@ -318,6 +318,7 @@ static void padmgr_UpdatePC(void) {
     PADStatus pad_status[MAXCONTROLLERS];
     int i;
 
+    JW_JUTGamePad_read();
     PADRead(pad_status);
 
     /* Convert PADStatus (GC format) to OSContPad (N64 format).
@@ -344,6 +345,10 @@ static void padmgr_UpdatePC(void) {
         if (gc & 0x0004) n64 |= 0x0400; /* D-Down */
         if (gc & 0x0001) n64 |= 0x0200; /* D-Left */
         if (gc & 0x0002) n64 |= 0x0100; /* D-Right */
+        if (pad_status[i].substickX >= 29)  n64 |= 0x0001; /* C-Right */
+        if (pad_status[i].substickX <= -29) n64 |= 0x0002; /* C-Left */
+        if (pad_status[i].substickY >= 29)  n64 |= 0x0008; /* C-Up */
+        if (pad_status[i].substickY <= -29) n64 |= 0x0004; /* C-Down */
         this->cur_pads[i].button = n64;
         this->cur_pads[i].stick_x = pad_status[i].stickX;
         this->cur_pads[i].stick_y = pad_status[i].stickY;
