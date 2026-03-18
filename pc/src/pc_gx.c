@@ -1264,7 +1264,7 @@ void GXSetPixelFmt(u32 pix_fmt, u32 z_fmt) { (void)pix_fmt; (void)z_fmt; }
 void GXSetCullMode(u32 mode) {
     pc_gx_flush_if_begin_complete();
     DIRTY(PC_GX_DIRTY_CULL);
-    g_gx.cull_mode = g_pc_model_viewer ? GX_CULL_NONE : mode;
+    g_gx.cull_mode = g_pc_model_viewer_no_cull ? GX_CULL_NONE : mode;
 }
 void GXSetCoPlanar(GXBool enable) { (void)enable; }
 

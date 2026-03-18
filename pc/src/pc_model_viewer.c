@@ -1,4 +1,23 @@
-/* pc_model_viewer.c - Debug model viewer scene (--model-viewer flag) */
+/* Multi-category debug model viewer scene (--model-viewer flag)
+ *
+ * Categories:
+ *   Structures (75) - building/structure skeleton models with palettes
+ *   NPCs (382) - animal NPC models with body/eye/mouth textures
+ *   Fish (39) - museum fish skeleton models with swimming animation
+ *
+ * Controls:
+ *   Tab        - cycle category (Structures -> NPCs -> Fish -> wrap)
+ *   LShift     - next model within category
+ *   Space      - prev model (alias: A button)
+ *   LCtrl      - prev model
+ *   WASD       - orbit camera
+ *   I/K        - zoom in/out
+ *   J/L        - pan left/right
+ *   Enter      - toggle animation pause
+ *   
+ *   Note: File is starting to get annoyingly long, consider refactoring if I end up adding more features.
+ *
+ */
 #include "pc_model_viewer.h"
 #include "pc_platform.h"
 
@@ -8,14 +27,19 @@
 #include "c_keyframe.h"
 #include "graph.h"
 #include "ac_structure.h"
+#include "ac_npc.h"
 #include "PR/mbi.h"
 #include "dolphin/gx/GXFrameBuffer.h"
 #include "libultra/libultra.h"
+#include "libforest/gbi_extensions.h"
 
 #include <math.h>
 
 int g_pc_model_viewer = 0;
 int g_pc_model_viewer_start = 0;
+int g_pc_model_viewer_no_cull = 0;
+
+/* STRUCTURE MODEL TABLE */
 
 typedef struct {
     const char* name;
@@ -287,81 +311,234 @@ static const MVModelEntry s_model_table[] = {
     { "Museum Lily Pad",        &cKF_bs_r_obj_museum5_hasu, &cKF_ba_r_obj_museum5_hasu, aSTR_PAL_MUSEUM, 0 },
 };
 
-#define MODEL_COUNT (int)(sizeof(s_model_table) / sizeof(s_model_table[0]))
+#define STRUCTURE_COUNT (int)(sizeof(s_model_table) / sizeof(s_model_table[0]))
 
-#define CAM_DEFAULT_DIST    20000.0f
+/* NPC DATA */
+
+extern aNPC_draw_data_c npc_draw_data_tbl[];
+extern cKF_Animation_R_c cKF_ba_r_ply_1_wait1;
+
+#define NPC_COUNT 382  /* must match npc_draw_data_tbl[] array size */
+
+/* Dummy cloth texture (32x32 CI4 = 512 bytes) and white palette for segment 0x0A */
+static u8 s_dummy_cloth_tex[512] ATTRIBUTE_ALIGN(32);
+static u16 s_dummy_cloth_pal[16] ATTRIBUTE_ALIGN(32);
+static int s_dummy_cloth_init = 0;
+
+static void mv_init_dummy_cloth(void) {
+    if (!s_dummy_cloth_init) {
+        int i;
+        memset(s_dummy_cloth_tex, 0, sizeof(s_dummy_cloth_tex));
+        for (i = 0; i < 16; i++)
+            s_dummy_cloth_pal[i] = 0xFFFF; /* white */
+        s_dummy_cloth_init = 1;
+    }
+}
+
+/* FISH DATA */
+
+extern cKF_Skeleton_R_c* mfish_model_tbl[];
+extern cKF_Animation_R_c* mfish_anime_init_tbl[];
+
+#define FISH_COUNT       40  /* must match mfish_model_tbl[] array size */
+#define FISH_JELLYFISH   35  /* NULL skeleton/animation */
+#define FISH_SCALE       0.01f
+
+static const char* s_fish_names[FISH_COUNT] = {
+    "Crucian Carp",     "Brook Trout",      "Carp",             "Koi",
+    "Catfish",          "Small Bass",       "Bass",             "Large Bass",
+    "Bluegill",         "Giant Catfish",    "Giant Snakehead",  "Barbel Steed",
+    "Dace",             "Pale Chub",        "Bitterling",       "Loach",
+    "Pond Smelt",       "Sweetfish",        "Cherry Salmon",    "Large Char",
+    "Rainbow Trout",    "Stringfish",       "Salmon",           "Goldfish",
+    "Piranha",          "Arowana",          "Eel",              "Freshwater Goby",
+    "Angelfish",        "Guppy",            "Popeyed Goldfish", "Coelacanth",
+    "Crawfish",         "Frog",             "Killifish",        "Jellyfish (N/A)",
+    "Sea Bass",         "Red Snapper",      "Barred Knifejaw",  "Arapaima",
+};
+
+/* CAMERA CONSTANTS (per-category) */
+
 #define CAM_DEFAULT_ANGLE_X 0.3f
 #define CAM_DEFAULT_ANGLE_Y 4.71238898f    /* 3PI/2 */
 #define CAM_ORBIT_SPEED     0.03f
-#define CAM_ZOOM_SPEED      200.0f
-#define CAM_MIN_DIST        500.0f
-#define CAM_MAX_DIST        50000.0f
-#define CAM_PAN_SPEED       100.0f
-#define CAM_CENTER_Y        3000.0f
+
+static const f32 s_cam_dist[MV_CAT_NUM]       = { 20000.0f, 500.0f,  300.0f  };
+static const f32 s_cam_center_y[MV_CAT_NUM]   = { 3000.0f,  200.0f,  50.0f   };
+static const f32 s_cam_min_dist[MV_CAT_NUM]   = { 500.0f,   50.0f,   30.0f   };
+static const f32 s_cam_max_dist[MV_CAT_NUM]   = { 50000.0f, 5000.0f, 3000.0f };
+static const f32 s_cam_zoom_speed[MV_CAT_NUM] = { 200.0f,   5.0f,    3.0f    };
+static const f32 s_cam_pan_speed[MV_CAT_NUM]  = { 100.0f,   5.0f,    3.0f    };
+
+/* CATEGORY HELPERS */
+
+static int mv_cat_count(int cat) {
+    switch (cat) {
+        case MV_CAT_STRUCTURES: return STRUCTURE_COUNT;
+        case MV_CAT_NPCS:       return NPC_COUNT;
+        case MV_CAT_FISH:       return FISH_COUNT;
+        default:                return 0;
+    }
+}
+
+static const char* mv_cat_name(int cat) {
+    switch (cat) {
+        case MV_CAT_STRUCTURES: return "Structures";
+        case MV_CAT_NPCS:       return "NPCs";
+        case MV_CAT_FISH:       return "Fish";
+        default:                return "???";
+    }
+}
+
+static const char* mv_model_name(int cat, int idx) {
+    switch (cat) {
+        case MV_CAT_STRUCTURES: return s_model_table[idx].name;
+        case MV_CAT_NPCS:       return "NPC";
+        case MV_CAT_FISH:       return s_fish_names[idx];
+        default:                return "???";
+    }
+}
+
+/* Skip NULL entries when navigating fish */
+static int mv_fish_skip_null(int idx, int dir) {
+    if (idx == FISH_JELLYFISH) {
+        idx += dir;
+        if (idx < 0) idx = FISH_COUNT - 1;
+        if (idx >= FISH_COUNT) idx = 0;
+    }
+    return idx;
+}
+
+/* WINDOW TITLE & CAMERA RESET */
+
 static void mv_update_title(GAME_MODEL_VIEWER* mv) {
-    char title[128];
-    snprintf(title, sizeof(title), "Model Viewer [%d/%d] %s",
-             mv->current_model + 1, MODEL_COUNT,
-             s_model_table[mv->current_model].name);
+    char title[160];
+    int cat = mv->category;
+    int idx = mv->cat_index[cat];
+    int count = mv_cat_count(cat);
+    snprintf(title, sizeof(title), "Model Viewer [%s %d/%d] %s",
+             mv_cat_name(cat), idx + 1, count, mv_model_name(cat, idx));
     SDL_SetWindowTitle(g_pc_window, title);
 }
 
 static void mv_reset_camera(GAME_MODEL_VIEWER* mv) {
-    mv->cam_distance = CAM_DEFAULT_DIST;
+    int cat = mv->category;
+    mv->cam_distance = s_cam_dist[cat];
     mv->cam_angle_x = CAM_DEFAULT_ANGLE_X;
     mv->cam_angle_y = CAM_DEFAULT_ANGLE_Y;
     mv->cam_pan_x = 0.0f;
     mv->cam_pan_z = 0.0f;
 }
 
+/* MODEL SETUP (per-category skeleton initialization) */
+
 static void mv_setup_model(GAME_MODEL_VIEWER* mv) {
-    const MVModelEntry* entry = &s_model_table[mv->current_model];
+    int cat = mv->category;
+    int idx = mv->cat_index[cat];
 
     memset(&mv->skeleton_info, 0, sizeof(mv->skeleton_info));
     memset(mv->joint_work, 0, sizeof(mv->joint_work));
     memset(mv->joint_target, 0, sizeof(mv->joint_target));
 
-    cKF_SkeletonInfo_R_ct(&mv->skeleton_info, entry->skeleton, NULL,
-                          mv->joint_work, mv->joint_target);
+    switch (cat) {
+        case MV_CAT_STRUCTURES: {
+            const MVModelEntry* entry = &s_model_table[idx];
+            cKF_SkeletonInfo_R_ct(&mv->skeleton_info, entry->skeleton, NULL,
+                                  mv->joint_work, mv->joint_target);
+            cKF_SkeletonInfo_R_init_standard_stop(&mv->skeleton_info, entry->animation, NULL);
+            cKF_SkeletonInfo_R_play(&mv->skeleton_info);
+            break;
+        }
+        case MV_CAT_NPCS: {
+            aNPC_draw_data_c* npc = &npc_draw_data_tbl[idx];
+            if (npc->model_skeleton == NULL) break;
+            cKF_SkeletonInfo_R_ct(&mv->skeleton_info, npc->model_skeleton, NULL,
+                                  mv->joint_work, mv->joint_target);
+            /* Use player idle animation — same 26-joint structure as NPC skeletons */
+            cKF_SkeletonInfo_R_init_standard_repeat_speedsetandmorph(
+                &mv->skeleton_info, &cKF_ba_r_ply_1_wait1, NULL, 1.0f, 0.0f);
+            cKF_SkeletonInfo_R_play(&mv->skeleton_info);
+            break;
+        }
+        case MV_CAT_FISH: {
+            cKF_Skeleton_R_c* skel = mfish_model_tbl[idx];
+            cKF_Animation_R_c* anim = mfish_anime_init_tbl[idx];
+            if (skel == NULL || anim == NULL) break;
+            cKF_SkeletonInfo_R_ct(&mv->skeleton_info, skel, NULL,
+                                  mv->joint_work, mv->joint_target);
+            cKF_SkeletonInfo_R_init_standard_repeat_speedsetandmorph(
+                &mv->skeleton_info, anim, NULL, 1.0f, 0.0f);
+            cKF_SkeletonInfo_R_play(&mv->skeleton_info);
+            break;
+        }
+    }
 
-    /* Animation needed for joints with non-zero rest-pose rotations */
-    cKF_SkeletonInfo_R_init_standard_stop(&mv->skeleton_info, entry->animation, NULL);
-    cKF_SkeletonInfo_R_play(&mv->skeleton_info);
-
-    mv->initialized_model = mv->current_model;
+    mv->initialized_cat = cat;
+    mv->initialized_model = idx;
 
     mv_reset_camera(mv);
     mv_update_title(mv);
 }
 
+/* INPUT HANDLING */
+
 static void mv_handle_input(GAME_MODEL_VIEWER* mv) {
-    if (chkTrigger(BUTTON_B)) {
-        mv->current_model++;
-        if (mv->current_model >= MODEL_COUNT)
-            mv->current_model = 0;
+    int cat = mv->category;
+    int count = mv_cat_count(cat);
+    int changed_model = 0;
+
+    /* Tab = cycle category */
+    {
+        const Uint8* keys = SDL_GetKeyboardState(NULL);
+        static int tab_prev = 0;
+        int tab_now = keys[SDL_SCANCODE_TAB];
+        if (tab_now && !tab_prev) {
+            mv->category = (cat + 1) % MV_CAT_NUM;
+            cat = mv->category;
+            count = mv_cat_count(cat);
+            /* Force re-init */
+            mv->initialized_cat = -1;
+            mv_reset_camera(mv);
+        }
+        tab_prev = tab_now;
     }
 
-    if (chkTrigger(BUTTON_A)) {
-        mv->current_model--;
-        if (mv->current_model < 0)
-            mv->current_model = MODEL_COUNT - 1;
+    /* LShift = next model (B button also works) */
+    if (chkTrigger(BUTTON_B)) {
+        mv->cat_index[cat]++;
+        if (mv->cat_index[cat] >= count) mv->cat_index[cat] = 0;
+        if (cat == MV_CAT_FISH) mv->cat_index[cat] = mv_fish_skip_null(mv->cat_index[cat], 1);
+        changed_model = 1;
     }
+
+    /* Space/A = prev model */
+    if (chkTrigger(BUTTON_A)) {
+        mv->cat_index[cat]--;
+        if (mv->cat_index[cat] < 0) mv->cat_index[cat] = count - 1;
+        if (cat == MV_CAT_FISH) mv->cat_index[cat] = mv_fish_skip_null(mv->cat_index[cat], -1);
+        changed_model = 1;
+    }
+
+    /* LCtrl = prev model */
     {
         const Uint8* keys = SDL_GetKeyboardState(NULL);
         static int ctrl_prev = 0;
         int ctrl_now = keys[SDL_SCANCODE_LCTRL];
         if (ctrl_now && !ctrl_prev) {
-            mv->current_model--;
-            if (mv->current_model < 0)
-                mv->current_model = MODEL_COUNT - 1;
+            mv->cat_index[cat]--;
+            if (mv->cat_index[cat] < 0) mv->cat_index[cat] = count - 1;
+            if (cat == MV_CAT_FISH) mv->cat_index[cat] = mv_fish_skip_null(mv->cat_index[cat], -1);
+            changed_model = 1;
         }
         ctrl_prev = ctrl_now;
     }
 
+    /* Enter = toggle animation pause */
     if (chkTrigger(BUTTON_START)) {
         mv->anim_paused ^= 1;
     }
 
+    /* Joystick = orbit camera */
     {
         int jx = getJoystick_X();
         int jy = getJoystick_Y();
@@ -371,40 +548,49 @@ static void mv_handle_input(GAME_MODEL_VIEWER* mv) {
         }
     }
 
+    /* D-pad left/right = pan */
     if (chkButton(BUTTON_DLEFT) || chkButton(BUTTON_DRIGHT)) {
         f32 right_x = cosf(mv->cam_angle_y);
         f32 right_z = -sinf(mv->cam_angle_y);
-        f32 dir = chkButton(BUTTON_DLEFT) ? -CAM_PAN_SPEED : CAM_PAN_SPEED;
+        f32 dir = chkButton(BUTTON_DLEFT) ? -s_cam_pan_speed[cat] : s_cam_pan_speed[cat];
         mv->cam_pan_x += right_x * dir;
         mv->cam_pan_z += right_z * dir;
     }
 
+    /* Clamp pitch */
     if (mv->cam_angle_x > (f32)(PC_PI * 0.45))
         mv->cam_angle_x = (f32)(PC_PI * 0.45);
     if (mv->cam_angle_x < (f32)(-PC_PI * 0.45))
         mv->cam_angle_x = (f32)(-PC_PI * 0.45);
 
+    /* D-pad up/down = zoom */
     if (chkButton(BUTTON_DUP)) {
-        mv->cam_distance -= CAM_ZOOM_SPEED;
+        mv->cam_distance -= s_cam_zoom_speed[cat];
     }
     if (chkButton(BUTTON_DDOWN)) {
-        mv->cam_distance += CAM_ZOOM_SPEED;
+        mv->cam_distance += s_cam_zoom_speed[cat];
     }
 
-    if (mv->cam_distance < CAM_MIN_DIST)
-        mv->cam_distance = CAM_MIN_DIST;
-    if (mv->cam_distance > CAM_MAX_DIST)
-        mv->cam_distance = CAM_MAX_DIST;
+    /* Clamp distance */
+    if (mv->cam_distance < s_cam_min_dist[cat])
+        mv->cam_distance = s_cam_min_dist[cat];
+    if (mv->cam_distance > s_cam_max_dist[cat])
+        mv->cam_distance = s_cam_max_dist[cat];
+
+    /* Update title if model changed (without full reinit, just to show name) */
+    if (changed_model) {
+        mv_update_title(mv);
+    }
 }
 
-static void mv_draw(GAME_MODEL_VIEWER* mv) {
+/*  DRAW: COMMON SETUP (viewport, projection, lookAt) */
+
+static void mv_draw_common_setup(GAME_MODEL_VIEWER* mv) {
     GAME* game = (GAME*)mv;
     GRAPH* g = game->graph;
+    int cat = mv->category;
+    f32 center_y = s_cam_center_y[cat];
     f32 ex, ey, ez;
-
-    if (mv->initialized_model != mv->current_model) {
-        mv_setup_model(mv);
-    }
 
     ex = mv->cam_distance * cosf(mv->cam_angle_x) * sinf(mv->cam_angle_y);
     ey = mv->cam_distance * sinf(mv->cam_angle_x);
@@ -423,13 +609,15 @@ static void mv_draw(GAME_MODEL_VIEWER* mv) {
     gDPPipeSync(NOW_POLY_OPA_DISP++);
     CLOSE_DISP(g);
 
-    /* Direct rendering setup: viewport, projection, lookAt, modelview */
+    /* Viewport, projection, lookAt, modelview */
     {
         Vp* vp = GRAPH_ALLOC_TYPE(g, Vp, 1);
         Mtx* proj_mtx = GRAPH_ALLOC_TYPE(g, Mtx, 1);
         Mtx* look_mtx = GRAPH_ALLOC_TYPE(g, Mtx, 1);
         Mtx* mv_mtx = GRAPH_ALLOC_TYPE(g, Mtx, 1);
         u16 perspNorm;
+        f32 near_plane = (cat == MV_CAT_STRUCTURES) ? 10.0f : 1.0f;
+        f32 far_plane  = (cat == MV_CAT_STRUCTURES) ? 50000.0f : 5000.0f;
 
         vp->vp.vscale[0] = 640 * 2;
         vp->vp.vscale[1] = 480 * 2;
@@ -441,11 +629,11 @@ static void mv_draw(GAME_MODEL_VIEWER* mv) {
         vp->vp.vtrans[3] = 0;
 
         guPerspective(proj_mtx, &perspNorm, 45.0f,
-                      640.0f / 480.0f, 10.0f, 50000.0f, 1.0f);
+                      640.0f / 480.0f, near_plane, far_plane, 1.0f);
 
         guLookAt(look_mtx,
-                 ex + mv->cam_pan_x, ey + CAM_CENTER_Y, ez + mv->cam_pan_z,
-                 mv->cam_pan_x, CAM_CENTER_Y, mv->cam_pan_z,
+                 ex + mv->cam_pan_x, ey + center_y, ez + mv->cam_pan_z,
+                 mv->cam_pan_x, center_y, mv->cam_pan_z,
                  0.0f, 1.0f, 0.0f);
         guMtxIdent(mv_mtx);
 
@@ -463,14 +651,49 @@ static void mv_draw(GAME_MODEL_VIEWER* mv) {
 
         CLOSE_DISP(g);
     }
+}
+
+/* DRAW: COMMON LIGHTING & FOG (Possibly should remove fog) */
+
+static void mv_draw_common_lights(GAME_MODEL_VIEWER* mv) {
+    GAME* game = (GAME*)mv;
+    GRAPH* g = game->graph;
+
+    OPEN_DISP(g);
+
+    gDPPipeSync(NOW_POLY_OPA_DISP++);
+    gDPSetPrimColor(NOW_POLY_OPA_DISP++, 0, 128, 255, 255, 255, 255);
+    gDPSetEnvColor(NOW_POLY_OPA_DISP++, 255, 255, 255, 255);
+
+    {
+        static Lights1 default_light = gdSPDefLights1(
+            /* ambient  */ 80, 80, 80,
+            /* diffuse  */ 200, 200, 200,
+            /* direction*/ 40, 100, 80
+        );
+        gSPSetLights1(NOW_POLY_OPA_DISP++, default_light);
+    }
+
+    gDPSetFogColor(NOW_POLY_OPA_DISP++, 0, 0, 0, 0);
+    gSPFogPosition(NOW_POLY_OPA_DISP++, 999, 1000);
+
+    CLOSE_DISP(g);
+}
+
+/* DRAW: STRUCTURES */
+
+static void mv_draw_structures(GAME_MODEL_VIEWER* mv) {
+    GAME* game = (GAME*)mv;
+    GRAPH* g = game->graph;
+    int idx = mv->cat_index[MV_CAT_STRUCTURES];
 
     _texture_z_light_fog_prim(g);
+    mv_draw_common_lights(mv);
 
-    /* Set palette segments and pre-load TLUT. Some models rely on the actor
-     * to pre-load rather than embedding it in their DLs. */
+    /* Set palette segments and pre-load TLUT */
     OPEN_DISP(g);
     {
-        const MVModelEntry* entry = &s_model_table[mv->current_model];
+        const MVModelEntry* entry = &s_model_table[idx];
         u16* pal;
         if (entry->pal_idx >= 0) {
             pal = entry->is_winter ? structure_pal_adrs_winter[entry->pal_idx]
@@ -493,40 +716,128 @@ static void mv_draw(GAME_MODEL_VIEWER* mv) {
     }
     CLOSE_DISP(g);
 
-    if (mv->initialized_model >= 0) {
-        OPEN_DISP(g);
+    /* Draw skeleton */
+    {
+        Mtx* joint_mtx = GRAPH_ALLOC_TYPE(g, Mtx, 64);
+        Matrix_push();
+        Matrix_translate(0.0f, 0.0f, 0.0f, 0);
+        cKF_Si3_draw_R_SV(game, &mv->skeleton_info, joint_mtx, NULL, NULL, NULL);
+        Matrix_pull();
+    }
+}
 
-        gDPPipeSync(NOW_POLY_OPA_DISP++);
+/* DRAW: NPCs (body/eye/mouth textures, player idle animation) */
 
-        gDPSetPrimColor(NOW_POLY_OPA_DISP++, 0, 128, 255, 255, 255, 255);
-        gDPSetEnvColor(NOW_POLY_OPA_DISP++, 255, 255, 255, 255);
+static void mv_draw_npc(GAME_MODEL_VIEWER* mv) {
+    GAME* game = (GAME*)mv;
+    GRAPH* g = game->graph;
+    int idx = mv->cat_index[MV_CAT_NPCS];
+    aNPC_draw_data_c* npc = &npc_draw_data_tbl[idx];
 
-        {
-            static Lights1 default_light = gdSPDefLights1(
-                /* ambient  */ 80, 80, 80,
-                /* diffuse  */ 200, 200, 200,
-                /* direction*/ 40, 100, 80
-            );
-            gSPSetLights1(NOW_POLY_OPA_DISP++, default_light);
-        }
+    if (npc->model_skeleton == NULL) return;
 
-        gDPSetFogColor(NOW_POLY_OPA_DISP++, 0, 0, 0, 0);
-        gSPFogPosition(NOW_POLY_OPA_DISP++, 999, 1000);
+    mv_init_dummy_cloth();
 
-        CLOSE_DISP(g);
+    /* NPC render mode (z_gsCPModeSet_Data[10] + prim color) */
+    _texture_z_light_fog_prim_npc(g);
+    mv_draw_common_lights(mv);
 
-        {
-            Mtx* joint_mtx = GRAPH_ALLOC_TYPE(g, Mtx, 64);
-            Matrix_push();
-            Matrix_translate(0.0f, 0.0f, 0.0f, 0);
-            cKF_Si3_draw_R_SV(game, &mv->skeleton_info, joint_mtx, NULL, NULL, NULL);
-            Matrix_pull();
-        }
+    OPEN_DISP(g);
+
+    /* NPC-specific: tex edge alpha + Dolphin texture adjust (matches ac_npc_draw.c_inc) */
+    gDPSetTexEdgeAlpha(NOW_POLY_OPA_DISP++, 127);
+    gDPSetTextureAdjustMode(NOW_POLY_OPA_DISP++, G_TA_DOLPHIN);
+
+    /* Eye texture => segment 0x08 */
+    if (npc->tex_data.eye_texture[0] != NULL) {
+        gSPSegment(NOW_POLY_OPA_DISP++, ANIME_1_TXT_SEG, npc->tex_data.eye_texture[0]);
+    }
+
+    /* Mouth texture => segment 0x09 */
+    if (npc->tex_data.mouth_texture[0] != NULL) {
+        gSPSegment(NOW_POLY_OPA_DISP++, ANIME_2_TXT_SEG, npc->tex_data.mouth_texture[0]);
+    }
+
+    /* Body texture => segment 0x0B + TLUT 15 */
+    gSPSegment(NOW_POLY_OPA_DISP++, ANIME_4_TXT_SEG, npc->tex_data.texture);
+    gDPLoadTLUT_Dolphin(NOW_POLY_OPA_DISP++, 15, 16, 1, npc->tex_data.palette);
+
+    /* Dummy cloth => segment 0x0A + TLUT 14 */
+    gSPSegment(NOW_POLY_OPA_DISP++, ANIME_3_TXT_SEG, s_dummy_cloth_tex);
+    gDPLoadTLUT_Dolphin(NOW_POLY_OPA_DISP++, 14, 16, 1, s_dummy_cloth_pal);
+
+    CLOSE_DISP(g);
+
+    /* Draw skeleton with NPC scale */
+    {
+        Mtx* joint_mtx = GRAPH_ALLOC_TYPE(g, Mtx, 64);
+        Matrix_push();
+        Matrix_translate(0.0f, 0.0f, 0.0f, MTX_LOAD);
+        Matrix_scale(npc->scale, npc->scale, npc->scale, MTX_MULT);
+        cKF_Si3_draw_R_SV(game, &mv->skeleton_info, joint_mtx, NULL, NULL, NULL);
+        Matrix_pull();
+    }
+
+    /* Restore tex edge alpha + N64 texture adjust */
+    OPEN_DISP(g);
+    gDPSetTexEdgeAlpha(NOW_POLY_OPA_DISP++, 144);
+    gDPSetTextureAdjustMode(NOW_POLY_OPA_DISP++, G_TA_N64);
+    CLOSE_DISP(g);
+}
+
+/* DRAW: FISH (museum fish skeletons with swimming animation) */
+
+static void mv_draw_fish(GAME_MODEL_VIEWER* mv) {
+    GAME* game = (GAME*)mv;
+    GRAPH* g = game->graph;
+    int idx = mv->cat_index[MV_CAT_FISH];
+
+    if (mfish_model_tbl[idx] == NULL) return;
+
+    _texture_z_light_fog_prim(g);
+    mv_draw_common_lights(mv);
+
+    /* Draw skeleton with fish scale */
+    {
+        Mtx* joint_mtx = GRAPH_ALLOC_TYPE(g, Mtx, 64);
+        Matrix_push();
+        Matrix_translate(0.0f, 0.0f, 0.0f, MTX_LOAD);
+        Matrix_scale(FISH_SCALE, FISH_SCALE, FISH_SCALE, MTX_MULT);
+        cKF_Si3_draw_R_SV(game, &mv->skeleton_info, joint_mtx, NULL, NULL, NULL);
+        Matrix_pull();
+    }
+}
+
+/* MAIN DRAW */
+
+static void mv_draw(GAME_MODEL_VIEWER* mv) {
+    GAME* game = (GAME*)mv;
+    GRAPH* g = game->graph;
+    int cat = mv->category;
+    int idx = mv->cat_index[cat];
+
+    /* Reinit model if category or index changed */
+    if (cat != mv->initialized_cat || idx != mv->initialized_model) {
+        mv_setup_model(mv);
+    }
+
+    /* Set cull override: only disable for structures (hollow shells) */
+    g_pc_model_viewer_no_cull = (cat == MV_CAT_STRUCTURES);
+
+    mv_draw_common_setup(mv);
+
+    /* Category-specific draw */
+    switch (cat) {
+        case MV_CAT_STRUCTURES: mv_draw_structures(mv); break;
+        case MV_CAT_NPCS:       mv_draw_npc(mv);        break;
+        case MV_CAT_FISH:       mv_draw_fish(mv);        break;
     }
 
     game_debug_draw_last(game, g);
     game_draw_last(g);
 }
+
+/* SCENE ENTRY POINTS */
 
 static void model_viewer_main(GAME* game) {
     GAME_MODEL_VIEWER* mv = (GAME_MODEL_VIEWER*)game;
@@ -538,6 +849,7 @@ static void model_viewer_main(GAME* game) {
 void pc_model_viewer_init(GAME* game) {
     GAME_MODEL_VIEWER* mv = (GAME_MODEL_VIEWER*)game;
     GRAPH* g = game->graph;
+    int i;
 
     game->exec = &model_viewer_main;
     game->cleanup = &pc_model_viewer_cleanup;
@@ -551,18 +863,29 @@ void pc_model_viewer_init(GAME* game) {
     new_Matrix(game);
     SetGameFrame(1);
 
-    mv->current_model = g_pc_model_viewer_start;
-    if (mv->current_model < 0 || mv->current_model >= MODEL_COUNT)
-        mv->current_model = 0;
+    for (i = 0; i < MV_CAT_NUM; i++)
+        mv->cat_index[i] = 0;
+
+    mv->category = MV_CAT_STRUCTURES;
+    mv->initialized_cat = -1;
     mv->initialized_model = -1;
     mv->anim_paused = 0;
 
+    if (g_pc_model_viewer_start >= 0 && g_pc_model_viewer_start < STRUCTURE_COUNT) {
+        mv->cat_index[MV_CAT_STRUCTURES] = g_pc_model_viewer_start;
+    }
+
+    /* Fish: skip jellyfish if starting on it */
+    mv->cat_index[MV_CAT_FISH] = mv_fish_skip_null(mv->cat_index[MV_CAT_FISH], 1);
+
     mv_reset_camera(mv);
 
-    printf("[ModelViewer] Initialized with %d models\n", MODEL_COUNT);
+    printf("[ModelViewer] Initialized: Structures=%d, NPCs=%d, Fish=%d\n",
+           STRUCTURE_COUNT, NPC_COUNT, FISH_COUNT);
 }
 
 void pc_model_viewer_cleanup(GAME* game) {
     (void)game;
+    g_pc_model_viewer_no_cull = 0;
     SDL_SetWindowTitle(g_pc_window, PC_WINDOW_TITLE);
 }

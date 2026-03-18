@@ -104,6 +104,7 @@ extern unsigned int pc_image_end;
 /* --- Model viewer --- */
 extern int g_pc_model_viewer;
 extern int g_pc_model_viewer_start;
+extern int g_pc_model_viewer_no_cull;
 
 /* --- Per-frame diagnostics --- */
 extern int pc_emu64_frame_cmds;
