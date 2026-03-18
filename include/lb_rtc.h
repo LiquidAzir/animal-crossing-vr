@@ -10,7 +10,11 @@ extern "C" {
 
 /* TODO: do these have a better header? */
 #define GAME_YEAR_MIN 2000 /* Minimum year supported by the game */
+#ifdef TARGET_PC
+#define GAME_YEAR_MAX 2100 /* Extended year range for PC port (playable 2001-2099) */
+#else
 #define GAME_YEAR_MAX 2032 /* Maximum year supported by the game */
+#endif
 
 #define lbRTC_YEAR_MIN 1901
 #define lbRTC_YEAR_MAX 2099

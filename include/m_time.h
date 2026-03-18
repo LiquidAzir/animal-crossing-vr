@@ -13,7 +13,11 @@ extern "C" {
 #define mTM_FIELD_RENEW_HOUR 6 /* hour which daily things 'reset' */
 
 #define mTM_MIN_YEAR 2001
+#ifdef TARGET_PC
+#define mTM_MAX_YEAR 2100
+#else
 #define mTM_MAX_YEAR 2030
+#endif
 
 enum {
   mTM_SEASON_BEGIN = 0,

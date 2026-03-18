@@ -17,7 +17,11 @@ extern "C" {
 #define lbRk_KYUU_LEAP_MONTH 13
 
 #define lbRk_HARVEST_MOON_YEAR_MIN 2002
+#ifdef TARGET_PC
+#define lbRk_HARVEST_MOON_YEAR_MAX 2099
+#else
 #define lbRk_HARVEST_MOON_YEAR_MAX 2030
+#endif
 #define lbRk_HARVEST_MOON_YEAR_NUM ((lbRk_HARVEST_MOON_YEAR_MAX - lbRk_HARVEST_MOON_YEAR_MIN) + 1)
 
 #define lbRk_KYUU_DAY_START 1
