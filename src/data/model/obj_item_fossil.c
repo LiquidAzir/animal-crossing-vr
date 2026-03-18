@@ -22,7 +22,7 @@ u8 obj_shop_fossil_tex[] ATTRIBUTE_ALIGN(32)= {
 #endif
 
 #ifdef TARGET_PC
-static Vtx obj_item_fossil_v[0x40 / sizeof(Vtx)];
+static Vtx obj_item_fossil_v[0x190 / sizeof(Vtx)];
 #else
 static Vtx obj_item_fossil_v[] = {
 #include "assets/obj_item_fossil/obj_item_fossil_v.inc"
@@ -56,7 +56,7 @@ gsSPEndDisplayList(),
 #ifdef TARGET_PC
 extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, int);
 void _pc_load_src_data_model_obj_item_fossil_c(void) {
-    pc_load_asset("assets/obj_item_fossil/obj_item_fossil_pal.bin", obj_item_fossil_pal, 0x20, 0xB6F800, 0, 1);
-    pc_load_asset("assets/obj_item_fossil/obj_item_fossil_v.bin", obj_item_fossil_v, 0x40, 0xB6FA20, 0, 2);
+    pc_load_asset("assets/obj_item_fossil/obj_item_fossil_pal.bin", obj_item_fossil_pal, 0x20, 0x66C020, 0, 1);
+    pc_load_asset("assets/obj_item_fossil/obj_item_fossil_v.bin", obj_item_fossil_v, 0x190, 0x66C240, 0, 2);
 }
 #endif

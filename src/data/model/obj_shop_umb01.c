@@ -1190,7 +1190,7 @@ static u8 tol_umb18_kasa1_tex_txt[] = {
 #endif
 
 #ifdef TARGET_PC
-static u8 tol_umb18_kasa2_tex_txt[0x40];
+static u8 tol_umb18_kasa2_tex_txt[0x80];
 #else
 static u8 tol_umb18_kasa2_tex_txt[] = {
 #include "assets/obj_shop_umb01/tol_umb18_kasa2_tex_txt.inc"
@@ -2288,7 +2288,7 @@ void _pc_load_src_data_model_obj_shop_umb01_c(void) {
     pc_load_asset("assets/obj_shop_umb01/tol_umb_14_tuka_tex_txt.bin", tol_umb_14_tuka_tex_txt, 0x200, 0x8AFD80, 0, 0);
     pc_load_asset("assets/obj_shop_umb01/tol_umb18_pal.bin", tol_umb18_pal, 0x20, 0x8B2080, 0, 1);
     pc_load_asset("assets/obj_shop_umb01/tol_umb18_kasa1_tex_txt.bin", tol_umb18_kasa1_tex_txt, 0x100, 0x8B20A0, 0, 0);
-    pc_load_asset("assets/obj_shop_umb01/tol_umb18_kasa2_tex_txt.bin", tol_umb18_kasa2_tex_txt, 0x40, 0x8B21A0, 0, 0);
+    pc_load_asset("assets/obj_shop_umb01/tol_umb18_kasa2_tex_txt.bin", tol_umb18_kasa2_tex_txt, 0x80, 0x8B21A0, 0, 0);
     pc_load_asset("assets/obj_shop_umb01/tol_umb18_tuka_tex_txt.bin", tol_umb18_tuka_tex_txt, 0x200, 0x8B21E0, 0, 0);
     pc_load_asset("assets/obj_shop_umb01/tol_umb_22_pal.bin", tol_umb_22_pal, 0x20, 0x8B4500, 0, 1);
     pc_load_asset("assets/obj_shop_umb01/tol_umb_25_pal.bin", tol_umb_25_pal, 0x20, 0x8B61A0, 0, 1);
