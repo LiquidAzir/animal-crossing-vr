@@ -27,10 +27,11 @@ int g_pc_fp_mode = 0;
 int g_pc_item_main_index_now = -1;
 
 /* Swingable ranges from the mPlayer_ITEM_MAIN_* enum (m_player.h:445-471):
- * axe 1, net 2-9, rod 11-19, shovel 20. */
+ * axe 1, net 2-7 + 9, rod 11-18, shovel 20. The putaway states — NET (8)
+ * and ROD (19) — are excluded so a swing can't re-trigger mid-stow. */
 int pc_fp_swingable_equipped(void) {
     int i = g_pc_item_main_index_now;
-    return (i >= 1 && i <= 9) || (i >= 11 && i <= 20);
+    return (i >= 1 && i <= 7) || (i == 9) || (i >= 11 && i <= 18) || (i == 20);
 }
 
 /* Camera is in TALK mode (set by the m_camera2 hook): the swing gesture

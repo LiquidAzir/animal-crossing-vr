@@ -77,7 +77,13 @@ With a tool out in first person:
 
 - **Swing your right controller** (a firm, quick motion) to use it — swing
   the net, chop with the axe, dig with the shovel, cast the rod. One swing
-  = one use; it's the same as pressing A, so buttons still work too.
+  = one use.
+- **Swing and button are fully interchangeable, always.** The swing simply
+  presses A for you — the A button (right trigger) works at all times, and
+  you can mix them freely (cast with a flick, hook the bite with the
+  trigger, or vice versa). With `vr_tool_on_hand` on, the tool acts where
+  your hand is for both input styles — point the net at the bug whether
+  you swing or press.
 - **The tool rides your real hand**: it's rendered at your controller's
   pose, and for the net that includes the catch area — you catch bugs
   where *you* swing. If the grip angle feels off, tune `vr_tool_pitch`

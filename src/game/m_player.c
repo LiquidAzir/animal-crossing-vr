@@ -1794,8 +1794,21 @@ extern void Player_actor_draw(ACTOR* actorx, GAME* game) {
         int draw_idx = data[main_idx];
 
         if (draw_idx >= 0 && draw_idx < mPlayer_DRAW_TYPE_NUM && proc[draw_idx] != NULL) {
+#ifdef TARGET_PC
+            /* NONE draw states never reach Player_actor_Item_draw — clear
+             * the motion-tool item index so the swing gesture can't stay
+             * armed on a stale value. */
+            if (draw_idx != 1) {
+                g_pc_item_main_index_now = -1;
+            }
+#endif
             (*proc[draw_idx])(actorx, game);
             Player_actor_draw_other_func2(actorx, game); //
         }
     }
+#ifdef TARGET_PC
+    else {
+        g_pc_item_main_index_now = -1;
+    }
+#endif
 }
