@@ -81,6 +81,9 @@
       "haptics": [
         { "path": "/user/hand/left/output/haptic",  "output": "/actions/main/out/haptic_left" },
         { "path": "/user/hand/right/output/haptic", "output": "/actions/main/out/haptic_right" }
+      ],
+      "poses": [
+        { "output": "/actions/main/in/hand_right", "path": "/user/hand/right/pose/tip" }
       ]
     }
   }

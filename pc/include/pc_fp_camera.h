@@ -69,6 +69,16 @@ s16 pc_fp_camera_yaw(void);
 /* 1 while the player model should not be rendered (shadow still draws). */
 int pc_fp_hide_player(void);
 
+/* Motion tools: current item main index (written by the item draw
+ * dispatcher) and whether it's a swingable tool (axe/net/rod/shovel). */
+extern int g_pc_item_main_index_now;
+int pc_fp_swingable_equipped(void);
+
+/* TALK-camera state (set by the m_camera2 hook): gates the swing gesture
+ * so a controller swing can't advance dialogue. */
+void pc_fp_set_in_talk(int in_talk);
+int  pc_fp_in_talk(void);
+
 #ifdef __cplusplus
 }
 #endif

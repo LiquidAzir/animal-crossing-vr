@@ -52,6 +52,11 @@ float pc_vr_world_scale(void);
 /* Switch between the diorama scale and the first-person life-size scale. */
 void pc_vr_set_fp_scale(int fp_active);
 
+/* Motion tools: game-world anchor matrix (row-major 3x4, MtxF top rows) for
+ * the held tool at the real right-controller pose. Returns 0 when the
+ * normal animated hand matrix should be used. */
+int pc_vr_hand_tool_mtx(float out[12]);
+
 /* emu64 hook: called whenever the game's view (lookAt) matrix is loaded
  * into the projection stack. mtx34 is row-major 3x4, game units. */
 void pc_vr_notify_game_view(const float* mtx34);

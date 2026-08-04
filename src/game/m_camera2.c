@@ -246,6 +246,9 @@ static void Camera2_SetView(GAME_PLAY* play) {
                       camera->now_main_index == CAMERA2_PROCESS_WADE ||
                       camera->now_main_index == CAMERA2_PROCESS_TALK);
 
+        pc_fp_set_in_talk(camera->now_main_index == CAMERA2_PROCESS_TALK ||
+                          camera->now_main_index == CAMERA2_PROCESS_CUST_TALK);
+
         if (fp_now) {
             float fp_pos[3];
             float fp_eye[3];

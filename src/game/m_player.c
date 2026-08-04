@@ -30,6 +30,7 @@
 
 #ifdef TARGET_PC
 #include "pc_fp_camera.h"
+#include "pc_vr.h"
 #endif
 
 static int l_skip_other_func_set_wade = FALSE;

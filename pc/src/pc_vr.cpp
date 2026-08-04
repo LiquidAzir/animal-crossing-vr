@@ -101,6 +101,17 @@ static void m34_mul(const M34 a, const M34 b, M34 out) {
     }
 }
 
+/* Inverse of rotation + UNIFORM scale + translation: M = [sR | t]. */
+static void m34_invert_rs(const M34 m, M34 out) {
+    float s2 = m[0][0] * m[0][0] + m[1][0] * m[1][0] + m[2][0] * m[2][0];
+    float k = (s2 > 1e-12f) ? 1.0f / s2 : 1.0f;   /* (sR)^T / s^2 = R^T / s */
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            out[i][j] = m[j][i] * k;
+    for (int i = 0; i < 3; i++)
+        out[i][3] = -(out[i][0] * m[0][3] + out[i][1] * m[1][3] + out[i][2] * m[2][3]);
+}
+
 /* Inverse of a rigid transform (orthonormal rotation + translation). */
 static void m34_invert_rigid(const M34 m, M34 out) {
     /* R^T */
@@ -174,9 +185,26 @@ static struct {
     VRActionHandle_t act_move, act_camera;
     VRActionHandle_t act_a, act_b, act_x, act_y, act_l, act_r, act_z, act_start;
     VRActionHandle_t act_recenter;
+    VRActionHandle_t act_hand_r;
     VRActionHandle_t act_haptic_l, act_haptic_r;
     int input_ready;
     int recenter_latch;
+
+    /* Motion tools: right-controller pose in seated space + derived state */
+    M34 world_from_seated;      /* W^-1, updated with the view correction */
+    int hand_valid;             /* pose valid this frame */
+    M34 hand_world;             /* tool anchor in game-world units */
+    M34 tool_local;             /* controller-tip -> tool grip orientation */
+    Uint32 swing_hi_since;      /* ticks when speed first exceeded threshold (0 = below) */
+    Uint32 swing_block_until;   /* refractory deadline, ms ticks */
+    int swing_pulse;            /* inject A this frame */
+
+    /* Frame-timing telemetry (vr_log.txt every ~30s) */
+    uint32_t t_last_frame_index;
+    unsigned int t_frames;
+    float t_gpu_sum, t_gpu_max;
+    unsigned int t_drops, t_mispresent;
+    Uint32 t_last_log_ticks;
 
     int submit_fail_count;
     int submitted_this_frame;
@@ -392,6 +420,7 @@ static void pcvr_input_init(void) {
     s_vr.input->GetActionHandle((char*)"/actions/main/in/z",        &s_vr.act_z);
     s_vr.input->GetActionHandle((char*)"/actions/main/in/start",    &s_vr.act_start);
     s_vr.input->GetActionHandle((char*)"/actions/main/in/recenter", &s_vr.act_recenter);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/hand_right", &s_vr.act_hand_r);
     s_vr.input->GetActionHandle((char*)"/actions/main/out/haptic_left",  &s_vr.act_haptic_l);
     s_vr.input->GetActionHandle((char*)"/actions/main/out/haptic_right", &s_vr.act_haptic_r);
     s_vr.input_ready = 1;
@@ -488,6 +517,9 @@ static void pcvr_update_view_correction(void) {
         m34_mul(s_vr.inv_eye_pose[eye], t1, X);     /* (H*E)^-1 * W * V^-1 */
         memcpy(s_vr.view_correction[eye], X, sizeof(M34));
     }
+
+    /* Motion tools need seated-meters -> game-world (W^-1) */
+    m34_invert_rs(W, s_vr.world_from_seated);
 }
 
 extern "C" void pc_vr_notify_game_view(const float* mtx34) {
@@ -598,6 +630,26 @@ extern "C" void pc_vr_init(void) {
 
     g_pc_vr_cull_expand = 24.0f;
     g_pc_vr_cull_znear_slack = 8.0f;
+
+    /* Controller-tip -> tool-grip orientation: tools extend along the hand
+     * matrix's +Z, the SteamVR tip pose points along -Z, so flip about Y,
+     * then apply the user's pitch trim about X. */
+    {
+        /* Negated so positive vr_tool_pitch tilts the tool tip upward
+         * (the flip about Y inverts the local X rotation sense) */
+        float p = -(float)g_pc_settings.vr_tool_pitch * (float)(PC_PI / 180.0);
+        float cp2 = cosf(p), sp2 = sinf(p);
+        M34 flip, pitch;
+        m34_identity(flip);
+        flip[0][0] = -1.0f;
+        flip[2][2] = -1.0f;
+        m34_identity(pitch);
+        pitch[1][1] = cp2;  pitch[1][2] = -sp2;
+        pitch[2][1] = sp2;  pitch[2][2] = cp2;
+        m34_mul(flip, pitch, s_vr.tool_local);
+    }
+    m34_identity(s_vr.world_from_seated);
+    s_vr.t_last_log_ticks = SDL_GetTicks();
 
     s_vr.active = 1;
     s_vr.current_eye = -1;
@@ -710,6 +762,89 @@ extern "C" void pc_vr_frame_begin(void) {
         m34_invert_rigid(he, s_vr.inv_eye_pose[e]);
     }
     pcvr_update_view_correction();
+
+    /* --- Motion tools: right-controller pose + swing gesture --- */
+    s_vr.hand_valid = 0;
+    if (s_vr.swing_pulse > 0) s_vr.swing_pulse--;
+    if (s_vr.input_ready && s_vr.act_hand_r != k_ulInvalidActionHandle) {
+        InputPoseActionData_t pd;
+        if (s_vr.input->GetPoseActionDataForNextFrame(
+                s_vr.act_hand_r, ETrackingUniverseOrigin_TrackingUniverseSeated,
+                &pd, sizeof(pd), k_ulInvalidInputValueHandle) == EVRInputError_VRInputError_None &&
+            pd.bActive && pd.pose.bPoseIsValid) {
+
+            M34 hand_seated, t1;
+            m34_from_hmd(&pd.pose.mDeviceToAbsoluteTracking, hand_seated);
+            m34_mul(s_vr.world_from_seated, hand_seated, t1); /* seated -> game world */
+            m34_mul(t1, s_vr.tool_local, s_vr.hand_world);    /* grip orientation */
+            /* W^-1 left a 1/world_scale in the basis; the matrix this
+             * replaces (right_hand_mtx) carries the player's 0.01 actor
+             * scale that tool models are authored for. Rebase the 3x3 to
+             * 0.01 (translation stays in world units). */
+            {
+                float k = 0.01f * s_vr.world_scale;
+                for (int r = 0; r < 3; r++)
+                    for (int c = 0; c < 3; c++)
+                        s_vr.hand_world[r][c] *= k;
+            }
+            s_vr.hand_valid = 1;
+
+            /* Unified swing gesture: sustained fast controller motion fires
+             * one A press (tool use). Time-based thresholds so behavior is
+             * identical at 72/90/120 Hz: ~22ms sustained rejects tracking
+             * spikes, 350ms refractory stops re-triggers within one swing
+             * arc. Only with a swingable tool out, in FP, not during
+             * conversations (A would advance dialogue). */
+            if (g_pc_settings.vr_motion_swing && pc_fp_view_is_active() &&
+                pc_fp_swingable_equipped() && !pc_fp_in_talk()) {
+                float vx = pd.pose.vVelocity.v[0];
+                float vy = pd.pose.vVelocity.v[1];
+                float vz = pd.pose.vVelocity.v[2];
+                float speed = sqrtf(vx * vx + vy * vy + vz * vz);
+                Uint32 tnow = SDL_GetTicks();
+                if (speed > 2.2f) {
+                    if (s_vr.swing_hi_since == 0) s_vr.swing_hi_since = tnow;
+                    if (tnow - s_vr.swing_hi_since >= 22 && tnow >= s_vr.swing_block_until) {
+                        s_vr.swing_pulse = 2;      /* consumed by next PADRead */
+                        s_vr.swing_block_until = tnow + 350;
+                        s_vr.swing_hi_since = 0;
+                    }
+                } else {
+                    s_vr.swing_hi_since = 0;
+                }
+            } else {
+                s_vr.swing_hi_since = 0;
+            }
+        }
+    }
+
+    /* --- Frame-timing telemetry: one vr_log line every ~30s --- */
+    {
+        Compositor_FrameTiming ft;
+        ft.m_nSize = sizeof(ft);
+        if (s_vr.comp->GetFrameTiming(&ft, 1) && ft.m_nFrameIndex != s_vr.t_last_frame_index) {
+            s_vr.t_last_frame_index = ft.m_nFrameIndex;
+            s_vr.t_frames++;
+            s_vr.t_gpu_sum += ft.m_flTotalRenderGpuMs;
+            if (ft.m_flTotalRenderGpuMs > s_vr.t_gpu_max) s_vr.t_gpu_max = ft.m_flTotalRenderGpuMs;
+            s_vr.t_drops += ft.m_nNumDroppedFrames;
+            s_vr.t_mispresent += ft.m_nNumMisPresented;
+        }
+        Uint32 now_ticks = SDL_GetTicks();
+        if (now_ticks - s_vr.t_last_log_ticks >= 30000 && s_vr.t_frames > 0) {
+            pcvr_log("timing: %.0fs frames=%u fps=%.1f gpu_avg=%.2fms gpu_max=%.2fms drops=%u mispresent=%u",
+                     (now_ticks - s_vr.t_last_log_ticks) / 1000.0f, s_vr.t_frames,
+                     s_vr.t_frames * 1000.0f / (float)(now_ticks - s_vr.t_last_log_ticks),
+                     s_vr.t_gpu_sum / (float)s_vr.t_frames, s_vr.t_gpu_max,
+                     s_vr.t_drops, s_vr.t_mispresent);
+            s_vr.t_frames = 0;
+            s_vr.t_gpu_sum = 0.0f;
+            s_vr.t_gpu_max = 0.0f;
+            s_vr.t_drops = 0;
+            s_vr.t_mispresent = 0;
+            s_vr.t_last_log_ticks = now_ticks;
+        }
+    }
 
     /* Clear the UI layer (transparent) */
     pc_gx_draw_pending();
@@ -1005,6 +1140,9 @@ extern "C" void pc_vr_merge_pad(unsigned short* buttons,
     }
     s_y_prev = y_now;
 
+    /* Motion swing: inject the tool-use press (ORed with real A) */
+    if (s_vr.swing_pulse > 0) *buttons |= BTN_A;
+
     if (pcvr_digital(s_vr.act_a)) *buttons |= BTN_A;
     if (pcvr_digital(s_vr.act_b)) *buttons |= BTN_B;
     if (pcvr_digital(s_vr.act_x)) *buttons |= BTN_X;
@@ -1013,6 +1151,17 @@ extern "C" void pc_vr_merge_pad(unsigned short* buttons,
     if (pcvr_digital(s_vr.act_start)) *buttons |= BTN_START;
     if (l_held) { *buttons |= BTN_L; *triggerL = 255; }
     if (pcvr_digital(s_vr.act_r)) { *buttons |= BTN_R; *triggerR = 255; }
+}
+
+/* Tool anchor for the item draw: row-major 3x4 (MtxF top rows), game-world
+ * units. Returns 0 when the animated hand should be used instead. */
+extern "C" int pc_vr_hand_tool_mtx(float out[12]) {
+    if (!s_vr.active || !s_vr.hand_valid || !g_pc_settings.vr_tool_on_hand)
+        return 0;
+    if (!pc_fp_view_is_active())
+        return 0;
+    memcpy(out, s_vr.hand_world, sizeof(float) * 12);
+    return 1;
 }
 
 extern "C" void pc_vr_rumble(int on) {
