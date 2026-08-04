@@ -1743,14 +1743,10 @@ typedef void (*mPlayer_DRAW_PROC)(ACTOR*, GAME*);
 static void Player_actor_draw_Normal(ACTOR*, GAME*);
 
 extern void Player_actor_draw(ACTOR* actorx, GAME* game) {
-#ifdef TARGET_PC
-    /* First person: the camera is inside the player's head. Skip the model
-     * (the circle shadow is drawn by Actor_draw, outside this proc, and is
-     * kept to ground the view). */
-    if (pc_fp_hide_player()) {
-        return;
-    }
-#endif
+    /* First person does NOT skip this proc: the skeleton walk must run for
+     * hand matrices / tool draw / collision anchors — body geometry is
+     * suppressed per-joint instead (Player_actor_draw_Before_FirstPerson
+     * in m_player_draw.c_inc). */
     static const s8 data[] = {
         mPlayer_DRAW_TYPE_NONE,   mPlayer_DRAW_TYPE_NORMAL, mPlayer_DRAW_TYPE_NORMAL, mPlayer_DRAW_TYPE_NORMAL,
         mPlayer_DRAW_TYPE_NORMAL, mPlayer_DRAW_TYPE_NORMAL, mPlayer_DRAW_TYPE_NORMAL, mPlayer_DRAW_TYPE_NORMAL,
