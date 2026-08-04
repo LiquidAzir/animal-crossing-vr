@@ -61,8 +61,10 @@ and in VR:
 - In VR the world switches to **life-size scale** (`vr_fp_world_scale`,
   default 25 = one tile ≈ 1 m) — villagers stand in front of you at eye
   level. Toggling back returns to the diorama.
-- Scripted cameras stay in charge: talking to a villager, doors, events,
-  and demos use the normal game camera, then first person resumes.
+- **Talking to villagers stays first person** — the view turns to face them
+  as the chat starts, so they're right in front of you (at eye level in
+  VR). Doors, events, and demo cutscenes still use the normal game camera,
+  then first person resumes.
 - `[FirstPerson]` in `settings.ini`: `fp_mode` (start enabled),
   `fp_eye_height` (game units above the feet, default 52),
   `fp_snap_degrees` (0 = smooth VR turning).

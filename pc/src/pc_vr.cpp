@@ -162,6 +162,7 @@ static struct {
     float ui_distance;          /* meters */
     float ui_size;              /* panel width, meters */
     float height_offset;        /* meters */
+    float ui_dist_k;            /* smoothed panel pull-in (1.0 <-> 0.6 in FP) */
 
     /* UI composite GL objects */
     GLuint panel_prog;
@@ -836,10 +837,14 @@ static void pcvr_draw_panel(int eye) {
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glUseProgram(s_vr.panel_prog);
     glUniformMatrix4fv(s_vr.panel_u_mvp, 1, GL_TRUE, &m44[0][0]);
-    float half_w = s_vr.ui_size * 0.5f;
+    /* First person: the panel (and its apparent size) pulls in so dialogue
+     * doesn't sit stereo-behind a villager standing a meter away. dist_k is
+     * smoothed once per frame in compose (both eyes must agree). */
+    float dist_k = s_vr.ui_dist_k;
+    float half_w = s_vr.ui_size * 0.5f * dist_k;
     float half_h = half_w * 0.75f; /* 4:3 */
     glUniform2f(s_panel_u_half, half_w, half_h);
-    glUniform3f(s_panel_u_center, 0.0f, -0.05f, -s_vr.ui_distance);
+    glUniform3f(s_panel_u_center, 0.0f, -0.05f * dist_k, -s_vr.ui_distance * dist_k);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, s_vr.ui.color);
     glUniform1i(s_vr.panel_u_tex, 0);
@@ -851,6 +856,15 @@ static void pcvr_draw_panel(int eye) {
 
 extern "C" void pc_vr_compose_and_submit(void) {
     if (!s_vr.active) return;
+
+    /* Smooth the FP panel pull-in once per frame (shared by both eyes) so
+     * conversation-phase changes ease instead of popping */
+    {
+        float target = pc_fp_view_is_active() ? 0.6f : 1.0f;
+        if (s_vr.ui_dist_k <= 0.0f) s_vr.ui_dist_k = 1.0f;
+        s_vr.ui_dist_k += (target - s_vr.ui_dist_k) * 0.2f;
+        if (fabsf(target - s_vr.ui_dist_k) < 0.01f) s_vr.ui_dist_k = target;
+    }
 
     pcvr_draw_panel(0);
     pcvr_draw_panel(1);
@@ -981,10 +995,12 @@ extern "C" void pc_vr_merge_pad(unsigned short* buttons,
 
     /* Left grip + Y: toggle first person. Requires Y to RISE while the grip
      * is already held (holding Y then squeezing grip must not fire), and X
-     * must be up (X+Y is the recenter chord). Y is swallowed while gripped. */
+     * must be up (X+Y is the recenter chord). Y is swallowed while gripped.
+     * Not while the pause menu is open — the camera is frozen there. */
+    extern int g_pc_paused;
     static int s_y_prev = 0;
     int y_now = pcvr_digital(s_vr.act_y);
-    if (l_held && y_now && !s_y_prev && !pcvr_digital(s_vr.act_x)) {
+    if (l_held && y_now && !s_y_prev && !pcvr_digital(s_vr.act_x) && !g_pc_paused) {
         pc_fp_toggle();
     }
     s_y_prev = y_now;
