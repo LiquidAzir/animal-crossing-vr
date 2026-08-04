@@ -68,6 +68,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/glad/include
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/fixnes
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/openvr
     # .inc assets are loaded at runtime from disc image (no build/GAFE01_00 needed)
 )
 
@@ -298,6 +299,7 @@ set(PC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_stubs_cpp.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_assets.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_disc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_vr.cpp
 )
 
 # =============================================================================
@@ -426,6 +428,8 @@ endif()
 
 if(WIN32)
     target_link_libraries(ac_pc opengl32 winmm imm32 version setupapi)
+    # OpenVR (SteamVR) — MinGW links directly against the 32-bit DLL
+    target_link_libraries(ac_pc "${CMAKE_CURRENT_SOURCE_DIR}/lib/openvr/openvr_api.dll")
 else()
     find_package(OpenGL REQUIRED)
     target_link_libraries(ac_pc OpenGL::GL dl pthread m)
@@ -445,6 +449,22 @@ add_custom_command(TARGET ac_pc POST_BUILD
         "${CMAKE_BINARY_DIR}/bin/shaders/"
     COMMENT "Copying shader files to bin/shaders/"
 )
+
+# OpenVR runtime DLL + SteamVR input action manifest
+if(WIN32)
+    add_custom_command(TARGET ac_pc POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/openvr/openvr_api.dll"
+            "${CMAKE_BINARY_DIR}/bin/"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin/vr_actions"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/vr_actions/actionmanifest.json"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vr_actions/bindings_oculus_touch.json"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vr_actions/bindings_knuckles.json"
+            "${CMAKE_BINARY_DIR}/bin/vr_actions/"
+        COMMENT "Copying OpenVR runtime and VR action manifest to bin/"
+    )
+endif()
 
 # Copy SDL2.dll next to executable so users don't need it on PATH
 if(WIN32)

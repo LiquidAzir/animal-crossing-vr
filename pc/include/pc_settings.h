@@ -21,6 +21,11 @@ typedef struct {
     int master_volume;    /* Applied at the PC audio output, 0-100 (default 100) */
     int stick_deadzone;   /* Gamepad main stick deadzone, percent 0-40 (default 12) */
     int cstick_deadzone;  /* Gamepad C-stick deadzone, percent 0-40 (default 12) */
+    int vr_mode;          /* 0=off, 1=auto (VR when headset present), 2=force on */
+    int vr_world_scale;   /* millimeters per game unit (default 10 = 1 tile -> 40 cm) */
+    int vr_ui_distance;   /* UI panel distance in cm (default 200) */
+    int vr_ui_size;       /* UI panel width in cm (default 240) */
+    int vr_height_offset; /* raise/lower viewpoint in cm (default 0) */
 } PCSettings;
 
 extern PCSettings g_pc_settings;

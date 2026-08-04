@@ -83,6 +83,11 @@ extern int g_pc_window_w;
 extern int g_pc_window_h;
 void pc_platform_update_window_size(void);
 
+/* Current render target dims (window normally; eye/UI FBO during VR passes).
+ * All GC-coordinate -> pixel scaling in the pc layer uses these. */
+extern int g_pc_target_w;
+extern int g_pc_target_h;
+
 /* --- Widescreen mode (3-state) ---
  * 0 = hor+ (default): full-window viewport, FOV-corrected projection. Resets each frame.
  * 1 = stretch: full-window, no correction. For transitions/inventory BG.

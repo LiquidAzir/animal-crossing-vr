@@ -1,8 +1,15 @@
-# Animal Crossing PC Port
+# Animal Crossing PC Port — VR Edition
 
 A native PC port of Animal Crossing (GameCube) built on top of the [ac-decomp](https://github.com/ACreTeam/ac-decomp) decompilation project.
 
 The game's original C code runs natively on x86, with a custom translation layer replacing the GameCube's GX graphics API with OpenGL 3.3.
+
+**This fork adds native SteamVR support** — true stereo rendering with 6-DOF
+head tracking (the village becomes a living diorama), a floating panel for the
+game's 2D UI, and Quest/Index controller input. See [VR_README.md](VR_README.md)
+for setup (Quest 3 via Steam Link / Virtual Desktop / Link) and
+[pc/VR_ARCHITECTURE.md](pc/VR_ARCHITECTURE.md) for how it works. VR activates
+automatically when a headset is present and the game runs flat otherwise.
 
 This repository does not contain any game assets or assembly whatsoever. An existing copy of the game is required.
 

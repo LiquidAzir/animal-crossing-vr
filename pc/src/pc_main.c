@@ -10,6 +10,7 @@
 #include "pc_pause_menu.h"
 #include "pc_settings_menu.h"
 #include "pc_profiler.h"
+#include "pc_vr.h"
 #include "m_kankyo.h"
 
 /* prefer discrete GPU on laptops */
@@ -35,6 +36,7 @@ int           g_pc_weather_intensity_override = mEnv_WEATHER_INTENSITY_HEAVY;
 int           g_pc_window_w = PC_SCREEN_WIDTH;
 int           g_pc_window_h = PC_SCREEN_HEIGHT;
 int           g_pc_widescreen_stretch = 0;
+static int    g_pc_vr_override = -1; /* -1=use settings, 0=--no-vr, 2=--vr */
 
 /* exe image range -- used by seg2k0 to distinguish pointers from segment addresses */
 unsigned int pc_image_base = 0;
@@ -153,6 +155,12 @@ void pc_platform_update_window_size(void) {
     SDL_GL_GetDrawableSize(g_pc_window, &g_pc_window_w, &g_pc_window_h);
     if (g_pc_window_w <= 0) g_pc_window_w = PC_SCREEN_WIDTH;
     if (g_pc_window_h <= 0) g_pc_window_h = PC_SCREEN_HEIGHT;
+    /* Keep target dims following the window except mid-VR-pass (the event
+     * poll that calls this runs between frames, outside scene passes). */
+    if (!pc_vr_in_scene_pass()) {
+        g_pc_target_w = g_pc_window_w;
+        g_pc_target_h = g_pc_window_h;
+    }
 }
 
 void pc_platform_swap_buffers(void) {
@@ -270,6 +278,8 @@ int main(int argc, char* argv[]) {
             printf("  --date M/D[/Y]      Override in-game date (e.g. 7/4, 12/24/2026)\n");
             printf("  --rain [intensity]  Force rainy weather; intensity is light, normal, or heavy\n");
             printf("  --uber-shader       Disable shader specialization (single uber shader)\n");
+            printf("  --vr                Force SteamVR mode (error message if unavailable)\n");
+            printf("  --no-vr             Disable VR for this session\n");
             printf("  --help, -h          Show this help message\n");
             return 0;
         } else if (strcmp(argv[i], "--framelimit") == 0) {
@@ -328,6 +338,10 @@ int main(int argc, char* argv[]) {
                     i++;
                 }
             }
+        } else if (strcmp(argv[i], "--vr") == 0) {
+            g_pc_vr_override = 2;
+        } else if (strcmp(argv[i], "--no-vr") == 0) {
+            g_pc_vr_override = 0;
         }
     }
 
@@ -381,8 +395,12 @@ int main(int argc, char* argv[]) {
 
     SDL_SetMainReady();
     pc_settings_load();
+    if (g_pc_vr_override >= 0) {
+        g_pc_settings.vr_mode = g_pc_vr_override;
+    }
     pc_keybindings_load();
     pc_platform_init();
+    pc_vr_init();   /* needs the GL context; no-op when vr_mode=0 or no HMD */
     pc_disc_init();
     if (!pc_assets_init()) {
         const char* msg =
@@ -399,6 +417,7 @@ int main(int argc, char* argv[]) {
     ac_entry();                         /* sets HotStartEntry = &entry */
     boot_main(argc, (const char**)argv); /* full init → HotStartEntry → game loop */
 
+    pc_vr_shutdown();
     pc_disc_shutdown();
     pc_platform_shutdown();
     return 0;

@@ -3,6 +3,7 @@
 #include "pc_typing.h"
 #include "pc_keybindings.h"
 #include "pc_settings.h"
+#include "pc_vr.h"
 #include <dolphin/pad.h>
 
 /* analog stick constants */
@@ -164,6 +165,10 @@ u32 PADRead(PADStatus* status) {
         status[0].triggerRight = pad_trigger_value(pb->r);
     }
 
+    /* VR controllers (SteamVR Input) merge on top of keyboard/gamepad */
+    pc_vr_merge_pad(&buttons, &stickX, &stickY, &cstickX, &cstickY,
+                    &status[0].triggerLeft, &status[0].triggerRight);
+
     status[0].button = buttons;
     status[0].stickX = stickX;
     status[0].stickY = stickY;
@@ -178,6 +183,9 @@ void PADControlMotor(s32 chan, u32 command) {
     if (g_controller && chan == 0) {
         u16 intensity = (command == 1) ? 0xFFFF : 0;
         SDL_GameControllerRumble(g_controller, intensity, intensity, RUMBLE_DURATION_MS);
+    }
+    if (chan == 0) {
+        pc_vr_rumble(command == 1);
     }
 }
 

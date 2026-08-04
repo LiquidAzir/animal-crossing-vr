@@ -1,6 +1,7 @@
 /* pc_settings.c - runtime settings loaded from settings.ini */
 #include "pc_settings.h"
 #include "pc_platform.h"
+#include "pc_vr.h"
 #include "m_player_lib.h"
 #include "ac_birth_control.h"
 
@@ -20,6 +21,11 @@ PCSettings g_pc_settings = {
     .master_volume = 100,
     .stick_deadzone = 12,
     .cstick_deadzone = 12,
+    .vr_mode = 1,
+    .vr_world_scale = 10,
+    .vr_ui_distance = 200,
+    .vr_ui_size = 240,
+    .vr_height_offset = 0,
 };
 
 static const char* SETTINGS_FILE = "settings.ini";
@@ -69,7 +75,21 @@ static const char* DEFAULT_SETTINGS =
     "[Input]\n"
     "# Gamepad stick deadzones as a percentage (0-40)\n"
     "stick_deadzone = 12\n"
-    "cstick_deadzone = 12\n";
+    "cstick_deadzone = 12\n"
+    "\n"
+    "[VR]\n"
+    "# SteamVR mode: 0 = off, 1 = auto (VR when a headset is present), 2 = force on\n"
+    "vr_mode = 1\n"
+    "\n"
+    "# World scale in millimeters per game unit (10 = one 40-unit tile is 40 cm; smaller = more miniature)\n"
+    "vr_world_scale = 10\n"
+    "\n"
+    "# UI panel distance (cm) and width (cm)\n"
+    "vr_ui_distance = 200\n"
+    "vr_ui_size = 240\n"
+    "\n"
+    "# Raise (+) or lower (-) your viewpoint in cm\n"
+    "vr_height_offset = 0\n";
 
 static const char* skip_ws(const char* s) {
     while (*s == ' ' || *s == '\t') s++;
@@ -120,6 +140,16 @@ static void apply_setting(const char* key, const char* value) {
         if (val >= 0 && val <= 40) g_pc_settings.stick_deadzone = val;
     } else if (strcmp(key, "cstick_deadzone") == 0) {
         if (val >= 0 && val <= 40) g_pc_settings.cstick_deadzone = val;
+    } else if (strcmp(key, "vr_mode") == 0) {
+        if (val >= 0 && val <= 2) g_pc_settings.vr_mode = val;
+    } else if (strcmp(key, "vr_world_scale") == 0) {
+        if (val >= 1 && val <= 1000) g_pc_settings.vr_world_scale = val;
+    } else if (strcmp(key, "vr_ui_distance") == 0) {
+        if (val >= 50 && val <= 1000) g_pc_settings.vr_ui_distance = val;
+    } else if (strcmp(key, "vr_ui_size") == 0) {
+        if (val >= 50 && val <= 1000) g_pc_settings.vr_ui_size = val;
+    } else if (strcmp(key, "vr_height_offset") == 0) {
+        if (val >= -300 && val <= 300) g_pc_settings.vr_height_offset = val;
     }
 }
 
@@ -137,7 +167,8 @@ static void apply_frame_limit_setting(void) {
         max_fps = 0;
     }
 
-    g_frame_limiter = (u32)max_fps;
+    /* VR paces via WaitGetPoses — the timer limiter must stay off */
+    g_frame_limiter = pc_vr_active() ? 0 : (u32)max_fps;
 }
 
 static void apply_borderless_acres_setting(void) {
@@ -208,6 +239,20 @@ void pc_settings_save(void) {
     fprintf(f, "# Gamepad stick deadzones as a percentage (0-40)\n");
     fprintf(f, "stick_deadzone = %d\n", g_pc_settings.stick_deadzone);
     fprintf(f, "cstick_deadzone = %d\n", g_pc_settings.cstick_deadzone);
+    fprintf(f, "\n");
+    fprintf(f, "[VR]\n");
+    fprintf(f, "# SteamVR mode: 0 = off, 1 = auto (VR when a headset is present), 2 = force on\n");
+    fprintf(f, "vr_mode = %d\n", g_pc_settings.vr_mode);
+    fprintf(f, "\n");
+    fprintf(f, "# World scale in millimeters per game unit (10 = one 40-unit tile is 40 cm; smaller = more miniature)\n");
+    fprintf(f, "vr_world_scale = %d\n", g_pc_settings.vr_world_scale);
+    fprintf(f, "\n");
+    fprintf(f, "# UI panel distance (cm) and width (cm)\n");
+    fprintf(f, "vr_ui_distance = %d\n", g_pc_settings.vr_ui_distance);
+    fprintf(f, "vr_ui_size = %d\n", g_pc_settings.vr_ui_size);
+    fprintf(f, "\n");
+    fprintf(f, "# Raise (+) or lower (-) your viewpoint in cm\n");
+    fprintf(f, "vr_height_offset = %d\n", g_pc_settings.vr_height_offset);
     fclose(f);
     printf("[Settings] Saved %s\n", SETTINGS_FILE);
 }
@@ -349,7 +394,8 @@ void pc_settings_apply(void) {
         }
     }
 
-    SDL_GL_SetSwapInterval(g_pc_settings.vsync);
+    /* Window vsync would fight WaitGetPoses pacing in VR */
+    SDL_GL_SetSwapInterval(pc_vr_active() ? 0 : g_pc_settings.vsync);
     pc_platform_update_window_size();
 
     printf("[Settings] Applied: %dx%d fullscreen=%d vsync=%d max_fps=%d msaa=%d\n",
