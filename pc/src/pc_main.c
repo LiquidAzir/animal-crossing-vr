@@ -17,6 +17,29 @@
 #ifdef _WIN32
 __declspec(dllexport) unsigned long NvOptimusEnablement = 1;
 __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+
+/* Last-chance crash report: the GUI build has no console, so without this a
+ * crash is a silent instant close. The module+offset lets a dev map the
+ * fault to a function against the same build. */
+static LONG WINAPI pc_crash_handler(EXCEPTION_POINTERS* info) {
+    FILE* f = fopen("crash.txt", "w");
+    if (f && info && info->ExceptionRecord) {
+        void* addr = info->ExceptionRecord->ExceptionAddress;
+        HMODULE mod = NULL;
+        char modname[MAX_PATH] = "?";
+        GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                           GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (LPCSTR)addr, &mod);
+        if (mod) GetModuleFileNameA(mod, modname, sizeof(modname));
+        fprintf(f, "exception 0x%08lX at %p\nmodule %s\nbase %p offset 0x%lX\n",
+                (unsigned long)info->ExceptionRecord->ExceptionCode, addr, modname,
+                (void*)mod, (unsigned long)((char*)addr - (char*)mod));
+        fclose(f);
+    } else if (f) {
+        fclose(f);
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
 #endif
 
 SDL_Window*   g_pc_window = NULL;
@@ -266,6 +289,9 @@ static int pc_parse_rain_intensity(const char* text) {
 }
 
 int main(int argc, char* argv[]) {
+#ifdef _WIN32
+    SetUnhandledExceptionFilter(pc_crash_handler);
+#endif
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: AnimalCrossing [options]\n");

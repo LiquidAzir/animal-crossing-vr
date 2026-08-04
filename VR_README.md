@@ -73,11 +73,19 @@ Bindings. Keyboard and a normal gamepad keep working in VR too.
 
 ## Troubleshooting
 
+Two files next to the exe make problems diagnosable without a terminal:
+
+- **`vr_log.txt`** — written every VR launch: runtime detection, init steps,
+  render target size, first-frame submit result, and any fallback reason.
+- **`crash.txt`** — written only if the game crashes: the faulting module
+  and offset.
+
+If something goes wrong, send both files.
+
 - **"SteamVR is not installed" box** → install SteamVR from Steam, relaunch.
 - **Game runs flat with headset on** → make sure SteamVR is running first;
-  check `vr_mode` isn't 0; try `--vr`.
-- **Black view but game audible** → the compositor rejected frames; check
-  the log with `--verbose` from a terminal.
+  check `vr_mode` isn't 0; try `--vr`; read `vr_log.txt` for the reason.
+- **Black view but game audible** → check `vr_log.txt` for submit errors.
 - **Wrong seated position** → look straight ahead and press X + Y.
 - **Performance** → lower SteamVR's render resolution, or reduce `msaa` in
   `settings.ini` (applies to the mirror window only).

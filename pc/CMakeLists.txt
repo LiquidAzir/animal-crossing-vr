@@ -499,6 +499,12 @@ if(MINGW)
     target_link_options(ac_pc PRIVATE -static-libgcc -static-libstdc++ -Wl,-Bstatic,--whole-archive "${WINPTHREAD_STRIPPED}" -Wl,-Bdynamic,--no-whole-archive)
 endif()
 
+# 32-bit process: allow 4GB of address space (SteamVR's in-process client,
+# the GL driver, and the eye render targets add pressure on top of the game)
+if(WIN32)
+    target_link_options(ac_pc PRIVATE -Wl,--large-address-aware)
+endif()
+
 # Hide console window on Windows (GUI subsystem)
 # Use -DPC_CONSOLE=ON to keep the console visible for debugging
 if(WIN32 AND NOT PC_CONSOLE)
