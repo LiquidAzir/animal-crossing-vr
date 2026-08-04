@@ -41,6 +41,7 @@ void pc_gx_restore_after_nes(void);
 void pc_gx_viewport_state_invalidate(void);
 void pc_gx_mark_new_pass(void);
 void pc_gx_vr_reset_routing(void);
+void pc_gx_dirty_colormask(void);
 void pc_gx_get_clear(float* rgba, float* depth);
 extern int g_pc_target_w, g_pc_target_h;   /* pc_gx.c: current render target dims */
 }
@@ -803,8 +804,11 @@ static void pcvr_draw_panel(int eye) {
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
+    /* UI content is rendered over transparent black (premultiplied-ish) */
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glUseProgram(s_vr.panel_prog);
     glUniformMatrix4fv(s_vr.panel_u_mvp, 1, GL_TRUE, &m44[0][0]);
     float half_w = s_vr.ui_size * 0.5f;
@@ -977,6 +981,9 @@ extern "C" void pc_vr_nes_begin_draw(void) {
     if (!s_vr.active) return;
     glGetIntegerv(GL_VIEWPORT, s_nes_saved_viewport);
     glBindFramebuffer(GL_FRAMEBUFFER, s_vr.ui.fbo);
+    /* The game DL path may have left alpha writes masked off; the panel
+     * needs coverage alpha from the NES quad. */
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     g_pc_target_w = s_vr.ui.w;
     g_pc_target_h = s_vr.ui.h;
 }
@@ -988,4 +995,6 @@ extern "C" void pc_vr_nes_end_draw(void) {
                (GLsizei)s_nes_saved_viewport[2], (GLsizei)s_nes_saved_viewport[3]);
     g_pc_target_w = g_pc_window_w;
     g_pc_target_h = g_pc_window_h;
+    /* We touched the color mask behind the dirty system */
+    pc_gx_dirty_colormask();
 }
