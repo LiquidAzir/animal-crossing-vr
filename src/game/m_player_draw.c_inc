@@ -17,6 +17,26 @@ static void Player_actor_draw_Before_head(ACTOR* actorx, GAME* game, cKF_Skeleto
 typedef void (*mPlayer_DRAW_BEFORE_PROC)(ACTOR*, GAME*, cKF_SkeletonInfo_R_c*, Gfx**, u8*, s_xyz*, xyz_t*);
 
 static int Player_actor_draw_Before(GAME* game, cKF_SkeletonInfo_R_c* kf, int joint_no, Gfx** gfx_pp, u8* work_flag,
+                                    void* arg, s_xyz* rot, xyz_t* pos);
+
+#ifdef TARGET_PC
+/* First person: run the FULL skeleton walk but emit no body geometry.
+ * Returning the original callback's verdict keeps the matrix chain exact;
+ * NULLing the joint display list hides the model. Everything downstream
+ * that the blunt draw-skip used to starve stays live this way: the
+ * right/left hand matrices (so Player_actor_Item_draw renders the held
+ * tool, animated), axe/net collision triangles, net_pos/scoop_pos read by
+ * insects, the bobber's hand anchors, footprints, and the umbrella. */
+static int Player_actor_draw_Before_FirstPerson(GAME* game, cKF_SkeletonInfo_R_c* kf, int joint_no, Gfx** gfx_pp,
+                                                u8* work_flag, void* arg, s_xyz* rot, xyz_t* pos) {
+    int keep_chain = Player_actor_draw_Before(game, kf, joint_no, gfx_pp, work_flag, arg, rot, pos);
+
+    *gfx_pp = NULL;
+    return keep_chain;
+}
+#endif
+
+static int Player_actor_draw_Before(GAME* game, cKF_SkeletonInfo_R_c* kf, int joint_no, Gfx** gfx_pp, u8* work_flag,
                                     void* arg, s_xyz* rot, xyz_t* pos) {
     // clang-format off
     static const mPlayer_DRAW_BEFORE_PROC proc[] = {
@@ -295,7 +315,13 @@ static void Player_actor_draw_Normal(ACTOR* actorx, GAME* game) {
         CLOSE_DISP(graph);
     }
 
+#ifdef TARGET_PC
+    cKF_Si3_draw_R_SV(game, kf, mtx,
+                      pc_fp_hide_player() ? &Player_actor_draw_Before_FirstPerson : &Player_actor_draw_Before,
+                      &Player_actor_draw_After, player);
+#else
     cKF_Si3_draw_R_SV(game, kf, mtx, &Player_actor_draw_Before, &Player_actor_draw_After, player);
+#endif
 
     if (player->change_color_flag) {
         /* Revert to standard fog color */

@@ -55,9 +55,11 @@ Toggle any time with **F5** (keyboard) or **left grip + Y** (VR). Works flat
 and in VR:
 
 - The camera moves to your villager's eyes; the character model hides (its
-  shadow stays). Left stick walks where you're looking; C-stick / right
-  stick turns (smooth in flat with pitch on the stick; **snap turns** in VR,
-  with pitch from your head).
+  shadow stays) but **held tools stay visible and animated in front of
+  you** — fishing rod (with its bend), net, shovel, axe, umbrella, watering
+  can. Left stick walks where you're looking; C-stick / right stick turns
+  (smooth in flat with pitch on the stick; **snap turns** in VR, with pitch
+  from your head).
 - In VR the world switches to **life-size scale** (`vr_fp_world_scale`,
   default 25 = one tile ≈ 1 m) — villagers stand in front of you at eye
   level. Toggling back returns to the diorama.
