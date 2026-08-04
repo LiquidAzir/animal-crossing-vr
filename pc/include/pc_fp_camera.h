@@ -1,9 +1,11 @@
 /* pc_fp_camera.h - first-person camera mode (flat + VR).
  *
- * When enabled, the play scene's NORMAL/WADE camera is replaced with a view
- * from the player character's eyes. Scripted cameras (dialogue, doors,
- * events, demos) keep control and first person resumes afterwards — the
- * game camera continues to run underneath, so toggling is seamless.
+ * When enabled, the play scene's NORMAL/WADE/TALK cameras are replaced with
+ * a view from the player character's eyes — regular villager conversations
+ * stay first person (the view snaps to face the partner as the chat
+ * starts). Scripted cameras (doors, demos, events, item, staff roll) keep
+ * control and first person resumes afterwards — the game camera continues
+ * to run underneath, so toggling is seamless.
  *
  * Look: C-stick / right stick (smooth yaw+pitch flat; snap yaw in VR, where
  * pitch comes from the headset). Movement stays stick-relative-to-view by
@@ -40,6 +42,17 @@ void pc_fp_frame(float dt);
 
 /* Compute the first-person view from the player's feet position. */
 void pc_fp_view(const float player_pos[3], float eye[3], float at[3], float up[3]);
+
+/* Snap the look direction to face a world point (used when a conversation
+ * starts, so the villager is in front of you). Pitch aims at target_y in
+ * flat mode; VR pitch stays with the headset. */
+void pc_fp_face_point(const float player_pos[3], float target_x, float target_y, float target_z);
+
+/* Toggled on mid-conversation: 1 exactly once, so the hook re-snaps. */
+int pc_fp_consume_resnap(void);
+
+/* Conversation ended: ease flat-mode pitch back to level. */
+void pc_fp_talk_exit(void);
 
 /* Whether the override actually ran this frame (vs a scripted camera). */
 void pc_fp_set_active(int active);

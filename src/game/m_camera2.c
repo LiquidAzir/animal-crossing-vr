@@ -235,14 +235,16 @@ static void Camera2_SetView(GAME_PLAY* play) {
     }
 
 #ifdef TARGET_PC
-    /* First person replaces the follow cameras only; scripted cameras
-     * (talk, doors, demos, item, staff roll...) keep control and FP
-     * resumes afterwards. */
+    /* First person replaces the follow cameras and plain conversations;
+     * scripted cameras (demos, doors, item, events, staff roll...) keep
+     * control and FP resumes afterwards. */
     {
+        static int pc_fp_last_index = -1;
         PLAYER_ACTOR* fp_player = get_player_actor_withoutCheck(play);
         int fp_now = g_pc_fp_mode && fp_player != NULL &&
                      (camera->now_main_index == CAMERA2_PROCESS_NORMAL ||
-                      camera->now_main_index == CAMERA2_PROCESS_WADE);
+                      camera->now_main_index == CAMERA2_PROCESS_WADE ||
+                      camera->now_main_index == CAMERA2_PROCESS_TALK);
 
         if (fp_now) {
             float fp_pos[3];
@@ -256,6 +258,34 @@ static void Camera2_SetView(GAME_PLAY* play) {
             fp_pos[0] = fp_player->actor_class.world.position.x;
             fp_pos[1] = fp_player->actor_class.world.position.y;
             fp_pos[2] = fp_player->actor_class.world.position.z;
+
+            /* Entering a conversation (or toggling FP on mid-conversation):
+             * turn to face the partner so they stand in front of you (one
+             * snap — a comfortable cut in VR) */
+            int fp_resnap = pc_fp_consume_resnap();
+            if (camera->now_main_index == CAMERA2_PROCESS_TALK &&
+                (fp_resnap || pc_fp_last_index != CAMERA2_PROCESS_TALK)) {
+                ACTOR* partner = camera->main_data.talk.speaker_actor;
+                if (partner == NULL || partner == &fp_player->actor_class) {
+                    partner = camera->main_data.talk.listener_actor;
+                }
+                if (partner != NULL && partner != &fp_player->actor_class) {
+                    pc_fp_face_point(fp_pos, partner->world.position.x,
+                                     partner->world.position.y + 30.0f,
+                                     partner->world.position.z);
+                } else if (camera->main_data.talk.flags & 2) {
+                    /* talk_pos conversations (e.g. selling furniture) pan
+                     * to a point rather than an actor — face that point */
+                    pc_fp_face_point(fp_pos, camera->main_data.talk.listener_pos.x,
+                                     camera->main_data.talk.listener_pos.y + 30.0f,
+                                     camera->main_data.talk.listener_pos.z);
+                }
+            }
+            if (pc_fp_last_index == CAMERA2_PROCESS_TALK &&
+                camera->now_main_index != CAMERA2_PROCESS_TALK) {
+                pc_fp_talk_exit();
+            }
+            pc_fp_last_index = camera->now_main_index;
 
             pc_fp_frame(play->game.graph->dt_num_60fps_frames);
             pc_fp_view(fp_pos, fp_eye, fp_at, fp_up);
@@ -271,6 +301,7 @@ static void Camera2_SetView(GAME_PLAY* play) {
             return;
         }
 
+        pc_fp_last_index = camera->now_main_index;
         pc_fp_set_active(0);
         pc_fp_notify_camera_yaw(camera->direction.y);
     }
