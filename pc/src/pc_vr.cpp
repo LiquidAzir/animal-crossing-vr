@@ -198,6 +198,9 @@ static struct {
     Uint32 swing_hi_since;      /* ticks when speed first exceeded threshold (0 = below) */
     Uint32 swing_block_until;   /* refractory deadline, ms ticks */
     int swing_pulse;            /* inject A this frame */
+    int hand_ever_valid;        /* pose has been valid at least once */
+    int hand_missing_logged;    /* one-shot diagnostic for unbound pose */
+    Uint32 active_since_ticks;  /* when the session went active */
 
     /* Frame-timing telemetry (vr_log.txt every ~30s) */
     uint32_t t_last_frame_index;
@@ -650,6 +653,7 @@ extern "C" void pc_vr_init(void) {
     }
     m34_identity(s_vr.world_from_seated);
     s_vr.t_last_log_ticks = SDL_GetTicks();
+    s_vr.active_since_ticks = s_vr.t_last_log_ticks;
 
     s_vr.active = 1;
     s_vr.current_eye = -1;
@@ -788,6 +792,7 @@ extern "C" void pc_vr_frame_begin(void) {
                         s_vr.hand_world[r][c] *= k;
             }
             s_vr.hand_valid = 1;
+            s_vr.hand_ever_valid = 1;
 
             /* Unified swing gesture: sustained fast controller motion fires
              * one A press (tool use). Time-based thresholds so behavior is
@@ -814,8 +819,24 @@ extern "C" void pc_vr_frame_begin(void) {
                 }
             } else {
                 s_vr.swing_hi_since = 0;
+                /* A pulse must not carry into a conversation a villager
+                 * just started — it would skip the opening dialogue page */
+                if (pc_fp_in_talk()) s_vr.swing_pulse = 0;
             }
         }
+    }
+
+    /* One-shot setup diagnostic: motion tools enabled but the pose action
+     * never bound (stale vr_actions folder or a custom binding without the
+     * pose). Points straight at the fix instead of failing silently. */
+    if (!s_vr.hand_ever_valid && !s_vr.hand_missing_logged && s_vr.input_ready &&
+        (g_pc_settings.vr_tool_on_hand || g_pc_settings.vr_motion_swing) &&
+        SDL_GetTicks() - s_vr.active_since_ticks > 10000) {
+        s_vr.hand_missing_logged = 1;
+        pcvr_log("right-hand pose not delivering yet (10s) - motion tools waiting. "
+                 "Normal if the controllers are asleep or you were in the dashboard. "
+                 "If tools never follow your hand: update the vr_actions folder next "
+                 "to the exe, or re-select the default binding once in SteamVR.");
     }
 
     /* --- Frame-timing telemetry: one vr_log line every ~30s --- */

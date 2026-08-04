@@ -117,7 +117,7 @@ static const char* DEFAULT_SETTINGS =
     "# VR first person: render the held tool at your real controller pose (0/1)\n"
     "vr_tool_on_hand = 1\n"
     "\n"
-    "# Tool-on-hand pitch adjustment in degrees (-90..90)\n"
+    "# Tool-on-hand pitch adjustment in degrees (-90..90, restart to apply)\n"
     "vr_tool_pitch = 0\n";
 
 static const char* skip_ws(const char* s) {
@@ -316,7 +316,7 @@ void pc_settings_save(void) {
     fprintf(f, "# VR first person: render the held tool at your real controller pose (0/1)\n");
     fprintf(f, "vr_tool_on_hand = %d\n", g_pc_settings.vr_tool_on_hand);
     fprintf(f, "\n");
-    fprintf(f, "# Tool-on-hand pitch adjustment in degrees (-90..90)\n");
+    fprintf(f, "# Tool-on-hand pitch adjustment in degrees (-90..90, restart to apply)\n");
     fprintf(f, "vr_tool_pitch = %d\n", g_pc_settings.vr_tool_pitch);
     fclose(f);
     printf("[Settings] Saved %s\n", SETTINGS_FILE);
