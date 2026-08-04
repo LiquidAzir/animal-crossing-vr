@@ -92,6 +92,11 @@ static void Player_actor_Item_draw(ACTOR* actor, GAME* game) {
     PLAYER_ACTOR* player = (PLAYER_ACTOR*)actor;
     int now_index = player->now_item_main_index;
 
+#ifdef TARGET_PC
+    /* VR motion tools read the live item state (swing gesture gate) */
+    g_pc_item_main_index_now = now_index;
+#endif
+
     if (mPlayer_ITEM_MAIN_VALID(now_index)) {
         GRAPH* graph = game->graph;
 
@@ -123,7 +128,33 @@ static void Player_actor_Item_draw(ACTOR* actor, GAME* game) {
                 Mtx* mtx;
 
                 Matrix_push();
+#ifdef TARGET_PC
+                /* VR first person: anchor the held tool to the real
+                 * controller pose. The per-tool procs derive their attach
+                 * and collision points from this stack top, so the tool
+                 * (and e.g. the net's catch position) follows your hand.
+                 * Falls back to the animated hand whenever the pose is
+                 * unavailable or the feature is off. */
+                {
+                    float pc_hand[12];
+                    if (pc_vr_hand_tool_mtx(pc_hand)) {
+                        MtxF pc_hand_mf;
+                        pc_hand_mf.xx = pc_hand[0]; pc_hand_mf.xy = pc_hand[1];
+                        pc_hand_mf.xz = pc_hand[2]; pc_hand_mf.xw = pc_hand[3];
+                        pc_hand_mf.yx = pc_hand[4]; pc_hand_mf.yy = pc_hand[5];
+                        pc_hand_mf.yz = pc_hand[6]; pc_hand_mf.yw = pc_hand[7];
+                        pc_hand_mf.zx = pc_hand[8]; pc_hand_mf.zy = pc_hand[9];
+                        pc_hand_mf.zz = pc_hand[10]; pc_hand_mf.zw = pc_hand[11];
+                        pc_hand_mf.wx = 0.0f; pc_hand_mf.wy = 0.0f;
+                        pc_hand_mf.wz = 0.0f; pc_hand_mf.ww = 1.0f;
+                        Matrix_put(&pc_hand_mf);
+                    } else {
+                        Matrix_put(&player->right_hand_mtx);
+                    }
+                }
+#else
                 Matrix_put(&player->right_hand_mtx);
+#endif
 
                 if (scale != 1.0f) {
                     Matrix_scale(scale, scale, scale, MTX_MULT);

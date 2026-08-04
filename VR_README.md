@@ -71,6 +71,24 @@ and in VR:
   `fp_eye_height` (game units above the feet, default 52),
   `fp_snap_degrees` (0 = smooth VR turning).
 
+## Motion tools (VR first person)
+
+With a tool out in first person:
+
+- **Swing your right controller** (a firm, quick motion) to use it — swing
+  the net, chop with the axe, dig with the shovel, cast the rod. One swing
+  = one use; it's the same as pressing A, so buttons still work too.
+- **The tool rides your real hand**: it's rendered at your controller's
+  pose, and for the net that includes the catch area — you catch bugs
+  where *you* swing. If the grip angle feels off, tune `vr_tool_pitch`
+  (degrees) in `settings.ini`.
+- Both features have switches under `[FirstPerson]`-adjacent keys in
+  `settings.ini`: `vr_motion_swing` and `vr_tool_on_hand` (1 = on).
+
+`vr_log.txt` now also records a performance summary every 30 seconds
+(fps, GPU frame time, dropped frames) — see [VR_PLAYTEST.md](VR_PLAYTEST.md)
+for the guided test route that uses it.
+
 ## Tuning (`settings.ini`, `[VR]` section)
 
 | Key | Default | Meaning |

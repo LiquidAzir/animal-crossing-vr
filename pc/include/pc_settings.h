@@ -30,6 +30,9 @@ typedef struct {
     int fp_eye_height;    /* first-person eye height above the player's feet, game units (default 52) */
     int fp_snap_degrees;  /* VR snap-turn angle (default 45; 0 = smooth turning) */
     int vr_fp_world_scale;/* mm per game unit in first person (default 25 = life-size-ish) */
+    int vr_motion_swing;  /* VR FP: swinging the right controller triggers the tool (default 1) */
+    int vr_tool_on_hand;  /* VR FP: render the held tool at the real controller pose (default 1) */
+    int vr_tool_pitch;    /* tool-on-hand pitch adjustment, degrees (default 0) */
 } PCSettings;
 
 extern PCSettings g_pc_settings;

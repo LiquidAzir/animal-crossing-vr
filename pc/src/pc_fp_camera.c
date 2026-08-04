@@ -22,6 +22,29 @@ extern int g_pc_substick_y;
 
 int g_pc_fp_mode = 0;
 
+/* Written by Player_actor_Item_draw each frame: the player's current item
+ * main index (mPlayer_ITEM_MAIN_*), -1 when nothing is out. */
+int g_pc_item_main_index_now = -1;
+
+/* Swingable ranges from the mPlayer_ITEM_MAIN_* enum (m_player.h:445-471):
+ * axe 1, net 2-9, rod 11-19, shovel 20. */
+int pc_fp_swingable_equipped(void) {
+    int i = g_pc_item_main_index_now;
+    return (i >= 1 && i <= 9) || (i >= 11 && i <= 20);
+}
+
+/* Camera is in TALK mode (set by the m_camera2 hook): the swing gesture
+ * must not fire — A would advance dialogue. */
+static int s_in_talk;
+
+void pc_fp_set_in_talk(int in_talk) {
+    s_in_talk = in_talk;
+}
+
+int pc_fp_in_talk(void) {
+    return s_in_talk;
+}
+
 #define FP_BANG_PER_DEG   (65536.0f / 360.0f)
 #define FP_TURN_RATE_BANG 380.0f   /* per 60Hz frame at full stick (~2.1 deg) */
 #define FP_PITCH_RATE     0.020f   /* radians per 60Hz frame at full stick */

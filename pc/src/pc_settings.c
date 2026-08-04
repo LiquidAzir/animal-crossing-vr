@@ -30,6 +30,9 @@ PCSettings g_pc_settings = {
     .fp_eye_height = 52,
     .fp_snap_degrees = 45,
     .vr_fp_world_scale = 25,
+    .vr_motion_swing = 1,
+    .vr_tool_on_hand = 1,
+    .vr_tool_pitch = 0,
 };
 
 static const char* SETTINGS_FILE = "settings.ini";
@@ -106,7 +109,16 @@ static const char* DEFAULT_SETTINGS =
     "fp_snap_degrees = 45\n"
     "\n"
     "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n"
-    "vr_fp_world_scale = 25\n";
+    "vr_fp_world_scale = 25\n"
+    "\n"
+    "# VR first person: swing the right controller to use the held tool (0/1)\n"
+    "vr_motion_swing = 1\n"
+    "\n"
+    "# VR first person: render the held tool at your real controller pose (0/1)\n"
+    "vr_tool_on_hand = 1\n"
+    "\n"
+    "# Tool-on-hand pitch adjustment in degrees (-90..90)\n"
+    "vr_tool_pitch = 0\n";
 
 static const char* skip_ws(const char* s) {
     while (*s == ' ' || *s == '\t') s++;
@@ -175,6 +187,12 @@ static void apply_setting(const char* key, const char* value) {
         if (val >= 0 && val <= 90) g_pc_settings.fp_snap_degrees = val;
     } else if (strcmp(key, "vr_fp_world_scale") == 0) {
         if (val >= 1 && val <= 1000) g_pc_settings.vr_fp_world_scale = val;
+    } else if (strcmp(key, "vr_motion_swing") == 0) {
+        if (val == 0 || val == 1) g_pc_settings.vr_motion_swing = val;
+    } else if (strcmp(key, "vr_tool_on_hand") == 0) {
+        if (val == 0 || val == 1) g_pc_settings.vr_tool_on_hand = val;
+    } else if (strcmp(key, "vr_tool_pitch") == 0) {
+        if (val >= -90 && val <= 90) g_pc_settings.vr_tool_pitch = val;
     }
 }
 
@@ -291,6 +309,15 @@ void pc_settings_save(void) {
     fprintf(f, "\n");
     fprintf(f, "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n");
     fprintf(f, "vr_fp_world_scale = %d\n", g_pc_settings.vr_fp_world_scale);
+    fprintf(f, "\n");
+    fprintf(f, "# VR first person: swing the right controller to use the held tool (0/1)\n");
+    fprintf(f, "vr_motion_swing = %d\n", g_pc_settings.vr_motion_swing);
+    fprintf(f, "\n");
+    fprintf(f, "# VR first person: render the held tool at your real controller pose (0/1)\n");
+    fprintf(f, "vr_tool_on_hand = %d\n", g_pc_settings.vr_tool_on_hand);
+    fprintf(f, "\n");
+    fprintf(f, "# Tool-on-hand pitch adjustment in degrees (-90..90)\n");
+    fprintf(f, "vr_tool_pitch = %d\n", g_pc_settings.vr_tool_pitch);
     fclose(f);
     printf("[Settings] Saved %s\n", SETTINGS_FILE);
 }
