@@ -1,4 +1,4 @@
-This project is dual-licensed:
+This project is multi-licensed:
 
 - The original decompilation code is from ACreTeam/ac-decomp and is
   licensed under CC0 1.0 Universal (public domain).
@@ -6,6 +6,14 @@ This project is dual-licensed:
 
 - The PC port layer (pc/ directory and all #ifdef TARGET_PC additions
   to decomp files) is licensed under the MIT License below.
+
+- The VR fork additions (pc_vr, pc_fp_camera, the VR/first-person hooks in
+  decomp files, and vr_actions/) are licensed under the MIT License below,
+  Copyright (c) 2026 LiquidAzir, under the same terms as the PC port
+  layer's MIT license text.
+
+- The vendored OpenVR SDK (pc/lib/openvr/) is BSD-3-Clause, Copyright
+  Valve Corporation — see pc/lib/openvr/LICENSE.
 
 
 MIT License
