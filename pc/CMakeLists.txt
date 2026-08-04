@@ -300,6 +300,7 @@ set(PC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_assets.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_disc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_vr.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_fp_camera.c
 )
 
 # =============================================================================

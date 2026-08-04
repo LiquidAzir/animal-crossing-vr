@@ -11,6 +11,7 @@
 #include "pc_settings_menu.h"
 #include "pc_profiler.h"
 #include "pc_vr.h"
+#include "pc_fp_camera.h"
 #include "m_kankyo.h"
 
 /* prefer discrete GPU on laptops */
@@ -215,6 +216,14 @@ int pc_platform_poll_events(void) {
                 }
                 if (event.key.keysym.sym == SDLK_F3 && !event.key.repeat) {
                     pc_speedhack_toggle();
+                    break;
+                }
+                if (event.key.keysym.sym == SDLK_F5 && !event.key.repeat) {
+                    /* Not while paused: the camera is frozen, so the switch
+                     * couldn't take effect until unpause anyway */
+                    if (!g_pc_paused) {
+                        pc_fp_toggle();
+                    }
                     break;
                 }
                 if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat) {
@@ -425,6 +434,7 @@ int main(int argc, char* argv[]) {
         g_pc_settings.vr_mode = g_pc_vr_override;
     }
     pc_keybindings_load();
+    pc_fp_init();
     pc_platform_init();
     pc_vr_init();   /* needs the GL context; no-op when vr_mode=0 or no HMD */
     pc_disc_init();

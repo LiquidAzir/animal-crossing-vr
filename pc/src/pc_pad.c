@@ -12,6 +12,10 @@
 
 static SDL_GameController* g_controller = NULL;
 
+/* Merged C-stick (keyboard + gamepad + VR) for the first-person camera */
+int g_pc_substick_x = 0;
+int g_pc_substick_y = 0;
+
 /* deadzone percent (0-40) -> raw SDL axis threshold */
 static int deadzone_threshold(int percent) {
     if (percent < 0)  percent = 0;
@@ -168,6 +172,9 @@ u32 PADRead(PADStatus* status) {
     /* VR controllers (SteamVR Input) merge on top of keyboard/gamepad */
     pc_vr_merge_pad(&buttons, &stickX, &stickY, &cstickX, &cstickY,
                     &status[0].triggerLeft, &status[0].triggerRight);
+
+    g_pc_substick_x = cstickX;
+    g_pc_substick_y = cstickY;
 
     status[0].button = buttons;
     status[0].stickX = stickX;

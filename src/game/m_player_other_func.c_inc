@@ -258,7 +258,15 @@ static void Player_actor_move_other_func2(ACTOR* actor, GAME* game) {
 
     Player_actor_set_eye_PositionAndAngle(actor);
     Player_actor_sound_SetStatus(actor);
+#ifdef TARGET_PC
+    /* First person owns the C-stick (look control) — suppress the normal
+     * camera's C-stick zoom/angle stepping while FP is on. */
+    if (!g_pc_fp_mode) {
+        Player_actor_Set_Indoor_Camera_Index(actor, game);
+    }
+#else
     Player_actor_Set_Indoor_Camera_Index(actor, game);
+#endif
     Player_actor_check_forward(actor, game);
 
     if (!l_skip_other_func_set_wade) {

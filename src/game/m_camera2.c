@@ -11,6 +11,10 @@
 #include "m_common_data.h"
 #include "m_field_make.h"
 
+#ifdef TARGET_PC
+#include "pc_fp_camera.h"
+#endif
+
 #if VERSION >= VER_GAFU01_00
 #define CAMERA2_STAFFROLL_CENTER_X_ROT_STEP_DIVISOR 3333
 #define CAMERA2_STAFFROLL_CENTER_Y_ROT_STEP_DIVISOR 2166
@@ -229,6 +233,48 @@ static void Camera2_SetView(GAME_PLAY* play) {
     if (F32_IS_ZERO(camera->perspective.fov_y)) {
         camera->perspective.fov_y += 1.0f;
     }
+
+#ifdef TARGET_PC
+    /* First person replaces the follow cameras only; scripted cameras
+     * (talk, doors, demos, item, staff roll...) keep control and FP
+     * resumes afterwards. */
+    {
+        PLAYER_ACTOR* fp_player = get_player_actor_withoutCheck(play);
+        int fp_now = g_pc_fp_mode && fp_player != NULL &&
+                     (camera->now_main_index == CAMERA2_PROCESS_NORMAL ||
+                      camera->now_main_index == CAMERA2_PROCESS_WADE);
+
+        if (fp_now) {
+            float fp_pos[3];
+            float fp_eye[3];
+            float fp_at[3];
+            float fp_up[3];
+            xyz_t eye_v;
+            xyz_t at_v;
+            xyz_t up_v;
+
+            fp_pos[0] = fp_player->actor_class.world.position.x;
+            fp_pos[1] = fp_player->actor_class.world.position.y;
+            fp_pos[2] = fp_player->actor_class.world.position.z;
+
+            pc_fp_frame(play->game.graph->dt_num_60fps_frames);
+            pc_fp_view(fp_pos, fp_eye, fp_at, fp_up);
+
+            eye_v.x = fp_eye[0]; eye_v.y = fp_eye[1]; eye_v.z = fp_eye[2];
+            at_v.x = fp_at[0];   at_v.y = fp_at[1];   at_v.z = fp_at[2];
+            up_v.x = fp_up[0];   up_v.y = fp_up[1];   up_v.z = fp_up[2];
+
+            setScaleView(view, camera->perspective.scale);
+            setPerspectiveView(view, PC_FP_FOV_DEG, PC_FP_NEAR, camera->perspective.far);
+            setLookAtView(view, &eye_v, &at_v, &up_v);
+            pc_fp_set_active(1);
+            return;
+        }
+
+        pc_fp_set_active(0);
+        pc_fp_notify_camera_yaw(camera->direction.y);
+    }
+#endif
 
     setScaleView(view, camera->perspective.scale);
     setPerspectiveView(view, camera->perspective.fov_y, camera->perspective.near, camera->perspective.far);
@@ -570,6 +616,12 @@ static void Camera2_setup_main_Base(GAME_PLAY* play) {
 }
 
 extern s16 getCamera2AngleY(GAME_PLAY* play) {
+#ifdef TARGET_PC
+    /* First person: stick-forward must mean walk-where-you're-looking */
+    if (pc_fp_view_is_active()) {
+        return pc_fp_camera_yaw();
+    }
+#endif
     return play->camera.direction.y;
 }
 

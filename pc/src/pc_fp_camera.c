@@ -1,0 +1,141 @@
+/* pc_fp_camera.c - first-person camera mode (flat + VR).
+ *
+ * Angle convention: atans_table(a, b) returns theta with a = r*cos(theta),
+ * b = r*sin(theta) — the REVERSE argument order of C's atan2 (see
+ * sys_math_atan.c and m_controller.c's cos_s/sin_s reconstruction).
+ * Camera2_DirectionCalc does direction.y = atans_table(back.z, back.x)
+ * + 180 deg, and movement integrates x += sin_s(angle), z += cos_s(angle)
+ * (m_actor.c:60). So the FORWARD vector for yaw theta is
+ * (sin theta, 0, cos theta); yaw initializes directly from direction.y at
+ * toggle time and getCamera2AngleY can return our yaw verbatim, keeping the
+ * stick->walk-direction formula (m_player_common.c_inc:2261) exact.
+ */
+#include "pc_platform.h"
+#include "pc_settings.h"
+#include "pc_fp_camera.h"
+#include "pc_vr.h"
+#include <math.h>
+
+/* merged C-stick (keyboard + gamepad + VR), set by PADRead in pc_pad.c */
+extern int g_pc_substick_x;
+extern int g_pc_substick_y;
+
+int g_pc_fp_mode = 0;
+
+#define FP_BANG_PER_DEG   (65536.0f / 360.0f)
+#define FP_TURN_RATE_BANG 380.0f   /* per 60Hz frame at full stick (~2.1 deg) */
+#define FP_PITCH_RATE     0.020f   /* radians per 60Hz frame at full stick */
+#define FP_PITCH_CLAMP    1.15f    /* ~66 deg up/down */
+#define FP_SNAP_ON        0.60f    /* stick thresholds for VR snap turning */
+#define FP_SNAP_OFF       0.35f
+
+static float s_yaw;          /* forward angle, binary-angle units [0, 65536) */
+static float s_pitch;        /* radians, positive = up (flat mode only) */
+static u32   s_active_stamp; /* pc_frame_counter when the override last ran */
+static s16   s_last_cam_yaw; /* live game camera yaw (for toggle-on init) */
+static int   s_snap_latch;
+
+/* Frame counter from pc_vi.c. The active flag is frame-stamped rather than
+ * latched: some camera modes (STOP's empty main, a TALK edge case) never
+ * reach Camera2_SetView, and a stale latch would keep the player hidden and
+ * the movement yaw redirected under a camera we no longer control. */
+extern u32 pc_frame_counter;
+
+void pc_fp_init(void) {
+    g_pc_fp_mode = g_pc_settings.fp_mode != 0;
+    s_yaw = 0.0f;
+    s_pitch = 0.0f;
+    s_active_stamp = (u32)-1000;
+    s_snap_latch = 0;
+    if (g_pc_fp_mode) {
+        printf("[FP] starting in first person (F5 toggles)\n");
+    }
+}
+
+void pc_fp_toggle(void) {
+    g_pc_fp_mode = !g_pc_fp_mode;
+    if (g_pc_fp_mode) {
+        /* Face wherever the game camera was facing */
+        s_yaw = (float)(u16)s_last_cam_yaw;
+        s_pitch = 0.0f;
+        s_snap_latch = 1; /* don't snap off a stick that's already deflected */
+    }
+    g_pc_settings.fp_mode = g_pc_fp_mode;
+    pc_vr_set_fp_scale(g_pc_fp_mode);
+    printf("[FP] first person %s\n", g_pc_fp_mode ? "ON" : "OFF");
+}
+
+void pc_fp_notify_camera_yaw(s16 yaw) {
+    s_last_cam_yaw = yaw;
+}
+
+void pc_fp_set_active(int active) {
+    s_active_stamp = active ? pc_frame_counter : (u32)(pc_frame_counter - 1000u);
+}
+
+int pc_fp_view_is_active(void) {
+    return g_pc_fp_mode && (u32)(pc_frame_counter - s_active_stamp) <= 1u;
+}
+
+int pc_fp_hide_player(void) {
+    return pc_fp_view_is_active();
+}
+
+s16 pc_fp_camera_yaw(void) {
+    return (s16)(u16)((int)s_yaw & 0xFFFF);
+}
+
+void pc_fp_frame(float dt) {
+    float sx = (float)g_pc_substick_x / 100.0f;
+    float sy = (float)g_pc_substick_y / 100.0f;
+    if (sx > 1.0f) sx = 1.0f;
+    if (sx < -1.0f) sx = -1.0f;
+    if (sy > 1.0f) sy = 1.0f;
+    if (sy < -1.0f) sy = -1.0f;
+    if (dt > 4.0f) dt = 4.0f;
+
+    if (pc_vr_active() && g_pc_settings.fp_snap_degrees > 0) {
+        /* VR: snap turning (comfort); pitch comes from the headset */
+        if (!s_snap_latch && fabsf(sx) > FP_SNAP_ON) {
+            float step = (float)g_pc_settings.fp_snap_degrees * FP_BANG_PER_DEG;
+            s_yaw -= (sx > 0.0f ? step : -step);
+            s_snap_latch = 1;
+        } else if (s_snap_latch && fabsf(sx) < FP_SNAP_OFF) {
+            s_snap_latch = 0;
+        }
+        s_pitch = 0.0f;
+    } else {
+        /* Smooth look (flat, or VR with fp_snap_degrees = 0) */
+        s_yaw -= sx * FP_TURN_RATE_BANG * dt;
+        if (!pc_vr_active()) {
+            s_pitch += sy * FP_PITCH_RATE * dt;
+            if (s_pitch > FP_PITCH_CLAMP) s_pitch = FP_PITCH_CLAMP;
+            if (s_pitch < -FP_PITCH_CLAMP) s_pitch = -FP_PITCH_CLAMP;
+        } else {
+            s_pitch = 0.0f;
+        }
+    }
+
+    while (s_yaw < 0.0f) s_yaw += 65536.0f;
+    while (s_yaw >= 65536.0f) s_yaw -= 65536.0f;
+}
+
+void pc_fp_view(const float player_pos[3], float eye[3], float at[3], float up[3]) {
+    const float th = s_yaw * (float)(2.0 * PC_PI / 65536.0);
+    const float cp = cosf(s_pitch);
+    const float fx = sinf(th) * cp;   /* game convention: x = sin, z = cos */
+    const float fy = sinf(s_pitch);
+    const float fz = cosf(th) * cp;
+
+    eye[0] = player_pos[0];
+    eye[1] = player_pos[1] + (float)g_pc_settings.fp_eye_height;
+    eye[2] = player_pos[2];
+
+    at[0] = eye[0] + fx * 100.0f;
+    at[1] = eye[1] + fy * 100.0f;
+    at[2] = eye[2] + fz * 100.0f;
+
+    up[0] = 0.0f;
+    up[1] = 1.0f;
+    up[2] = 0.0f;
+}

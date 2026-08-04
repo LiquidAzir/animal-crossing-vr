@@ -49,6 +49,8 @@ unsigned int pc_vr_bind_ui_target(int ui);
 int  pc_vr_skip_ui_draws(void);
 /* Fog ranges are in view units; VR view space is meters. */
 float pc_vr_world_scale(void);
+/* Switch between the diorama scale and the first-person life-size scale. */
+void pc_vr_set_fp_scale(int fp_active);
 
 /* emu64 hook: called whenever the game's view (lookAt) matrix is loaded
  * into the projection stack. mtx34 is row-major 3x4, game units. */
