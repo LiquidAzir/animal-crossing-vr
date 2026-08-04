@@ -1,8 +1,14 @@
 /* pc_vr.cpp - SteamVR (OpenVR) backend: stereo FBOs, tracking, compositor
  * submit, UI panel composite, and Touch-controller input.
  *
- * C++ because openvr.h is a C++ header; everything exported is extern "C"
- * (see pc_vr.h). All calls run on the main/render thread.
+ * Uses OpenVR's flat "FnTable" C interface (openvr_capi.h) instead of the
+ * C++ interfaces: openvr_api.dll is MSVC-built, and MSVC<->MinGW C++ member
+ * calls (thiscall vtables, by-value aggregate returns) are not a contract we
+ * can rely on from a MinGW i686 build. FnTable methods are plain __stdcall
+ * function pointers — compiler-agnostic by design. The exported entry points
+ * (VR_InitInternal etc.) are plain C and safe either way.
+ *
+ * All calls run on the main/render thread.
  *
  * Spaces and conventions (see pc/VR_ARCHITECTURE.md):
  *   - Game view matrices are row-major 3x4, right-handed, -Z forward,
@@ -11,8 +17,8 @@
  *   - The seated tracking origin is equated with a *leveled* (yaw-only)
  *     frame at the game camera: W = T_height * Scale * Anchor maps game
  *     world -> seated meters. Per eye: V_vr = (H*E)^-1 * W, and the
- *     correction applied to the game's combined view*model matrices is
- *     X = V_vr * V_game^-1.
+ *     correction applied to the game's combined view*model position matrices
+ *     is X = V_vr * V_game^-1.
  *   - Projections are kept in the GX depth convention (near -> NDC -1,
  *     far -> NDC 0) to match the rest of pc_gx.
  */
@@ -21,11 +27,12 @@
 #include "pc_diag.h"
 #include "pc_vr.h"
 
-#include "openvr.h"
+#include "openvr_capi.h"
 
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 extern "C" {
 void pc_gx_draw_pending(void);
@@ -36,6 +43,40 @@ void pc_gx_mark_new_pass(void);
 void pc_gx_vr_reset_routing(void);
 void pc_gx_get_clear(float* rgba, float* depth);
 extern int g_pc_target_w, g_pc_target_h;   /* pc_gx.c: current render target dims */
+}
+
+/* openvr_capi.h ships its global entry-point declarations disabled (#if 0);
+ * consumers declare them. These are plain C exports of openvr_api.dll. */
+extern "C" {
+S_API intptr_t VR_InitInternal(EVRInitError* peError, EVRApplicationType eType);
+S_API void VR_ShutdownInternal(void);
+S_API bool VR_IsHmdPresent(void);
+S_API intptr_t VR_GetGenericInterface(const char* pchInterfaceVersion, EVRInitError* peError);
+S_API bool VR_IsRuntimeInstalled(void);
+S_API const char* VR_GetVRInitErrorAsSymbol(EVRInitError error);
+S_API const char* VR_GetVRInitErrorAsEnglishDescription(EVRInitError error);
+}
+
+/* ---------------------------------------------------------------- */
+/* Init log: always written next to the exe (stdout is NUL'd in the
+ * default GUI build, which made the first field failure undiagnosable). */
+
+static FILE* s_vr_logf = NULL;
+
+static void pcvr_log(const char* fmt, ...) {
+    va_list ap;
+    if (s_vr_logf) {
+        va_start(ap, fmt);
+        vfprintf(s_vr_logf, fmt, ap);
+        va_end(ap);
+        fputc('\n', s_vr_logf);
+        fflush(s_vr_logf);
+    }
+    va_start(ap, fmt);
+    printf("[VR] ");
+    vprintf(fmt, ap);
+    printf("\n");
+    va_end(ap);
 }
 
 /* ---------------------------------------------------------------- */
@@ -69,7 +110,7 @@ static void m34_invert_rigid(const M34 m, M34 out) {
         out[i][3] = -(out[i][0] * m[0][3] + out[i][1] * m[1][3] + out[i][2] * m[2][3]);
 }
 
-static void m34_from_hmd(const vr::HmdMatrix34_t* src, M34 out) {
+static void m34_from_hmd(const HmdMatrix34_t* src, M34 out) {
     memcpy(out, src->m, sizeof(M34));
 }
 
@@ -86,7 +127,13 @@ typedef struct {
 static struct {
     int active;                 /* VR session live */
     int requested;              /* 0=off, 1=auto, 2=forced on */
-    vr::IVRSystem* sys;
+    int runtime_up;             /* VR_InitInternal succeeded */
+
+    /* FnTable interfaces (flat C, __stdcall) */
+    struct VR_IVRSystem_FnTable*     sys;
+    struct VR_IVRCompositor_FnTable* comp;
+    struct VR_IVRInput_FnTable*      input;
+    struct VR_IVRChaperone_FnTable*  chap;
 
     PCVRTarget eye[2];
     PCVRTarget ui;
@@ -120,16 +167,17 @@ static struct {
     GLint  panel_u_mvp, panel_u_tex;
 
     /* Input */
-    vr::VRActionSetHandle_t action_set;
-    vr::VRActionHandle_t act_move, act_camera;
-    vr::VRActionHandle_t act_a, act_b, act_x, act_y, act_l, act_r, act_z, act_start;
-    vr::VRActionHandle_t act_recenter;
-    vr::VRActionHandle_t act_haptic_l, act_haptic_r;
+    VRActionSetHandle_t action_set;
+    VRActionHandle_t act_move, act_camera;
+    VRActionHandle_t act_a, act_b, act_x, act_y, act_l, act_r, act_z, act_start;
+    VRActionHandle_t act_recenter;
+    VRActionHandle_t act_haptic_l, act_haptic_r;
     int input_ready;
     int recenter_latch;
 
     int submit_fail_count;
     int submitted_this_frame;
+    int logged_first_submit;
     unsigned int frame_index;
 } s_vr;
 
@@ -174,7 +222,7 @@ static int pcvr_create_target(PCVRTarget* t, int w, int h) {
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
-        printf("[VR] FBO %dx%d incomplete: 0x%04X\n", w, h, status);
+        pcvr_log("FBO %dx%d incomplete: 0x%04X", w, h, status);
         return 0;
     }
     return 1;
@@ -222,7 +270,7 @@ static GLuint pcvr_compile(GLenum type, const char* src) {
     if (!ok) {
         char log[1024];
         glGetShaderInfoLog(sh, sizeof(log), NULL, log);
-        printf("[VR] panel shader compile failed: %s\n", log);
+        pcvr_log("panel shader compile failed: %s", log);
         glDeleteShader(sh);
         return 0;
     }
@@ -242,7 +290,7 @@ static int pcvr_create_panel_gl(void) {
     GLint ok = 0;
     glGetProgramiv(s_vr.panel_prog, GL_LINK_STATUS, &ok);
     if (!ok) {
-        printf("[VR] panel shader link failed\n");
+        pcvr_log("panel shader link failed");
         return 0;
     }
     s_vr.panel_u_mvp = glGetUniformLocation(s_vr.panel_prog, "u_mvp");
@@ -250,9 +298,8 @@ static int pcvr_create_panel_gl(void) {
     s_panel_u_half   = glGetUniformLocation(s_vr.panel_prog, "u_half");
     s_panel_u_center = glGetUniformLocation(s_vr.panel_prog, "u_center");
 
-    /* Unit quad, UV flipped in V: the UI FBO is rendered with GL's
-     * bottom-left origin, matching the game's Y-down flip in the viewport,
-     * so sampling is direct (v=0 at bottom). */
+    /* Unit quad; the UI FBO is rendered with GL's bottom-left origin so
+     * sampling is direct (v=0 at bottom). */
     static const float quad[] = {
         /* pos      uv */
         -1.f, -1.f, 0.f, 0.f,
@@ -274,59 +321,76 @@ static int pcvr_create_panel_gl(void) {
 }
 
 /* ---------------------------------------------------------------- */
+/* FnTable acquisition */
+
+static void* pcvr_get_fntable(const char* version) {
+    char name[128];
+    snprintf(name, sizeof(name), "FnTable:%s", version);
+    EVRInitError err = EVRInitError_VRInitError_None;
+    intptr_t p = VR_GetGenericInterface(name, &err);
+    if (err != EVRInitError_VRInitError_None || p == 0) {
+        pcvr_log("GetGenericInterface(%s) failed: %d", name, (int)err);
+        return NULL;
+    }
+    return (void*)p;
+}
+
+/* ---------------------------------------------------------------- */
 /* Input actions */
 
 static void pcvr_input_init(void) {
     s_vr.input_ready = 0;
+    if (!s_vr.input) return;
 
     char manifest[MAX_PATH];
     if (!GetFullPathNameA("vr_actions\\actionmanifest.json", sizeof(manifest), manifest, NULL))
         return;
     FILE* f = fopen(manifest, "rb");
     if (!f) {
-        printf("[VR] no action manifest at %s - VR controllers disabled\n", manifest);
+        pcvr_log("no action manifest at %s - VR controllers disabled", manifest);
         return;
     }
     fclose(f);
 
-    vr::EVRInputError err = vr::VRInput()->SetActionManifestPath(manifest);
-    if (err != vr::VRInputError_None) {
-        printf("[VR] SetActionManifestPath failed: %d\n", (int)err);
+    EVRInputError err = s_vr.input->SetActionManifestPath((char*)manifest);
+    if (err != EVRInputError_VRInputError_None) {
+        pcvr_log("SetActionManifestPath failed: %d", (int)err);
         return;
     }
 
-    vr::VRInput()->GetActionSetHandle("/actions/main", &s_vr.action_set);
-    vr::VRInput()->GetActionHandle("/actions/main/in/move",     &s_vr.act_move);
-    vr::VRInput()->GetActionHandle("/actions/main/in/camera",   &s_vr.act_camera);
-    vr::VRInput()->GetActionHandle("/actions/main/in/a",        &s_vr.act_a);
-    vr::VRInput()->GetActionHandle("/actions/main/in/b",        &s_vr.act_b);
-    vr::VRInput()->GetActionHandle("/actions/main/in/x",        &s_vr.act_x);
-    vr::VRInput()->GetActionHandle("/actions/main/in/y",        &s_vr.act_y);
-    vr::VRInput()->GetActionHandle("/actions/main/in/l",        &s_vr.act_l);
-    vr::VRInput()->GetActionHandle("/actions/main/in/r",        &s_vr.act_r);
-    vr::VRInput()->GetActionHandle("/actions/main/in/z",        &s_vr.act_z);
-    vr::VRInput()->GetActionHandle("/actions/main/in/start",    &s_vr.act_start);
-    vr::VRInput()->GetActionHandle("/actions/main/in/recenter", &s_vr.act_recenter);
-    vr::VRInput()->GetActionHandle("/actions/main/out/haptic_left",  &s_vr.act_haptic_l);
-    vr::VRInput()->GetActionHandle("/actions/main/out/haptic_right", &s_vr.act_haptic_r);
+    s_vr.input->GetActionSetHandle((char*)"/actions/main", &s_vr.action_set);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/move",     &s_vr.act_move);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/camera",   &s_vr.act_camera);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/a",        &s_vr.act_a);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/b",        &s_vr.act_b);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/x",        &s_vr.act_x);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/y",        &s_vr.act_y);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/l",        &s_vr.act_l);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/r",        &s_vr.act_r);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/z",        &s_vr.act_z);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/start",    &s_vr.act_start);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/recenter", &s_vr.act_recenter);
+    s_vr.input->GetActionHandle((char*)"/actions/main/out/haptic_left",  &s_vr.act_haptic_l);
+    s_vr.input->GetActionHandle((char*)"/actions/main/out/haptic_right", &s_vr.act_haptic_r);
     s_vr.input_ready = 1;
+    pcvr_log("input actions ready (%s)", manifest);
 }
 
-static int pcvr_digital(vr::VRActionHandle_t h) {
-    if (!s_vr.input_ready || h == vr::k_ulInvalidActionHandle) return 0;
-    vr::InputDigitalActionData_t d;
-    if (vr::VRInput()->GetDigitalActionData(h, &d, sizeof(d),
-            vr::k_ulInvalidInputValueHandle) != vr::VRInputError_None)
+static int pcvr_digital(VRActionHandle_t h) {
+    if (!s_vr.input_ready || h == k_ulInvalidActionHandle) return 0;
+    InputDigitalActionData_t d;
+    if (s_vr.input->GetDigitalActionData(h, &d, sizeof(d), k_ulInvalidInputValueHandle)
+            != EVRInputError_VRInputError_None)
         return 0;
     return d.bActive && d.bState;
 }
 
-static void pcvr_analog(vr::VRActionHandle_t h, float* x, float* y) {
+static void pcvr_analog(VRActionHandle_t h, float* x, float* y) {
     *x = 0.0f; *y = 0.0f;
-    if (!s_vr.input_ready || h == vr::k_ulInvalidActionHandle) return;
-    vr::InputAnalogActionData_t d;
-    if (vr::VRInput()->GetAnalogActionData(h, &d, sizeof(d),
-            vr::k_ulInvalidInputValueHandle) != vr::VRInputError_None)
+    if (!s_vr.input_ready || h == k_ulInvalidActionHandle) return;
+    InputAnalogActionData_t d;
+    if (s_vr.input->GetAnalogActionData(h, &d, sizeof(d), k_ulInvalidInputValueHandle)
+            != EVRInputError_VRInputError_None)
         return;
     if (!d.bActive) return;
     *x = d.x; *y = d.y;
@@ -336,8 +400,8 @@ static void pcvr_analog(vr::VRActionHandle_t h, float* x, float* y) {
 /* Matrix pipeline */
 
 static void pcvr_update_eye_projection(int eye) {
-    vr::HmdMatrix44_t p = s_vr.sys->GetProjectionMatrix(
-        eye == 0 ? vr::Eye_Left : vr::Eye_Right, PC_VR_NEAR_M, pcvr_far_m());
+    HmdMatrix44_t p = s_vr.sys->GetProjectionMatrix(
+        eye == 0 ? EVREye_Eye_Left : EVREye_Eye_Right, PC_VR_NEAR_M, pcvr_far_m());
 
     float (*out)[4] = s_vr.eye_projection[eye];
     for (int i = 0; i < 4; i++)
@@ -430,56 +494,72 @@ extern "C" void pc_vr_init(void) {
 
     if (s_vr.requested == 0) return;
 
-    if (!vr::VR_IsRuntimeInstalled()) {
-        printf("[VR] SteamVR is not installed - running flat\n");
+    s_vr_logf = fopen("vr_log.txt", "w");
+    pcvr_log("init: vr_mode=%d scale=%.4f (openvr FnTable backend)",
+             s_vr.requested, s_vr.world_scale);
+
+    if (!VR_IsRuntimeInstalled()) {
+        pcvr_log("SteamVR is not installed - running flat");
         if (s_vr.requested == 2)
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Animal Crossing VR",
                 "SteamVR is not installed.\nInstall SteamVR from Steam, then relaunch.", g_pc_window);
         return;
     }
-    if (s_vr.requested == 1 && !vr::VR_IsHmdPresent()) {
-        printf("[VR] no HMD detected - running flat (use --vr to force)\n");
+    if (s_vr.requested == 1 && !VR_IsHmdPresent()) {
+        pcvr_log("no HMD detected - running flat (use --vr to force)");
         return;
     }
 
-    vr::EVRInitError err = vr::VRInitError_None;
-    s_vr.sys = vr::VR_Init(&err, vr::VRApplication_Scene);
-    if (err != vr::VRInitError_None) {
-        printf("[VR] VR_Init failed: %s\n", vr::VR_GetVRInitErrorAsEnglishDescription(err));
+    EVRInitError err = EVRInitError_VRInitError_None;
+    VR_InitInternal(&err, EVRApplicationType_VRApplication_Scene);
+    if (err != EVRInitError_VRInitError_None) {
+        pcvr_log("VR_InitInternal failed: %s",
+                 VR_GetVRInitErrorAsEnglishDescription(err));
         if (s_vr.requested == 2)
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Animal Crossing VR",
                 "Could not start SteamVR.\nIs the headset connected?", g_pc_window);
-        s_vr.sys = NULL;
         return;
     }
-    if (!vr::VRCompositor()) {
-        printf("[VR] compositor unavailable - running flat\n");
-        vr::VR_Shutdown();
-        s_vr.sys = NULL;
+    s_vr.runtime_up = 1;
+    pcvr_log("runtime initialized");
+
+    s_vr.sys   = (struct VR_IVRSystem_FnTable*)pcvr_get_fntable(IVRSystem_Version);
+    s_vr.comp  = (struct VR_IVRCompositor_FnTable*)pcvr_get_fntable(IVRCompositor_Version);
+    s_vr.input = (struct VR_IVRInput_FnTable*)pcvr_get_fntable(IVRInput_Version);
+    s_vr.chap  = (struct VR_IVRChaperone_FnTable*)pcvr_get_fntable(IVRChaperone_Version);
+    if (!s_vr.sys || !s_vr.comp) {
+        pcvr_log("required interfaces unavailable (sys=%p comp=%p) - running flat",
+                 (void*)s_vr.sys, (void*)s_vr.comp);
+        VR_ShutdownInternal();
+        s_vr.runtime_up = 0;
         return;
     }
-    vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
+    pcvr_log("interfaces: sys/comp ok, input=%s, chaperone=%s",
+             s_vr.input ? "ok" : "missing", s_vr.chap ? "ok" : "missing");
+
+    s_vr.comp->SetTrackingSpace(ETrackingUniverseOrigin_TrackingUniverseSeated);
 
     uint32_t rw = 0, rh = 0;
     s_vr.sys->GetRecommendedRenderTargetSize(&rw, &rh);
-    if (rw < 640) rw = 1440;
-    if (rh < 480) rh = 1584;
+    pcvr_log("recommended render target: %ux%u", rw, rh);
+    if (rw < 640 || rw > 8192) rw = 1440;
+    if (rh < 480 || rh > 8192) rh = 1584;
 
     if (!pcvr_create_target(&s_vr.eye[0], (int)rw, (int)rh) ||
         !pcvr_create_target(&s_vr.eye[1], (int)rw, (int)rh) ||
         !pcvr_create_target(&s_vr.ui, 1280, 960) ||
         !pcvr_create_panel_gl()) {
-        printf("[VR] GL resource creation failed - running flat\n");
+        pcvr_log("GL resource creation failed - running flat");
         pcvr_destroy_target(&s_vr.eye[0]);
         pcvr_destroy_target(&s_vr.eye[1]);
         pcvr_destroy_target(&s_vr.ui);
-        vr::VR_Shutdown();
-        s_vr.sys = NULL;
+        VR_ShutdownInternal();
+        s_vr.runtime_up = 0;
         return;
     }
 
     for (int e = 0; e < 2; e++) {
-        vr::HmdMatrix34_t eth = s_vr.sys->GetEyeToHeadTransform(e == 0 ? vr::Eye_Left : vr::Eye_Right);
+        HmdMatrix34_t eth = s_vr.sys->GetEyeToHeadTransform(e == 0 ? EVREye_Eye_Left : EVREye_Eye_Right);
         m34_from_hmd(&eth, s_vr.eye_to_head[e]);
         m34_identity(s_vr.inv_eye_pose[e]);
         pcvr_update_eye_projection(e);
@@ -499,26 +579,30 @@ extern "C" void pc_vr_init(void) {
 
     s_vr.active = 1;
     s_vr.current_eye = -1;
-    printf("[VR] SteamVR active: eye %ux%u, world scale %.4f m/unit\n",
-           rw, rh, s_vr.world_scale);
+    pcvr_log("ACTIVE: eye %ux%u, world scale %.4f m/unit", rw, rh, s_vr.world_scale);
 }
 
 extern "C" void pc_vr_shutdown(void) {
-    if (s_vr.sys) {
+    if (s_vr.runtime_up) {
         pcvr_destroy_target(&s_vr.eye[0]);
         pcvr_destroy_target(&s_vr.eye[1]);
         pcvr_destroy_target(&s_vr.ui);
         if (s_vr.panel_prog) glDeleteProgram(s_vr.panel_prog);
         if (s_vr.panel_vao) glDeleteVertexArrays(1, &s_vr.panel_vao);
         if (s_vr.panel_vbo) glDeleteBuffers(1, &s_vr.panel_vbo);
-        vr::VR_Shutdown();
-        s_vr.sys = NULL;
+        VR_ShutdownInternal();
+        s_vr.runtime_up = 0;
+        s_vr.sys = NULL; s_vr.comp = NULL; s_vr.input = NULL; s_vr.chap = NULL;
     }
     s_vr.active = 0;
+    if (s_vr_logf) {
+        fclose(s_vr_logf);
+        s_vr_logf = NULL;
+    }
 }
 
 static void pcvr_drop_to_flat(const char* why) {
-    printf("[VR] %s - dropping to flat mode\n", why);
+    pcvr_log("%s - dropping to flat mode", why);
     g_pc_vr_cull_expand = 0.0f;
     g_pc_vr_cull_znear_slack = 0.0f;
     g_pc_target_w = g_pc_window_w;
@@ -541,17 +625,17 @@ extern "C" void pc_vr_frame_begin(void) {
     if (!s_vr.active) return;
 
     /* Runtime events */
-    vr::VREvent_t ev;
+    struct VREvent_t ev;
     while (s_vr.sys && s_vr.sys->PollNextEvent(&ev, sizeof(ev))) {
         switch (ev.eventType) {
-        case vr::VREvent_Quit:
-        case vr::VREvent_DriverRequestedQuit:
+        case EVREventType_VREvent_Quit:
+        case EVREventType_VREvent_DriverRequestedQuit:
             s_vr.sys->AcknowledgeQuit_Exiting();
             pcvr_drop_to_flat("SteamVR quit requested");
             return;
-        case vr::VREvent_IpdChanged:
+        case EVREventType_VREvent_IpdChanged:
             for (int e = 0; e < 2; e++) {
-                vr::HmdMatrix34_t eth = s_vr.sys->GetEyeToHeadTransform(e == 0 ? vr::Eye_Left : vr::Eye_Right);
+                HmdMatrix34_t eth = s_vr.sys->GetEyeToHeadTransform(e == 0 ? EVREye_Eye_Left : EVREye_Eye_Right);
                 m34_from_hmd(&eth, s_vr.eye_to_head[e]);
             }
             break;
@@ -563,16 +647,17 @@ extern "C" void pc_vr_frame_begin(void) {
 
     /* Input */
     if (s_vr.input_ready) {
-        vr::VRActiveActionSet_t as;
+        VRActiveActionSet_t as;
         memset(&as, 0, sizeof(as));
         as.ulActionSet = s_vr.action_set;
-        vr::VRInput()->UpdateActionState(&as, sizeof(as), 1);
+        s_vr.input->UpdateActionState(&as, sizeof(as), 1);
 
         /* X+Y chord (or a user-bound recenter action): recenter seated origin */
         int chord = pcvr_digital(s_vr.act_x) && pcvr_digital(s_vr.act_y);
         int recenter_held = chord || pcvr_digital(s_vr.act_recenter);
         if (recenter_held && !s_vr.recenter_latch) {
-            vr::VRChaperone()->ResetZeroPose(vr::TrackingUniverseSeated);
+            if (s_vr.chap)
+                s_vr.chap->ResetZeroPose(ETrackingUniverseOrigin_TrackingUniverseSeated);
             s_vr.recenter_latch = 1;
         } else if (!recenter_held) {
             s_vr.recenter_latch = 0;
@@ -580,12 +665,12 @@ extern "C" void pc_vr_frame_begin(void) {
     }
 
     /* Blocks until ~3ms before vsync; paces the whole loop at HMD rate */
-    vr::TrackedDevicePose_t poses[vr::k_unMaxTrackedDeviceCount];
-    vr::EVRCompositorError cerr =
-        vr::VRCompositor()->WaitGetPoses(poses, vr::k_unMaxTrackedDeviceCount, NULL, 0);
-    if (cerr == vr::VRCompositorError_None &&
-        poses[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid) {
-        m34_from_hmd(&poses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking,
+    struct TrackedDevicePose_t poses[64]; /* k_unMaxTrackedDeviceCount */
+    EVRCompositorError cerr =
+        s_vr.comp->WaitGetPoses(poses, k_unMaxTrackedDeviceCount, NULL, 0);
+    if (cerr == EVRCompositorError_VRCompositorError_None &&
+        poses[k_unTrackedDeviceIndex_Hmd].bPoseIsValid) {
+        m34_from_hmd(&poses[k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking,
                      s_vr.head_pose);
         s_vr.have_pose = 1;
     }
@@ -713,7 +798,6 @@ static void pcvr_draw_panel(int eye) {
             m44[i][j] = P[i][0] * tmp[0][j] + P[i][1] * tmp[1][j]
                       + P[i][2] * tmp[2][j] + P[i][3] * tmp[3][j];
 
-    /* Column-major upload with transpose flag (matrix is row-major) */
     glBindFramebuffer(GL_FRAMEBUFFER, s_vr.eye[eye].fbo);
     glViewport(0, 0, s_vr.eye[eye].w, s_vr.eye[eye].h);
     glDisable(GL_SCISSOR_TEST);
@@ -744,17 +828,28 @@ extern "C" void pc_vr_compose_and_submit(void) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glFlush();
 
-    vr::Texture_t texL = { (void*)(uintptr_t)s_vr.eye[0].color,
-                          vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-    vr::Texture_t texR = { (void*)(uintptr_t)s_vr.eye[1].color,
-                          vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-    vr::EVRCompositorError e1 = vr::VRCompositor()->Submit(vr::Eye_Left, &texL);
-    vr::EVRCompositorError e2 = vr::VRCompositor()->Submit(vr::Eye_Right, &texR);
+    struct Texture_t texL;
+    texL.handle = (void*)(uintptr_t)s_vr.eye[0].color;
+    texL.eType = ETextureType_TextureType_OpenGL;
+    texL.eColorSpace = EColorSpace_ColorSpace_Gamma;
+    struct Texture_t texR = texL;
+    texR.handle = (void*)(uintptr_t)s_vr.eye[1].color;
+
+    EVRCompositorError e1 = s_vr.comp->Submit(EVREye_Eye_Left, &texL, NULL,
+                                              EVRSubmitFlags_Submit_Default);
+    EVRCompositorError e2 = s_vr.comp->Submit(EVREye_Eye_Right, &texR, NULL,
+                                              EVRSubmitFlags_Submit_Default);
     glFlush();
 
-    if (e1 != vr::VRCompositorError_None || e2 != vr::VRCompositorError_None) {
+    if (!s_vr.logged_first_submit) {
+        s_vr.logged_first_submit = 1;
+        pcvr_log("first frame submitted: L=%d R=%d", (int)e1, (int)e2);
+    }
+
+    if (e1 != EVRCompositorError_VRCompositorError_None ||
+        e2 != EVRCompositorError_VRCompositorError_None) {
         if (++s_vr.submit_fail_count == 1)
-            printf("[VR] compositor submit error L=%d R=%d\n", (int)e1, (int)e2);
+            pcvr_log("compositor submit error L=%d R=%d", (int)e1, (int)e2);
         if (s_vr.submit_fail_count > 300)
             pcvr_drop_to_flat("compositor keeps rejecting frames");
     } else {
@@ -867,10 +962,10 @@ extern "C" void pc_vr_merge_pad(unsigned short* buttons,
 
 extern "C" void pc_vr_rumble(int on) {
     if (!s_vr.active || !s_vr.input_ready || !on) return;
-    vr::VRInput()->TriggerHapticVibrationAction(s_vr.act_haptic_l, 0.0f, 0.15f, 160.0f, 0.8f,
-                                                vr::k_ulInvalidInputValueHandle);
-    vr::VRInput()->TriggerHapticVibrationAction(s_vr.act_haptic_r, 0.0f, 0.15f, 160.0f, 0.8f,
-                                                vr::k_ulInvalidInputValueHandle);
+    s_vr.input->TriggerHapticVibrationAction(s_vr.act_haptic_l, 0.0f, 0.15f, 160.0f, 0.8f,
+                                             k_ulInvalidInputValueHandle);
+    s_vr.input->TriggerHapticVibrationAction(s_vr.act_haptic_r, 0.0f, 0.15f, 160.0f, 0.8f,
+                                             k_ulInvalidInputValueHandle);
 }
 
 /* ---------------------------------------------------------------- */
