@@ -26,6 +26,7 @@
 #include "pc_settings.h"
 #include "pc_diag.h"
 #include "pc_vr.h"
+#include "pc_fp_camera.h"
 
 #include "openvr_capi.h"
 
@@ -192,6 +193,25 @@ float g_pc_vr_cull_znear_slack = 0.0f;
 static float pcvr_far_m(void) {
     float f = 6000.0f * s_vr.world_scale;
     return f < 200.0f ? 200.0f : f;
+}
+
+static void pcvr_update_eye_projection(int eye);
+static void pcvr_update_view_correction(void);
+
+/* First person uses a life-size scale; the diorama scale returns with the
+ * normal camera. Rebuilds projections (far plane derives from scale). */
+extern "C" void pc_vr_set_fp_scale(int fp_active) {
+    if (!s_vr.active) return;
+    float want = fp_active
+        ? (g_pc_settings.vr_fp_world_scale / 1000.0f)
+        : (g_pc_settings.vr_world_scale / 1000.0f);
+    if (want <= 0.0001f) want = fp_active ? 0.025f : 0.01f;
+    if (want == s_vr.world_scale) return;
+    s_vr.world_scale = want;
+    pcvr_update_eye_projection(0);
+    pcvr_update_eye_projection(1);
+    pcvr_update_view_correction();
+    pcvr_log("world scale -> %.4f m/unit (%s)", want, fp_active ? "first person" : "camera");
 }
 
 /* ---------------------------------------------------------------- */
@@ -581,6 +601,11 @@ extern "C" void pc_vr_init(void) {
     s_vr.active = 1;
     s_vr.current_eye = -1;
     pcvr_log("ACTIVE: eye %ux%u, world scale %.4f m/unit", rw, rh, s_vr.world_scale);
+
+    /* Starting in first person: switch to the life-size scale now */
+    if (g_pc_fp_mode) {
+        pc_vr_set_fp_scale(1);
+    }
 }
 
 extern "C" void pc_vr_shutdown(void) {
@@ -954,10 +979,20 @@ extern "C" void pc_vr_merge_pad(unsigned short* buttons,
         *cstickY = (signed char)sy;
     }
 
+    /* Left grip + Y: toggle first person. Requires Y to RISE while the grip
+     * is already held (holding Y then squeezing grip must not fire), and X
+     * must be up (X+Y is the recenter chord). Y is swallowed while gripped. */
+    static int s_y_prev = 0;
+    int y_now = pcvr_digital(s_vr.act_y);
+    if (l_held && y_now && !s_y_prev && !pcvr_digital(s_vr.act_x)) {
+        pc_fp_toggle();
+    }
+    s_y_prev = y_now;
+
     if (pcvr_digital(s_vr.act_a)) *buttons |= BTN_A;
     if (pcvr_digital(s_vr.act_b)) *buttons |= BTN_B;
     if (pcvr_digital(s_vr.act_x)) *buttons |= BTN_X;
-    if (pcvr_digital(s_vr.act_y)) *buttons |= BTN_Y;
+    if (y_now && !l_held) *buttons |= BTN_Y;
     if (pcvr_digital(s_vr.act_z)) *buttons |= BTN_Z;
     if (pcvr_digital(s_vr.act_start)) *buttons |= BTN_START;
     if (l_held) { *buttons |= BTN_L; *triggerL = 255; }

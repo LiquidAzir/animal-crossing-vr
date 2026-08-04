@@ -26,6 +26,10 @@ typedef struct {
     int vr_ui_distance;   /* UI panel distance in cm (default 200) */
     int vr_ui_size;       /* UI panel width in cm (default 240) */
     int vr_height_offset; /* raise/lower viewpoint in cm (default 0) */
+    int fp_mode;          /* start in first person: 0=no, 1=yes (F5 toggles) */
+    int fp_eye_height;    /* first-person eye height above the player's feet, game units (default 52) */
+    int fp_snap_degrees;  /* VR snap-turn angle (default 45; 0 = smooth turning) */
+    int vr_fp_world_scale;/* mm per game unit in first person (default 25 = life-size-ish) */
 } PCSettings;
 
 extern PCSettings g_pc_settings;

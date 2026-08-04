@@ -49,6 +49,24 @@ The desktop window shows a mirror of the left eye.
 Rebind anything in SteamVR → Settings → Controllers → Manage Controller
 Bindings. Keyboard and a normal gamepad keep working in VR too.
 
+## First-person mode
+
+Toggle any time with **F5** (keyboard) or **left grip + Y** (VR). Works flat
+and in VR:
+
+- The camera moves to your villager's eyes; the character model hides (its
+  shadow stays). Left stick walks where you're looking; C-stick / right
+  stick turns (smooth in flat with pitch on the stick; **snap turns** in VR,
+  with pitch from your head).
+- In VR the world switches to **life-size scale** (`vr_fp_world_scale`,
+  default 25 = one tile ≈ 1 m) — villagers stand in front of you at eye
+  level. Toggling back returns to the diorama.
+- Scripted cameras stay in charge: talking to a villager, doors, events,
+  and demos use the normal game camera, then first person resumes.
+- `[FirstPerson]` in `settings.ini`: `fp_mode` (start enabled),
+  `fp_eye_height` (game units above the feet, default 52),
+  `fp_snap_degrees` (0 = smooth VR turning).
+
 ## Tuning (`settings.ini`, `[VR]` section)
 
 | Key | Default | Meaning |

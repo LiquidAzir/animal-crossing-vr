@@ -26,6 +26,10 @@ PCSettings g_pc_settings = {
     .vr_ui_distance = 200,
     .vr_ui_size = 240,
     .vr_height_offset = 0,
+    .fp_mode = 0,
+    .fp_eye_height = 52,
+    .fp_snap_degrees = 45,
+    .vr_fp_world_scale = 25,
 };
 
 static const char* SETTINGS_FILE = "settings.ini";
@@ -89,7 +93,20 @@ static const char* DEFAULT_SETTINGS =
     "vr_ui_size = 240\n"
     "\n"
     "# Raise (+) or lower (-) your viewpoint in cm\n"
-    "vr_height_offset = 0\n";
+    "vr_height_offset = 0\n"
+    "\n"
+    "[FirstPerson]\n"
+    "# Start in first-person camera: 0 = normal camera, 1 = first person (F5 toggles in-game)\n"
+    "fp_mode = 0\n"
+    "\n"
+    "# Eye height above the player's feet, in game units (one ground tile = 40)\n"
+    "fp_eye_height = 52\n"
+    "\n"
+    "# VR snap-turn angle in degrees for first person (0 = smooth turning)\n"
+    "fp_snap_degrees = 45\n"
+    "\n"
+    "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n"
+    "vr_fp_world_scale = 25\n";
 
 static const char* skip_ws(const char* s) {
     while (*s == ' ' || *s == '\t') s++;
@@ -150,6 +167,14 @@ static void apply_setting(const char* key, const char* value) {
         if (val >= 50 && val <= 1000) g_pc_settings.vr_ui_size = val;
     } else if (strcmp(key, "vr_height_offset") == 0) {
         if (val >= -300 && val <= 300) g_pc_settings.vr_height_offset = val;
+    } else if (strcmp(key, "fp_mode") == 0) {
+        if (val == 0 || val == 1) g_pc_settings.fp_mode = val;
+    } else if (strcmp(key, "fp_eye_height") == 0) {
+        if (val >= 10 && val <= 200) g_pc_settings.fp_eye_height = val;
+    } else if (strcmp(key, "fp_snap_degrees") == 0) {
+        if (val >= 0 && val <= 90) g_pc_settings.fp_snap_degrees = val;
+    } else if (strcmp(key, "vr_fp_world_scale") == 0) {
+        if (val >= 1 && val <= 1000) g_pc_settings.vr_fp_world_scale = val;
     }
 }
 
@@ -253,6 +278,19 @@ void pc_settings_save(void) {
     fprintf(f, "\n");
     fprintf(f, "# Raise (+) or lower (-) your viewpoint in cm\n");
     fprintf(f, "vr_height_offset = %d\n", g_pc_settings.vr_height_offset);
+    fprintf(f, "\n");
+    fprintf(f, "[FirstPerson]\n");
+    fprintf(f, "# Start in first-person camera: 0 = normal camera, 1 = first person (F5 toggles in-game)\n");
+    fprintf(f, "fp_mode = %d\n", g_pc_settings.fp_mode);
+    fprintf(f, "\n");
+    fprintf(f, "# Eye height above the player's feet, in game units (one ground tile = 40)\n");
+    fprintf(f, "fp_eye_height = %d\n", g_pc_settings.fp_eye_height);
+    fprintf(f, "\n");
+    fprintf(f, "# VR snap-turn angle in degrees for first person (0 = smooth turning)\n");
+    fprintf(f, "fp_snap_degrees = %d\n", g_pc_settings.fp_snap_degrees);
+    fprintf(f, "\n");
+    fprintf(f, "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n");
+    fprintf(f, "vr_fp_world_scale = %d\n", g_pc_settings.vr_fp_world_scale);
     fclose(f);
     printf("[Settings] Saved %s\n", SETTINGS_FILE);
 }
