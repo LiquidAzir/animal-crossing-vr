@@ -1,132 +1,132 @@
-# Animal Crossing PC Port — VR Edition
+# Animal Crossing VR
 
-A native PC port of Animal Crossing (GameCube) built on top of the [ac-decomp](https://github.com/ACreTeam/ac-decomp) decompilation project.
+**A native VR fork of [ACGC-PC-Port](https://github.com/flyngmt/ACGC-PC-Port)** —
+the Animal Crossing (GameCube) PC port built on the
+[ac-decomp](https://github.com/ACreTeam/ac-decomp) decompilation.
 
-The game's original C code runs natively on x86, with a custom translation layer replacing the GameCube's GX graphics API with OpenGL 3.3.
+This fork adds a full SteamVR mode on top of the port: true stereo rendering
+with 6-DOF head tracking, a **first-person mode** that puts you on the ground
+in your village at life size, **motion-controlled tools** (swing your
+controller to catch bugs, chop trees, cast the fishing rod), snap turning,
+a floating panel for the game's 2D UI, and controller haptics. The same
+build runs **completely flat** with keyboard or gamepad when no headset is
+present — VR simply activates when one is.
 
-**This fork adds native SteamVR support** — true stereo rendering with 6-DOF
-head tracking (the village becomes a living diorama), a floating panel for the
-game's 2D UI, and Quest/Index controller input. See [VR_README.md](VR_README.md)
-for setup (Quest 3 via Steam Link / Virtual Desktop / Link) and
-[pc/VR_ARCHITECTURE.md](pc/VR_ARCHITECTURE.md) for how it works. VR activates
-automatically when a headset is present and the game runs flat otherwise.
+Based on upstream **v0.9.3**. Upstream improvements can be merged in as they
+land.
 
-This repository does not contain any game assets or assembly whatsoever. An existing copy of the game is required.
+| | |
+|---|---|
+| Third person (VR) | Your village as a living diorama — lean in, look around |
+| First person (F5 / grip+Y) | Stand in the village at eye level; villagers talk to your face |
+| Motion tools | Swing the net/axe/shovel/rod with your right controller — or just press A; both always work |
+| Flat mode | The unmodified game experience, plus the first-person camera if you want it |
 
-Supported versions: GAFE01_00: Rev 0 (USA)
+## What you need
 
-## Quick Start (Pre-built Release)
+1. **This software** — grab the latest zip from
+   [Releases](../../releases) (no build tools required).
+2. **Your own Animal Crossing (USA) disc image** (`.iso`, `.gcm`, or
+   `.ciso`), dumped from a cartridge/disc you own, placed in the `rom/`
+   folder next to the exe.
+   **This project contains no game assets and never will. Do not ask for
+   ROMs and do not link to them in issues or discussions.**
+3. **For VR:** [SteamVR](https://store.steampowered.com/app/250820/SteamVR/)
+   (free) and any SteamVR-compatible headset. Quest 2/3/Pro work over Steam
+   Link, Virtual Desktop, or Quest Link; Index, Vive, and other native PCVR
+   headsets work directly. Any reasonably VR-capable GPU is enough — the
+   game is light.
+4. **For flat play:** nothing else. SteamVR is not required; the game
+   detects the absence of a headset and runs as a normal window.
 
-Pre-built releases are available on the [Releases](https://github.com/flyngmt/ACGC-PC-Port/releases) page. No build tools required.
+Setup details, the full VR control table, comfort tuning, and
+troubleshooting: **[VR_README.md](VR_README.md)**. A guided test route for
+verifying a VR session end to end: [VR_PLAYTEST.md](VR_PLAYTEST.md).
 
-1. Download and extract the latest release zip
-2. Place your disc image in the `rom/` folder
-3. Run `AnimalCrossing.exe`
+## Quick start
 
-The game reads all assets directly from the disc image at startup. No extraction or preprocessing step is needed.
+1. Extract the release zip anywhere.
+2. Put your disc image in `rom/`.
+3. (VR) Start SteamVR with your headset connected.
+4. Run `AnimalCrossing.exe`.
 
-## Building from Source
+Settings live in `settings.ini` (created on first run) — resolution,
+world scale, first-person options, motion-tool toggles. `F5` toggles
+first person any time; in VR, left grip + Y does the same.
 
-Only needed if you want to modify the code. Otherwise, use the [pre-built release](https://github.com/flyngmt/ACGC-PC-Port/releases) above.
+## Building from source
 
-### Requirements
+Only needed if you want to modify the code.
 
-- **MSYS2** (https://www.msys2.org/)
-- **Animal Crossing (USA) disc image** (ISO, GCM, or CISO format)
-
-### MSYS2 Packages
-
-Open **MSYS2 MINGW32** from your Start menu and install:
+- **MSYS2** (https://www.msys2.org/), then from **MSYS2 MINGW32**:
 
 ```bash
 pacman -S mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-SDL2 mingw-w64-i686-make
+./build_pc.sh
 ```
 
-### Build Steps
+Output lands in `pc/build32/bin/`. The build is strictly 32-bit (the
+decompiled code depends on 32-bit pointers); the VR layer uses OpenVR's
+FnTable C API for exactly this reason. Architecture notes:
+[pc/VR_ARCHITECTURE.md](pc/VR_ARCHITECTURE.md) and
+[pc/DOCUMENTATION.md](pc/DOCUMENTATION.md).
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/flyngmt/ACGC-PC-Port.git
-   cd ACGC-PC-Port
-   ```
-
-2. Build (from **MSYS2 MINGW32** shell):
-   ```bash
-   ./build_pc.sh
-   ```
-
-3. Place your disc image in the `rom/` folder:
-   ```
-   pc/build32/bin/rom/YourGame.ciso
-   ```
-
-4. Run:
-   ```bash
-   pc/build32/bin/AnimalCrossing.exe
-   ```
-
-## Controls
-
-Keyboard bindings are customizable via `keybindings.ini` (next to the executable). Mouse buttons (Mouse1/Mouse2/Mouse3) can also be assigned.
-
-### Keyboard (defaults)
+## Keyboard controls (flat)
 
 | Key | Action |
 |-----|--------|
 | WASD | Move (left stick) |
-| Arrow Keys | Camera (C-stick) |
+| Arrow Keys | Camera (C-stick) — look, in first person |
 | Space | A button |
 | Left Shift | B button |
 | Enter | Start |
-| X | X button |
-| Y | Y button |
+| X / Y | X / Y buttons |
 | Q / E | L / R triggers |
 | Z | Z trigger |
-| I / J / K / L | D-pad (up/left/down/right) |
+| I / J / K / L | D-pad |
+| F5 | Toggle first person |
 
-### Gamepad
+Rebindable via `keybindings.ini`. SDL2 gamepads are supported with hotplug;
+VR controller bindings are rebindable in SteamVR's controller settings.
 
-SDL2 game controllers are supported with automatic hotplug detection. Button mapping follows the standard GameCube layout.
+## Credits & lineage
 
-## Command Line Options
+- **[ACreTeam](https://github.com/ACreTeam)** — the complete Animal
+  Crossing decompilation ([ac-decomp](https://github.com/ACreTeam/ac-decomp))
+  that makes all of this possible.
+- **[flyngmt](https://github.com/flyngmt)** — the
+  [PC port](https://github.com/flyngmt/ACGC-PC-Port): the GX→OpenGL
+  translation layer, asset pipeline, audio, save system, and everything
+  else that turned the decompilation into a runnable native game. This
+  fork's VR layer stands entirely on that work.
+- **[FIX94](https://github.com/FIX94)** — fixNES, powering the in-game NES
+  titles.
+- **Valve** — the [OpenVR SDK](https://github.com/ValveSoftware/openvr)
+  (BSD-3-Clause, vendored in `pc/lib/openvr/`).
+- VR fork (stereo renderer, first person, motion tools) by
+  [LiquidAzir](https://github.com/LiquidAzir).
 
-| Flag | Description |
-|------|-------------|
-| `--verbose` | Enable diagnostic logging |
-| `--no-framelimit` | Disable frame limiter (unlocked FPS) |
-| `--model-viewer [index]` | Launch debug model viewer (structures, NPCs, fish) |
-| `--time HOUR` | Override in-game hour (0-23) |
+## AI notice
 
-## Settings
+Upstream discloses that AI tools were used for the PC port layer. In the
+same spirit: this fork's VR/first-person layer was developed with
+substantial assistance from Claude (Anthropic). All of it was
+human-directed, reviewed, and play-tested.
 
-Graphics settings are stored in `settings.ini` and can be edited manually or through the in-game options menu:
+## License
 
-- Resolution (up to 4K)
-- Fullscreen toggle
-- VSync
-- MSAA (anti-aliasing)
-- Texture Loading/Caching (No need to enable if you aren't using a texture pack)
+Dual/multi-licensed — see [LICENSE](LICENSE):
+- Decompiled game code: **CC0 1.0** (ACreTeam/ac-decomp)
+- PC port layer: **MIT** © FlyingMeta
+- VR fork additions: **MIT** © LiquidAzir
+- fixNES: **MIT** © FIX94 · OpenVR: **BSD-3-Clause** © Valve
 
-## Texture Packs
-
-Custom textures can be placed in `texture_pack/`. Dolphin-compatible format (XXHash64, DDS).
-
-I highly recommend the following texture pack from the talented artists of Animal Crossing community.
-
-[HD Texture Pack](https://forums.dolphin-emu.org/Thread-animal-crossing-hd-texture-pack-version-23-feb-22nd-2026)
-
-## Save Data
-
-Save files are stored in `save/` using the standard GCI format, compatible with Dolphin emulator saves. Place a Dolphin GCI export in the save directory to import an existing save.
-
-## Credits
-
-This project would not be possible without the work of the [ACreTeam](https://github.com/ACreTeam) decompilation team. Their complete C decompilation of Animal Crossing is the foundation this port is built on.
-
-## AI Notice
-
-AI tools such as Claude were used in this project (PC port code only).
+This project distributes no Nintendo assets or code. A legally obtained
+disc image is required to play.
 
 ## FAQ
 
-See [FAQ](FAQ.md) for more info.
+See upstream's [FAQ](FAQ.md) for port questions (Deluxe-mod compatibility,
+Linux/Steam Deck, online play). VR-specific troubleshooting is in
+[VR_README.md](VR_README.md) — start with `vr_log.txt`, which explains
+itself.
