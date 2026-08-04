@@ -74,6 +74,11 @@ void pc_gx_mark_new_pass(void) {
     pc_gx_viewport_state_invalidate();
 }
 
+/* For pc_vr code that touches glColorMask behind the dirty system */
+void pc_gx_dirty_colormask(void) {
+    pc_gx_dirty_set(PC_GX_DIRTY_COLOR_MASK);
+}
+
 #ifdef PC_ENHANCEMENTS
 /* Aspect correction: factor = gc_aspect/actual_aspect, offset = content left edge in GC coords */
 static float g_aspect_factor = 1.0f;
@@ -832,6 +837,9 @@ void pc_gx_flush_vertices(void) {
             s_vr_ui_routed = want_ui;
             pc_vr_bind_ui_target(want_ui);
             pc_gx_reapply_viewport_scissor();
+            /* Mask/blend policy differs per target (UI forces alpha
+             * coverage) — reapply on every routing switch */
+            pc_gx_dirty_set(PC_GX_DIRTY_BLEND | PC_GX_DIRTY_COLOR_MASK);
         }
         if (want_ui && pc_vr_skip_ui_draws()) {
             g_gx.current_vertex_idx = g_gx.pending_verts;
@@ -1175,11 +1183,15 @@ void pc_gx_flush_vertices(void) {
 
     if (g_gx.dirty & PC_GX_DIRTY_COLOR_MASK) {
         pc_profiler_add_count_state_change();
+        /* VR UI layer: the panel composite uses this FBO's alpha as its
+         * transparency mask, but emu64 runs with GXSetAlphaUpdate(FALSE)
+         * (GC EFB alpha was useless) — force alpha writes on so drawn UI
+         * accumulates coverage instead of staying fully transparent. */
         glColorMask(
             g_gx.color_update_enable ? GL_TRUE : GL_FALSE,
             g_gx.color_update_enable ? GL_TRUE : GL_FALSE,
             g_gx.color_update_enable ? GL_TRUE : GL_FALSE,
-            g_gx.alpha_update_enable ? GL_TRUE : GL_FALSE
+            (g_gx.alpha_update_enable || s_vr_ui_routed) ? GL_TRUE : GL_FALSE
         );
     }
 
@@ -1196,9 +1208,16 @@ void pc_gx_flush_vertices(void) {
     if (g_gx.dirty & PC_GX_DIRTY_BLEND) {
         pc_profiler_add_count_state_change();
         /* Equation is state-driven: no hidden post-draw reset, so an
-         * early-out on unchanged blend state stays correct */
-        glBlendEquation(g_gx.blend_mode == GX_BM_SUBTRACT ? GL_FUNC_REVERSE_SUBTRACT
-                                                          : GL_FUNC_ADD);
+         * early-out on unchanged blend state stays correct.
+         * VR UI layer: alpha always accumulates "over" coverage (add),
+         * independent of the RGB equation. */
+        if (s_vr_ui_routed)
+            glBlendEquationSeparate(g_gx.blend_mode == GX_BM_SUBTRACT ? GL_FUNC_REVERSE_SUBTRACT
+                                                                      : GL_FUNC_ADD,
+                                    GL_FUNC_ADD);
+        else
+            glBlendEquation(g_gx.blend_mode == GX_BM_SUBTRACT ? GL_FUNC_REVERSE_SUBTRACT
+                                                              : GL_FUNC_ADD);
         switch (g_gx.blend_mode) {
             case GX_BM_NONE:
                 glDisable(GL_BLEND);
@@ -1234,7 +1253,10 @@ void pc_gx_flush_vertices(void) {
                         src = GL_SRC_ALPHA;
                         dst = GL_ONE_MINUS_SRC_ALPHA;
                     }
-                    glBlendFunc(src, dst);
+                    if (s_vr_ui_routed)
+                        glBlendFuncSeparate(src, dst, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                    else
+                        glBlendFunc(src, dst);
                 }
                 break;
             case GX_BM_LOGIC:
@@ -1242,7 +1264,10 @@ void pc_gx_flush_vertices(void) {
                 break;
             case GX_BM_SUBTRACT:
                 glEnable(GL_BLEND);
-                glBlendFunc(GL_ONE, GL_ONE);
+                if (s_vr_ui_routed)
+                    glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+                else
+                    glBlendFunc(GL_ONE, GL_ONE);
                 break;
         }
     }
