@@ -31,6 +31,7 @@
 #include "pc_platform.h"
 #include "pc_pause_menu.h"
 #include "pc_profiler.h"
+#include "pc_vr.h"
 extern int g_pc_running;
 #endif
 
@@ -184,22 +185,33 @@ static void graph_task_set00(GRAPH* this) {
             ucode[1].ucode_p = ucode_GetSpriteTextStart();
 #ifdef TARGET_PC
             Uint64 pc_prof_jw = pc_profiler_begin_timer();
-#endif
             JW_BeginFrame();
-            emu64_init();
-            emu64_set_ucode_info(2, ucode);
-            emu64_set_first_ucode(ucode[0].ucode_p);
-            PC_DIAG(3, "graph_task_set00: emu64_taskstart(Gfx_list05=%p)\n", (void*)this->Gfx_list05);
-#ifdef TARGET_PC
             {
-                Uint64 pc_prof_t = pc_profiler_begin_timer();
-                emu64_taskstart(this->Gfx_list05); /* work data */
-                pc_profiler_add_time(PC_PROF_TIMER_EMU64, pc_prof_t);
+                /* VR: interpret the frame's display list once per eye with
+                 * per-eye matrices (see pc/VR_ARCHITECTURE.md). Flat: once. */
+                int pc_vr_passes = pc_vr_active() ? 2 : 1;
+                int pc_pass;
+                PC_DIAG(3, "graph_task_set00: emu64_taskstart(Gfx_list05=%p) passes=%d\n",
+                        (void*)this->Gfx_list05, pc_vr_passes);
+                for (pc_pass = 0; pc_pass < pc_vr_passes; pc_pass++) {
+                    if (pc_vr_active()) {
+                        pc_vr_begin_eye(pc_pass);
+                    }
+                    emu64_init();
+                    emu64_set_ucode_info(2, ucode);
+                    emu64_set_first_ucode(ucode[0].ucode_p);
+                    {
+                        Uint64 pc_prof_t = pc_profiler_begin_timer();
+                        emu64_taskstart(this->Gfx_list05); /* work data */
+                        pc_profiler_add_time(PC_PROF_TIMER_EMU64, pc_prof_t);
+                    }
+                    emu64_cleanup();
+                }
+                if (pc_vr_active()) {
+                    pc_vr_end_scene_passes();
+                    pc_vr_compose_and_submit();
+                }
             }
-#else
-            emu64_taskstart(this->Gfx_list05); /* work data */
-#endif
-#ifdef TARGET_PC
             {
                 extern int pc_emu64_frame_cmds, pc_emu64_frame_tri_cmds, pc_emu64_frame_vtx_cmds;
                 extern int pc_gx_draw_call_count;
@@ -207,11 +219,15 @@ static void graph_task_set00(GRAPH* this) {
                         pc_emu64_frame_cmds, pc_emu64_frame_tri_cmds, pc_emu64_frame_vtx_cmds,
                         pc_gx_draw_call_count);
             }
-#endif
-            emu64_cleanup();
-#ifdef TARGET_PC
             /* Stop before JW_EndFrame: it contains the VI wait (swap/pace) */
             pc_profiler_add_time(PC_PROF_TIMER_JW_FRAME, pc_prof_jw);
+#else
+            JW_BeginFrame();
+            emu64_init();
+            emu64_set_ucode_info(2, ucode);
+            emu64_set_first_ucode(ucode[0].ucode_p);
+            emu64_taskstart(this->Gfx_list05); /* work data */
+            emu64_cleanup();
 #endif
             JW_EndFrame();
             frame++;

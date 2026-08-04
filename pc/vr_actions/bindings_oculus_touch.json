@@ -1,0 +1,87 @@
+{
+  "controller_type": "oculus_touch",
+  "description": "Default Animal Crossing VR bindings for Meta Touch controllers",
+  "name": "Animal Crossing VR - Touch",
+  "bindings": {
+    "/actions/main": {
+      "sources": [
+        {
+          "path": "/user/hand/left/input/joystick",
+          "mode": "joystick",
+          "inputs": {
+            "position": { "output": "/actions/main/in/move" },
+            "click":    { "output": "/actions/main/in/start" }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/joystick",
+          "mode": "joystick",
+          "inputs": {
+            "position": { "output": "/actions/main/in/camera" },
+            "click":    { "output": "/actions/main/in/z" }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/trigger",
+          "mode": "button",
+          "inputs": {
+            "click": { "output": "/actions/main/in/a" }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/trigger",
+          "mode": "button",
+          "inputs": {
+            "click": { "output": "/actions/main/in/b" }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/a",
+          "mode": "button",
+          "inputs": {
+            "click": { "output": "/actions/main/in/a" }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/b",
+          "mode": "button",
+          "inputs": {
+            "click": { "output": "/actions/main/in/b" }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/x",
+          "mode": "button",
+          "inputs": {
+            "click": { "output": "/actions/main/in/x" }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/y",
+          "mode": "button",
+          "inputs": {
+            "click": { "output": "/actions/main/in/y" }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/grip",
+          "mode": "button",
+          "inputs": {
+            "click": { "output": "/actions/main/in/l" }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/grip",
+          "mode": "button",
+          "inputs": {
+            "click": { "output": "/actions/main/in/r" }
+          }
+        }
+      ],
+      "haptics": [
+        { "path": "/user/hand/left/output/haptic",  "output": "/actions/main/out/haptic_left" },
+        { "path": "/user/hand/right/output/haptic", "output": "/actions/main/out/haptic_right" }
+      ]
+    }
+  }
+}

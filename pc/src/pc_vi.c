@@ -1,6 +1,7 @@
 /* pc_vi.c - video interface → SDL window swap + frame pacing */
 #include "pc_platform.h"
 #include "pc_profiler.h"
+#include "pc_vr.h"
 
 #define VI_TVMODE_NTSC_INT    0
 #define VI_TVMODE_NTSC_DS     1
@@ -59,6 +60,15 @@ void VIWaitForRetrace(void) {
         pc_profiler_add_time(PC_PROF_TIMER_GX_FLUSH, t_drain);
     }
 
+    /* VR: the desktop window shows a mirror of the left eye; frame pacing is
+     * WaitGetPoses (pc_vr_frame_begin) — skip the timer-based limiter.
+     * ensure_submitted covers frames that bypass the eye-pass loop (NES
+     * minigames, boot screens) so the compositor never starves. */
+    if (pc_vr_active()) {
+        pc_vr_ensure_submitted();
+        pc_vr_mirror_to_window();
+    }
+
     Uint64 t_before_swap = SDL_GetPerformanceCounter();
     Uint64 t_before_swap_prof = pc_profiler_begin_timer();
     pc_platform_swap_buffers();
@@ -69,7 +79,10 @@ void VIWaitForRetrace(void) {
     Uint64 t_before_pace_prof = pc_profiler_begin_timer();
     {
         extern int g_pc_nes_active;
-        int pace_frame = g_pc_nes_active || g_frame_limiter > 0;
+        /* NES emulation is frame-locked to 60 Hz — keep its pacing even in
+         * VR (the compositor reprojects). Normal play in VR is paced by
+         * WaitGetPoses instead of the timer. */
+        int pace_frame = g_pc_nes_active || (g_frame_limiter > 0 && !pc_vr_active());
         int pace_us = 0;
 
         if (g_pc_nes_active) {

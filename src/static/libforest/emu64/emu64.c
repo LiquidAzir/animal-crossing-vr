@@ -15,6 +15,7 @@
 
 #ifdef TARGET_PC
 #include "pc_platform.h"
+#include "pc_vr.h"
 #endif
 
 // this pragma may be unnecessary
@@ -4553,8 +4554,16 @@ void emu64::dl_G_MTX() {
                 MTXIdentity(this->position_mtx);
                 this->dirty_flags[EMU64_DIRTY_FLAG_PROJECTION_MTX] = true;
                 this->dirty_flags[EMU64_DIRTY_FLAG_FOG] = true;
+                /* No VR view notify here: the identity reset precedes the
+                 * lookAt MUL below; notifying identity would rebuild the VR
+                 * correction mid-frame and poison the still-buffered batch. */
             } else {
                 bcopy(mtx44, &this->position_mtx, sizeof(GC_Mtx)); /* Last row of Mtx44 is ignored */
+#ifdef TARGET_PC
+                /* The game's lookAt view was multiplied into the projection
+                 * stack: this is the world->camera matrix VR anchors to. */
+                pc_vr_notify_game_view((const float*)this->position_mtx);
+#endif
             }
         } else { /* Modelview */
             GC_Mtx& concat_src = this->model_view_mtx_stack[this->mtx_stack_size];
@@ -5242,15 +5251,39 @@ void emu64::dl_G_CULLDL() {
         /* Assign culling flags to vertex */
 #ifdef PC_ENHANCEMENTS
         /* Widescreen hor+ widens the rendered frustum but culling uses the
-         * original 4:3 projection matrix.  Extend X cull bounds to match. */
+         * original 4:3 projection matrix.  Extend X cull bounds to match.
+         * In VR the rendered frustum is the HMD's (much wider FOV plus head
+         * rotation/offset): expand every bound so whole-object culling never
+         * drops geometry that becomes visible when looking around. */
         {
             float cull_x = (float)g_pc_window_w / (float)g_pc_window_h
                          / ((float)PC_GC_WIDTH / (float)PC_GC_HEIGHT);
+            float cull_y = 1.0f;
+            float cull_zn = 0.0f;
             if (cull_x < 1.0f) cull_x = 1.0f;
+            if (g_pc_vr_cull_expand > 0.0f) {
+                if (cull_x < g_pc_vr_cull_expand) cull_x = g_pc_vr_cull_expand;
+                cull_y = g_pc_vr_cull_expand;
+                cull_zn = g_pc_vr_cull_znear_slack;
+            }
             if (ox < -cull_x) {
                 vtx->flag |= G_CULL_X_LESSTHAN;
             } else if (ox > cull_x) {
                 vtx->flag |= G_CULL_X_GREATERTHAN;
+            }
+
+            if (oy < -cull_y) {
+                vtx->flag |= G_CULL_Y_LESSTHAN;
+            } else if (oy > cull_y) {
+                vtx->flag |= G_CULL_Y_GREATERTHAN;
+            }
+
+            /* GX NDC convention: near -> -1, far -> 0. z < -1 is closer than
+             * the game's near plane — that's where VR leaning needs slack. */
+            if (oz > 0.0f) {
+                vtx->flag |= G_CULL_Z_LESSTHAN;
+            } else if (oz < -1.0f - cull_zn) {
+                vtx->flag |= G_CULL_Z_GREATERTHAN;
             }
         }
 #else
@@ -5259,7 +5292,6 @@ void emu64::dl_G_CULLDL() {
         } else if (ox > 1.0f) {
             vtx->flag |= G_CULL_X_GREATERTHAN;
         }
-#endif
 
         if (oy < -1.0f) {
             vtx->flag |= G_CULL_Y_LESSTHAN;
@@ -5272,6 +5304,7 @@ void emu64::dl_G_CULLDL() {
         } else if (oz < -1.0f) {
             vtx->flag |= G_CULL_Z_GREATERTHAN;
         }
+#endif
 
         EMU64_LOGF("%2d %04x %1d%1d%1d%1d%1d%1d %1d %6.3f %6.3f %6.3f  %8.2f %8.2f %8.2f \n", vstart, vtx->flag,
                    vtx->cull_z_greater, vtx->cull_z_lesser, vtx->cull_y_greater, vtx->cull_y_lesser,

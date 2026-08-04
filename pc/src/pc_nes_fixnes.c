@@ -36,6 +36,7 @@
 #include <glad/gl.h>
 #include "fm2play.h"
 #include "audio.h"
+#include "pc_vr.h"
 
 /* From pc_gx.c — restore game's GL state after NES emulation */
 extern void pc_gx_restore_after_nes(void);
@@ -43,6 +44,8 @@ extern void pc_gx_draw_pending(void);
 
 /* Externed directly (not via headers) to avoid fixNES symbol clashes. */
 extern int g_pc_window_w;
+extern int g_pc_target_w;
+extern int g_pc_target_h;
 extern int g_pc_window_h;
 extern int pc_settings_get_nes_aspect(void);
 extern int g_pc_profile_enabled;
@@ -389,6 +392,9 @@ void pc_fixnes_render_frame(uint16_t *fb) {
     pc_gx_draw_pending(); /* NES uses its own GL pipeline */
     if (!fixnes_shader) fixnes_init_gl();
 
+    /* VR: the NES frame becomes the UI panel content */
+    pc_vr_nes_begin_draw();
+
     /* Upload framebuffer — fixNES outputs RGB565 with COL_TEX_BSWAP
      * (R in low bits) — upload with GL_UNSIGNED_SHORT_5_6_5_REV.
      * Skip top 8 rows (often garbage), show 224 lines. */
@@ -398,8 +404,8 @@ void pc_fixnes_render_frame(uint16_t *fb) {
                  GL_RGB, GL_UNSIGNED_SHORT_5_6_5_REV, fb + 256 * 8);
 
     /* 0 = stretch to window, 1 = centered 4:3 with pillar/letterbox. */
-    int win_w = g_pc_window_w;
-    int win_h = g_pc_window_h;
+    int win_w = g_pc_target_w;
+    int win_h = g_pc_target_h;
     int vp_w, vp_h, vp_x, vp_y;
     if (pc_settings_get_nes_aspect() == 0) {
         vp_w = win_w; vp_h = win_h; vp_x = 0; vp_y = 0;
@@ -434,4 +440,6 @@ void pc_fixnes_render_frame(uint16_t *fb) {
     glBindVertexArray(0);
 
     glViewport(0, 0, win_w, win_h);
+
+    pc_vr_nes_end_draw();
 }

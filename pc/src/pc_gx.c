@@ -51,6 +51,29 @@ typedef struct { u8 r, g, b, a; } GXColor;
 /* --- Global GX State --- */
 PCGXState g_gx;
 
+#include "pc_vr.h"
+
+/* Current render target dims. Equal to the window normally; pc_vr points them
+ * at the eye/UI FBOs during VR passes. All GC->pixel scaling uses these. */
+int g_pc_target_w = PC_GC_WIDTH;
+int g_pc_target_h = PC_GC_HEIGHT;
+
+void pc_gx_get_clear(float* rgba, float* depth) {
+    rgba[0] = g_gx.clear_color[0];
+    rgba[1] = g_gx.clear_color[1];
+    rgba[2] = g_gx.clear_color[2];
+    rgba[3] = g_gx.clear_color[3];
+    *depth = g_gx.clear_depth;
+}
+
+/* New render pass (VR eye): every uniform group must re-upload to every
+ * program, including ones not currently bound (per-eye matrices differ). */
+void pc_gx_mark_new_pass(void) {
+    pc_gx_dirty_set(PC_GX_DIRTY_ALL);
+    pc_gx_texture_bind_cache_invalidate();
+    pc_gx_viewport_state_invalidate();
+}
+
 #ifdef PC_ENHANCEMENTS
 /* Aspect correction: factor = gc_aspect/actual_aspect, offset = content left edge in GC coords */
 static float g_aspect_factor = 1.0f;
@@ -59,7 +82,16 @@ static int   g_aspect_active = 0;
 
 static void pc_gx_update_aspect(void) {
     float gc_aspect = (float)PC_GC_WIDTH / (float)PC_GC_HEIGHT;
-    float win_aspect = (float)g_pc_window_w / (float)g_pc_window_h;
+    float win_aspect;
+    if (pc_vr_active()) {
+        /* Eye buffers use the HMD projection; the UI FBO is exactly 4:3.
+         * No widescreen correction in either case. */
+        g_aspect_factor = 1.0f;
+        g_aspect_offset = 0.0f;
+        g_aspect_active = 0;
+        return;
+    }
+    win_aspect = (float)g_pc_window_w / (float)g_pc_window_h;
     if (win_aspect > gc_aspect + 0.01f) {
         g_aspect_factor = gc_aspect / win_aspect;
         g_aspect_offset = (1.0f - g_aspect_factor) / 2.0f * (float)PC_GC_WIDTH;
@@ -371,6 +403,9 @@ void pc_gx_init(void) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    g_pc_target_w = g_pc_window_w;
+    g_pc_target_h = g_pc_window_h;
+
     g_gx.dirty = PC_GX_DIRTY_ALL;
 }
 
@@ -392,6 +427,21 @@ void pc_gx_begin_frame(void) {
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     /* Masks were changed behind the dirty system; reapply at first flush */
     DIRTY(PC_GX_DIRTY_DEPTH | PC_GX_DIRTY_COLOR_MASK);
+
+    /* VR: WaitGetPoses (paces at HMD rate), poll runtime events, clear the
+     * UI layer. Eye targets are cleared per pass in pc_vr_begin_eye; the
+     * backbuffer only receives the mirror blit. */
+    pc_vr_frame_begin();
+    if (pc_vr_active()) {
+#ifdef PC_ENHANCEMENTS
+        pc_gx_update_aspect();
+#endif
+        pc_profiler_add_time(PC_PROF_TIMER_GX_BEGIN, prof_start);
+        return;
+    }
+
+    g_pc_target_w = g_pc_window_w;
+    g_pc_target_h = g_pc_window_h;
 #ifdef PC_ENHANCEMENTS
     pc_gx_update_aspect();
     glDisable(GL_SCISSOR_TEST);
@@ -729,6 +779,24 @@ void pc_gx_draw_pending(void) {
     g_gx.pending_verts = 0;
 }
 
+/* VR ortho routing state: which FBO class the last batch targeted */
+static int s_vr_ui_routed = 0;
+
+void GXSetViewport(f32 left, f32 top, f32 wd, f32 ht, f32 nearz, f32 farz);
+void GXSetScissor(u32 left, u32 top, u32 wd, u32 ht);
+
+void pc_gx_vr_reset_routing(void) {
+    s_vr_ui_routed = 0;
+}
+
+static void pc_gx_reapply_viewport_scissor(void) {
+    pc_gx_viewport_state_invalidate();
+    GXSetViewport(g_gx.viewport[0], g_gx.viewport[1], g_gx.viewport[2],
+                  g_gx.viewport[3], g_gx.viewport[4], g_gx.viewport[5]);
+    GXSetScissor((u32)g_gx.scissor[0], (u32)g_gx.scissor[1],
+                 (u32)g_gx.scissor[2], (u32)g_gx.scissor[3]);
+}
+
 void pc_gx_flush_vertices(void) {
     int count = g_gx.current_vertex_idx - g_gx.pending_verts;
     if (count <= 0) return;
@@ -753,6 +821,25 @@ void pc_gx_flush_vertices(void) {
     /* State is changing: draw the deferred run while GL state still matches it */
     pc_gx_draw_pending();
 
+    /* VR: ortho (2D/UI) batches render into the UI overlay FBO; perspective
+     * batches render into the current eye FBO. The routing switch (and its
+     * viewport/scissor re-application) must run identically in BOTH passes so
+     * ortho-phase raster state never leaks into later perspective draws; only
+     * the vertex draw is dropped in the right pass (UI is drawn once, left). */
+    if (pc_vr_in_scene_pass()) {
+        int want_ui = (g_gx.projection_type == GX_ORTHOGRAPHIC);
+        if (want_ui != s_vr_ui_routed) {
+            s_vr_ui_routed = want_ui;
+            pc_vr_bind_ui_target(want_ui);
+            pc_gx_reapply_viewport_scissor();
+        }
+        if (want_ui && pc_vr_skip_ui_draws()) {
+            g_gx.current_vertex_idx = g_gx.pending_verts;
+            pc_profiler_add_time(PC_PROF_TIMER_GX_FLUSH, flush_start);
+            return;
+        }
+    }
+
     if (shader && shader != g_gx.current_shader) {
         pc_gx_use_program_profiled(shader);
         PC_GL_CHECK("glUseProgram");
@@ -776,7 +863,12 @@ void pc_gx_flush_vertices(void) {
 
         if (dirty & PC_GX_DIRTY_PROJECTION) {
             loc = UL(projection);
-            if (loc >= 0) glUniformMatrix4fv(loc, 1, GL_TRUE, (float*)g_gx.projection_mtx);
+            if (loc >= 0) {
+                if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE)
+                    glUniformMatrix4fv(loc, 1, GL_TRUE, pc_vr_eye_projection());
+                else
+                    glUniformMatrix4fv(loc, 1, GL_TRUE, (float*)g_gx.projection_mtx);
+            }
         }
 
         if (dirty & PC_GX_DIRTY_MODELVIEW) {
@@ -784,9 +876,24 @@ void pc_gx_flush_vertices(void) {
             if (loc >= 0) {
                 float mv44[16];
                 const float* src = (const float*)g_gx.pos_mtx[g_gx.current_mtx];
-                mv44[ 0] = src[0]; mv44[ 1] = src[1]; mv44[ 2] = src[2]; mv44[ 3] = src[3];
-                mv44[ 4] = src[4]; mv44[ 5] = src[5]; mv44[ 6] = src[6]; mv44[ 7] = src[7];
-                mv44[ 8] = src[8]; mv44[ 9] = src[9]; mv44[10] = src[10]; mv44[11] = src[11];
+                if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE) {
+                    /* posmtx' = X * (V*M): re-anchor the game's combined
+                     * view*model into head-tracked VR eye space (meters) */
+                    const float* X = pc_vr_view_correction();
+                    for (int r = 0; r < 3; r++) {
+                        const float* xr = X + r * 4;
+                        for (int c = 0; c < 4; c++) {
+                            mv44[r * 4 + c] = xr[0] * src[0 * 4 + c]
+                                            + xr[1] * src[1 * 4 + c]
+                                            + xr[2] * src[2 * 4 + c]
+                                            + (c == 3 ? xr[3] : 0.0f);
+                        }
+                    }
+                } else {
+                    mv44[ 0] = src[0]; mv44[ 1] = src[1]; mv44[ 2] = src[2]; mv44[ 3] = src[3];
+                    mv44[ 4] = src[4]; mv44[ 5] = src[5]; mv44[ 6] = src[6]; mv44[ 7] = src[7];
+                    mv44[ 8] = src[8]; mv44[ 9] = src[9]; mv44[10] = src[10]; mv44[11] = src[11];
+                }
                 mv44[12] = 0.0f;   mv44[13] = 0.0f;   mv44[14] = 0.0f;    mv44[15] = 1.0f;
                 glUniformMatrix4fv(loc, 1, GL_TRUE, mv44);
             }
@@ -1003,8 +1110,14 @@ void pc_gx_flush_vertices(void) {
         pc_gx_active_texture_cached(GL_TEXTURE0);
 
         if (dirty & PC_GX_DIRTY_FOG) {
+            GLfloat fog_s = g_gx.fog_start, fog_e = g_gx.fog_end;
+            if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE) {
+                /* VR view space is meters; fog ranges are game units */
+                fog_s *= pc_vr_world_scale();
+                fog_e *= pc_vr_world_scale();
+            }
             GLfloat fog_params[4] = {
-                (GLfloat)g_gx.fog_type, g_gx.fog_start, g_gx.fog_end, 0.0f
+                (GLfloat)g_gx.fog_type, fog_s, fog_e, 0.0f
             };
             loc = UL(fog_type);   if (loc >= 0) glUniform4fv(loc, 1, fog_params);
             loc = UL(fog_enable); if (loc >= 0) glUniform1i(loc, g_gx.fog_type != 0);
@@ -1322,8 +1435,8 @@ void GXSetViewport(f32 left, f32 top, f32 wd, f32 ht, f32 nearz, f32 farz) {
     g_gx.viewport[5] = farz;
 #ifdef PC_ENHANCEMENTS
     {
-        float sx = (float)g_pc_window_w / (float)PC_GC_WIDTH;
-        float sy = (float)g_pc_window_h / (float)PC_GC_HEIGHT;
+        float sx = (float)g_pc_target_w / (float)PC_GC_WIDTH;
+        float sy = (float)g_pc_target_h / (float)PC_GC_HEIGHT;
         float adj_left = left;
         float adj_wd = wd;
 
@@ -1341,7 +1454,7 @@ void GXSetViewport(f32 left, f32 top, f32 wd, f32 ht, f32 nearz, f32 farz) {
         gl_x = (int)(adj_left * sx);
         gl_w = (int)(adj_wd * sx);
         gl_h = (int)(ht * sy);
-        gl_y = g_pc_window_h - (int)(top * sy) - gl_h;
+        gl_y = g_pc_target_h - (int)(top * sy) - gl_h;
     }
 #else
     /* GX is Y-down, GL is Y-up */
@@ -1381,12 +1494,12 @@ void GXSetScissor(u32 left, u32 top, u32 wd, u32 ht) {
     g_gx.scissor[3] = ht;
 #ifdef PC_ENHANCEMENTS
     {
-        float sx = (float)g_pc_window_w / (float)PC_GC_WIDTH;
-        float sy = (float)g_pc_window_h / (float)PC_GC_HEIGHT;
+        float sx = (float)g_pc_target_w / (float)PC_GC_WIDTH;
+        float sy = (float)g_pc_target_h / (float)PC_GC_HEIGHT;
         gl_x = (int)(left * sx);
         gl_w = (int)(wd * sx);
         gl_h = (int)(ht * sy);
-        gl_y = g_pc_window_h - (int)(top * sy) - gl_h;
+        gl_y = g_pc_target_h - (int)(top * sy) - gl_h;
     }
 #else
     /* GX is Y-down, GL is Y-up */
@@ -2038,15 +2151,20 @@ static void pc_gx_copy_tex_execute_impl(void* dest, GXBool clear) {
 
     if (!dest) return;
 
+    /* VR right-eye pass: keep the left pass's capture (the table is keyed by
+     * dest pointer and a second store would replace it with right-eye or
+     * UI-context content) and skip the glReadPixels stall. */
+    if (pc_vr_current_eye() == 1) return;
+
     int out_wd = g_gx.tex_copy_src[2];
     int out_ht = g_gx.tex_copy_src[3];
     if (out_wd <= 0 || out_ht <= 0) return;
     if (out_wd > 4096 || out_ht > 4096) return;
 
 #ifdef PC_ENHANCEMENTS
-    /* Scale readback coordinates from GC coords to window resolution */
-    float sx = (float)g_pc_window_w / (float)PC_GC_WIDTH;
-    float sy = (float)g_pc_window_h / (float)PC_GC_HEIGHT;
+    /* Scale readback coordinates from GC coords to render target resolution */
+    float sx = (float)g_pc_target_w / (float)PC_GC_WIDTH;
+    float sy = (float)g_pc_target_h / (float)PC_GC_HEIGHT;
     int read_left = (int)(g_gx.tex_copy_src[0] * sx);
     int read_top  = (int)(g_gx.tex_copy_src[1] * sy);
     int read_wd   = (int)(out_wd * sx);
@@ -2060,11 +2178,11 @@ static void pc_gx_copy_tex_execute_impl(void* dest, GXBool clear) {
 
     if (read_left < 0) { read_wd += read_left; read_left = 0; }
     if (read_top < 0)  { read_ht += read_top;  read_top = 0; }
-    if (read_left + read_wd > g_pc_window_w) read_wd = g_pc_window_w - read_left;
-    if (read_top + read_ht > g_pc_window_h)  read_ht = g_pc_window_h - read_top;
+    if (read_left + read_wd > g_pc_target_w) read_wd = g_pc_target_w - read_left;
+    if (read_top + read_ht > g_pc_target_h)  read_ht = g_pc_target_h - read_top;
     if (read_wd <= 0 || read_ht <= 0) return;
 
-    int gl_y = g_pc_window_h - (read_top + read_ht);
+    int gl_y = g_pc_target_h - (read_top + read_ht);
     if (gl_y < 0) return;
 
     size_t rgba_size = (size_t)read_wd * (size_t)read_ht * 4;
