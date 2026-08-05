@@ -748,6 +748,18 @@ extern int Camera2_CheckCullingMode() {
     Camera2* camera = &play->camera;
     int main_index = camera->now_main_index;
 
+#ifdef TARGET_PC
+    /* VR: cinematic culling hides objects between the camera and the
+     * conversation/door — with the camera AT the player it just erases
+     * the buildings around you. Never engage it. */
+    {
+        extern float g_pc_vr_cull_expand;
+        if (g_pc_vr_cull_expand > 0.0f) {
+            return FALSE;
+        }
+    }
+#endif
+
     if (main_index == CAMERA2_PROCESS_TALK) {
         if (camera->main_data.talk.cull_timer >= 15.0f) {
             return TRUE;

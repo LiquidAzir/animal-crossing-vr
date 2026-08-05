@@ -8,7 +8,13 @@
 extern "C" {
 #endif
 
+#ifdef TARGET_PC
+/* PC/VR draws a 5x5 acre grid (slots beyond the classic 3x3 are used only
+ * when VR is active; unused slots carry exist=FALSE). */
+#define aFD_BLOCK_DRAW_NUM 25
+#else
 #define aFD_BLOCK_DRAW_NUM 9
+#endif
 
 typedef struct field_draw_s FIELD_DRAW_ACTOR;
 
