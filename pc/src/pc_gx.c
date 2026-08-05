@@ -832,7 +832,11 @@ void pc_gx_flush_vertices(void) {
      * ortho-phase raster state never leaks into later perspective draws; only
      * the vertex draw is dropped in the right pass (UI is drawn once, left). */
     if (pc_vr_in_scene_pass()) {
-        int want_ui = (g_gx.projection_type == GX_ORTHOGRAPHIC);
+        /* Flat-scene (game submenu open): EVERYTHING — including its 3D
+         * item models and world prerender — renders to the UI panel with
+         * the game's own matrices, once (left pass). */
+        int want_ui = (g_gx.projection_type == GX_ORTHOGRAPHIC) ||
+                      pc_vr_flat_scene_active();
         if (want_ui != s_vr_ui_routed) {
             s_vr_ui_routed = want_ui;
             pc_vr_bind_ui_target(want_ui);
@@ -872,7 +876,8 @@ void pc_gx_flush_vertices(void) {
         if (dirty & PC_GX_DIRTY_PROJECTION) {
             loc = UL(projection);
             if (loc >= 0) {
-                if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE)
+                if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE &&
+                    !pc_vr_flat_scene_active())
                     glUniformMatrix4fv(loc, 1, GL_TRUE, pc_vr_eye_projection());
                 else
                     glUniformMatrix4fv(loc, 1, GL_TRUE, (float*)g_gx.projection_mtx);
@@ -884,7 +889,8 @@ void pc_gx_flush_vertices(void) {
             if (loc >= 0) {
                 float mv44[16];
                 const float* src = (const float*)g_gx.pos_mtx[g_gx.current_mtx];
-                if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE) {
+                if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE &&
+                    !pc_vr_flat_scene_active()) {
                     /* posmtx' = X * (V*M): re-anchor the game's combined
                      * view*model into head-tracked VR eye space (meters) */
                     const float* X = pc_vr_view_correction();
@@ -1119,8 +1125,11 @@ void pc_gx_flush_vertices(void) {
 
         if (dirty & PC_GX_DIRTY_FOG) {
             GLfloat fog_s = g_gx.fog_start, fog_e = g_gx.fog_end;
-            if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE) {
-                /* VR view space is meters; fog ranges are game units */
+            if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE &&
+                !pc_vr_flat_scene_active()) {
+                /* VR view space is meters; fog ranges are game units.
+                 * Flat-scene renders with game-unit matrices — scaling fog
+                 * there would fog-wash the submenu's world prerender. */
                 fog_s *= pc_vr_world_scale();
                 fog_e *= pc_vr_world_scale();
             }

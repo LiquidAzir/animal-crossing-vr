@@ -584,6 +584,16 @@ static void Game_play_move(GAME* game) {
         }
     }
 
+#ifdef TARGET_PC
+    /* VR: while the submenu (inventory/map/patterns) is open, the whole
+     * scene — including its 3D item models — must render to the UI panel
+     * with the game's own matrices, not the head-tracked ones. */
+    {
+        extern void pc_vr_set_flat_scene(int on);
+        pc_vr_set_flat_scene(play->submenu.process_status != mSM_PROCESS_WAIT);
+    }
+#endif
+
     if (play->submenu.process_status == mSM_PROCESS_WAIT) {
         evw_anime_add_scroll_phase(&play->game);
         game->doing_point = 0;

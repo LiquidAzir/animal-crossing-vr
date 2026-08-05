@@ -57,6 +57,16 @@ void pc_vr_set_fp_scale(int fp_active);
  * normal animated hand matrix should be used. */
 int pc_vr_hand_tool_mtx(float out[12]);
 
+/* Headset gaze yaw relative to the FP anchor (binary-angle units, positive
+ * = left; 0 when inactive). Movement follows the gaze via this. */
+float pc_vr_head_yaw_offset_bang(void);
+
+/* Flat-scene mode: while the game submenu (inventory/map) is open, ALL
+ * rendering — including its 3D item models and world prerender — goes to
+ * the UI panel with original matrices. Stamped each frame by m_play. */
+void pc_vr_set_flat_scene(int on);
+int  pc_vr_flat_scene_active(void);
+
 /* emu64 hook: called whenever the game's view (lookAt) matrix is loaded
  * into the projection stack. mtx34 is row-major 3x4, game units. */
 void pc_vr_notify_game_view(const float* mtx34);

@@ -56,10 +56,18 @@ and in VR:
 
 - The camera moves to your villager's eyes; the character model hides (its
   shadow stays) but **held tools stay visible and animated in front of
-  you** — fishing rod (with its bend), net, shovel, axe, umbrella, watering
-  can. Left stick walks where you're looking; C-stick / right stick turns
-  (smooth in flat with pitch on the stick; **snap turns** in VR, with pitch
-  from your head).
+  you** — fishing rod (with its bend), net, shovel, axe, umbrella. Left
+  stick walks **where you're looking — headset included**: turn your head
+  and stick-forward follows your gaze. The right stick turns smoothly by
+  default (`fp_snap_degrees = 45` in settings.ini if you prefer snap
+  turns); pitch comes from your head in VR.
+- **Doors keep you in first person** — walking into your house or a shop no
+  longer cuts to third person. Scripted event cameras still take over
+  (deliberately — including short "look at this" pans like the wallpaper
+  preview when decorating).
+- The corner **clock/address widget** only appears in VR after standing
+  still for ~10 seconds (it was constant otherwise). Stand still when you
+  want to check the time.
 - In VR the world switches to **life-size scale** (`vr_fp_world_scale`,
   default 25 = one tile ≈ 1 m) — villagers stand in front of you at eye
   level. Toggling back returns to the diorama.

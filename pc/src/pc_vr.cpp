@@ -201,6 +201,7 @@ static struct {
     int hand_ever_valid;        /* pose has been valid at least once */
     int hand_missing_logged;    /* one-shot diagnostic for unbound pose */
     Uint32 active_since_ticks;  /* when the session went active */
+    u32 flat_scene_stamp;       /* pc_frame_counter when flat-scene last stamped */
 
     /* Frame-timing telemetry (vr_log.txt every ~30s) */
     uint32_t t_last_frame_index;
@@ -654,6 +655,7 @@ extern "C" void pc_vr_init(void) {
     m34_identity(s_vr.world_from_seated);
     s_vr.t_last_log_ticks = SDL_GetTicks();
     s_vr.active_since_ticks = s_vr.t_last_log_ticks;
+    s_vr.flat_scene_stamp = (u32)-1000;
 
     s_vr.active = 1;
     s_vr.current_eye = -1;
@@ -951,6 +953,37 @@ extern "C" int pc_vr_skip_ui_draws(void) {
 
 extern "C" float pc_vr_world_scale(void) {
     return s_vr.world_scale;
+}
+
+/* Yaw of the headset gaze relative to the FP anchor, in binary-angle units.
+ * Positive = turned left, matching the game's yaw sense. Lets movement (and
+ * A-targeting via getCamera2AngleY) follow where you're LOOKING, not just
+ * where the stick-turned anchor points. Head turned left by d: RotY(+d),
+ * so H[0][2]=sin d, H[2][2]=cos d -> atan2 recovers d. */
+extern "C" float pc_vr_head_yaw_offset_bang(void) {
+    if (!s_vr.active || !s_vr.have_pose) return 0.0f;
+    return atan2f(s_vr.head_pose[0][2], s_vr.head_pose[2][2])
+         * (65536.0f / (float)(2.0 * PC_PI));
+}
+
+/* Flat-scene: frame-stamped like the FP active flag so scene teardown can
+ * never leave it latched (m_play stamps it every play frame). */
+extern u32 pc_frame_counter;
+
+extern "C" void pc_vr_set_flat_scene(int on) {
+    s_vr.flat_scene_stamp = on ? pc_frame_counter : (u32)(pc_frame_counter - 1000u);
+}
+
+extern "C" int pc_vr_flat_scene_active(void) {
+    /* The PC pause menu gates Game_play_move (no stamping) but drawing
+     * continues — freeze the answer while paused, like the FP flag, or a
+     * paused submenu re-renders its 3D items with VR matrices. */
+    extern int g_pc_paused;
+    static int s_last;
+    if (!g_pc_paused) {
+        s_last = (u32)(pc_frame_counter - s_vr.flat_scene_stamp) <= 1u;
+    }
+    return s_vr.active && s_last;
 }
 
 extern "C" void pc_vr_end_scene_passes(void) {

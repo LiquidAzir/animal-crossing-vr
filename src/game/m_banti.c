@@ -291,7 +291,19 @@ extern void banti_move(GAME_PLAY* play) {
                 update = TRUE;
             }
         } else if (banti.addressable_type != mPlayer_ADDRESSABLE_TRUE) {
-            if (banti.timer > 30.0f || addressable_type == mPlayer_ADDRESSABLE_FALSE_TALKING) {
+            f32 appear_threshold = 30.0f;
+#ifdef TARGET_PC
+            /* VR: the clock/address widget would pop up after ~0.5s of
+             * standing still — constantly, in VR. Require ~10s of standing
+             * instead: it's there when you want it, quiet otherwise. */
+            {
+                extern int pc_vr_active(void);
+                if (pc_vr_active() && addressable_type == mPlayer_ADDRESSABLE_TRUE) {
+                    appear_threshold = 600.0f;
+                }
+            }
+#endif
+            if (banti.timer > appear_threshold || addressable_type == mPlayer_ADDRESSABLE_FALSE_TALKING) {
                 update = TRUE;
             }
         } else if (banti.timer > 50.0f || addressable_type == mPlayer_ADDRESSABLE_FALSE_TALKING) {

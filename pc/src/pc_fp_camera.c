@@ -128,7 +128,10 @@ int pc_fp_hide_player(void) {
 }
 
 s16 pc_fp_camera_yaw(void) {
-    return (s16)(u16)((int)s_yaw & 0xFFFF);
+    /* In VR, movement follows the headset gaze (anchor yaw + head yaw), so
+     * stick-forward walks where you're looking even mid-head-turn. */
+    float y = s_yaw + pc_vr_head_yaw_offset_bang();
+    return (s16)(u16)((int)y & 0xFFFF);
 }
 
 void pc_fp_frame(float dt) {

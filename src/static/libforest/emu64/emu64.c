@@ -5203,6 +5203,22 @@ void emu64::dl_G_CULLDL() {
 
     EMU64_WARNF("gsSPCullDisplayList(%d, %d),", vstart, vend);
 
+#ifdef TARGET_PC
+    /* VR: skip whole-object culling entirely. The test evaluates against the
+     * game camera's frustum, but VR renders with head-tracked wide-FOV
+     * matrices — and objects whose test vertices land BEHIND the camera
+     * produce unstable post-divide values, so widened bounds still let
+     * trees/houses (or their wall sub-objects) pop in and out. Drawing
+     * everything the display list contains is cheap on PC and is what
+     * Dolphin VR's per-game "disable culling" codes did. */
+    if (g_pc_vr_cull_expand > 0.0f) {
+        this->cullDL_calls++;
+        this->cullDL_visible_obj_count++;
+        pc_emu64_frame_cull_visible++;
+        return;
+    }
+#endif
+
     EMU64_LOG("vn mask   x     y    z  \n");
     mask = G_CULL_Z_GREATERTHAN | G_CULL_Z_LESSTHAN | G_CULL_Y_GREATERTHAN | G_CULL_Y_LESSTHAN | G_CULL_X_GREATERTHAN |
            G_CULL_X_LESSTHAN; /* 0x3F00 */
