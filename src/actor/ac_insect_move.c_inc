@@ -262,6 +262,26 @@ static void aINS_cull_check(ACTOR* actorx, GAME* game) {
         aINS_destruct(actorx, game);
     }
 
+#ifdef TARGET_PC
+    /* VR: the visibility test always passes (culling disabled), so the
+     * off-screen despawns below never run and the 9-slot insect pool
+     * degrades. Despawn on block distance (beyond the drawn 5x5) instead. */
+    {
+        extern float g_pc_vr_cull_expand;
+        if (g_pc_vr_cull_expand > 0.0f) {
+            int dbx = actorx->block_x - play->block_table.block_x;
+            int dbz = actorx->block_z - play->block_table.block_z;
+            if (dbx < 0) dbx = -dbx;
+            if (dbz < 0) dbz = -dbz;
+            actorx->state_bitfield |= ACTOR_STATE_NO_CULL;
+            if ((dbx > 2 || dbz > 2) && (ACTOR*)mPlib_Get_item_net_catch_label() != actorx) {
+                aINS_destruct(actorx, game);
+            }
+            return;
+        }
+    }
+#endif
+
     if (Actor_draw_actor_no_culling_check(actorx) == FALSE) {
         if (actorx->actor_specific == 1) {
             if ((ACTOR*)mPlib_Get_item_net_catch_label() != actorx) {

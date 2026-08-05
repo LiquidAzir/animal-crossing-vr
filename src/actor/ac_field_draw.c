@@ -200,6 +200,8 @@ static void aFD_PrepareFieldDraw(ACTOR* actorx, GAME* game) {
       3 4 5
       0 1 2
     */
+    /* First 9 entries are the classic 3x3 (flat mode uses only these);
+     * the outer ring extends to 5x5 for VR's free-look cameras. */
     static aFD_offset_c draw_block_offset_table[] = {
         { -1, 1 },  // bot-left
         { 0, 1 },   // bot
@@ -210,6 +212,13 @@ static void aFD_PrepareFieldDraw(ACTOR* actorx, GAME* game) {
         { -1, -1 }, // top-left
         { 0, -1 },  // top
         { 1, -1 },  // top-right
+#ifdef TARGET_PC
+        { -2, -2 }, { -1, -2 }, { 0, -2 }, { 1, -2 }, { 2, -2 },
+        { -2, -1 },                                   { 2, -1 },
+        { -2, 0 },                                    { 2, 0 },
+        { -2, 1 },                                    { 2, 1 },
+        { -2, 2 },  { -1, 2 },  { 0, 2 },  { 1, 2 },  { 2, 2 },
+#endif
     };
 
     GAME_PLAY* play = (GAME_PLAY*)game;
@@ -220,11 +229,27 @@ static void aFD_PrepareFieldDraw(ACTOR* actorx, GAME* game) {
     int bx;
     int bz;
     int i;
+    int draw_num = aFD_BLOCK_DRAW_NUM;
+
+#ifdef TARGET_PC
+    /* Flat mode keeps the original 3x3 footprint */
+    {
+        extern float g_pc_vr_cull_expand;
+        if (g_pc_vr_cull_expand <= 0.0f) {
+            draw_num = 9;
+        }
+    }
+#endif
 
     mFI_Wpos2BlockNum(&bx, &bz, player->actor_class.world.position);
     aFD_SetActorPosition(actorx, play);
 
     for (i = 0; i < aFD_BLOCK_DRAW_NUM; i++) {
+        if (i >= draw_num) {
+            block->exist = FALSE;
+            block++;
+            continue;
+        }
         block->bx = bx + draw_block_offset_table[i].offset_x;
         block->bz = bz + draw_block_offset_table[i].offset_z;
         mFI_BkNum2WposXZ(&block->wpos.x, &block->wpos.z, block->bx, block->bz);

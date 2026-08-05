@@ -16,6 +16,7 @@
 #ifdef TARGET_PC
 #include "pc_platform.h"
 #include "pc_vr.h"
+#include "pc_fp_camera.h"
 #endif
 
 // this pragma may be unnecessary
@@ -2450,6 +2451,16 @@ void emu64::cullmode() {
     if (aflags[AFLAGS_WIREFRAME] != 0) {
         cullmode = GX_CULL_NONE;
     }
+
+#ifdef TARGET_PC
+    /* First person: world geometry is single-sided (authored for a camera
+     * that always looks north) — backface culling makes walls invisible
+     * when viewed from behind ("half-rendered" buildings). Draw both
+     * sides while the FP view is live. */
+    if (cullmode == GX_CULL_BACK && pc_fp_view_is_active()) {
+        cullmode = GX_CULL_NONE;
+    }
+#endif
 
     GXSetCullMode(cullmode);
 }

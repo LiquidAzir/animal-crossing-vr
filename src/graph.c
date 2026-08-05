@@ -432,6 +432,18 @@ static void graph_main(GRAPH* this, GAME* game) {
                     SETREG(SREG, 33, GETREG(SREG, 33) & ~1);
                 }
             }
+#ifdef TARGET_PC
+            else {
+                /* Arena overflow silently drops the frame — make it loud so
+                 * pop/flicker reports are diagnosable (throttled to 1/s) */
+                extern u32 pc_frame_counter;
+                static u32 pc_last_overflow_log = (u32)-61;
+                if (pc_frame_counter - pc_last_overflow_log > 60) {
+                    pc_last_overflow_log = pc_frame_counter;
+                    printf("[GX] display-list arena overflow - frame dropped (please report)\n");
+                }
+            }
+#endif
         }
     }
 

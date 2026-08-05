@@ -24,6 +24,22 @@ extern "C" {
 #define FONT_SIZE 256
 */
 
+#ifdef TARGET_PC
+/* PC/VR draws far more of the world at once (culling disabled, 5x5 acre
+ * grid): the GameCube-sized arenas would overflow, which silently drops
+ * whole frames (graph_draw_finish error path). Plain BSS — costs ~500 KB
+ * of ordinary memory, not the emulated 24 MB arena. */
+#define POLY_OPA_SIZE 40000
+#define POLY_XLU_SIZE 8192
+#define OVERLAY_SIZE 1024
+#define WORK_SIZE 128
+#define UNK_BUF0_SIZE 32
+#define FONT_SIZE 1792
+#define SHADOW_SIZE 4096
+#define LIGHT_SIZE 256
+#define NEW0_SIZE 4096
+#define NEW1_SIZE 2048
+#else
 #define POLY_OPA_SIZE 9952
 #define POLY_XLU_SIZE 2048
 #define OVERLAY_SIZE 1024
@@ -34,6 +50,7 @@ extern "C" {
 #define LIGHT_SIZE 256
 #define NEW0_SIZE 512
 #define NEW1_SIZE 256
+#endif
 
 typedef struct dynamic_s {
     u16 start_magic;
