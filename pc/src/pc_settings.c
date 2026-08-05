@@ -28,7 +28,7 @@ PCSettings g_pc_settings = {
     .vr_height_offset = 0,
     .fp_mode = 0,
     .fp_eye_height = 52,
-    .fp_snap_degrees = 45,
+    .fp_snap_degrees = 0,
     .vr_fp_world_scale = 25,
     .vr_motion_swing = 1,
     .vr_tool_on_hand = 1,
@@ -105,8 +105,8 @@ static const char* DEFAULT_SETTINGS =
     "# Eye height above the player's feet, in game units (one ground tile = 40)\n"
     "fp_eye_height = 52\n"
     "\n"
-    "# VR snap-turn angle in degrees for first person (0 = smooth turning)\n"
-    "fp_snap_degrees = 45\n"
+    "# First-person VR turning: 0 = smooth (default); set e.g. 45 for snap turns\n"
+    "fp_snap_degrees = 0\n"
     "\n"
     "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n"
     "vr_fp_world_scale = 25\n"
@@ -304,7 +304,7 @@ void pc_settings_save(void) {
     fprintf(f, "# Eye height above the player's feet, in game units (one ground tile = 40)\n");
     fprintf(f, "fp_eye_height = %d\n", g_pc_settings.fp_eye_height);
     fprintf(f, "\n");
-    fprintf(f, "# VR snap-turn angle in degrees for first person (0 = smooth turning)\n");
+    fprintf(f, "# First-person VR turning: 0 = smooth (default); set e.g. 45 for snap turns\n");
     fprintf(f, "fp_snap_degrees = %d\n", g_pc_settings.fp_snap_degrees);
     fprintf(f, "\n");
     fprintf(f, "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n");

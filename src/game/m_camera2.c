@@ -241,10 +241,14 @@ static void Camera2_SetView(GAME_PLAY* play) {
     {
         static int pc_fp_last_index = -1;
         PLAYER_ACTOR* fp_player = get_player_actor_withoutCheck(play);
+        /* DOOR keeps first person through door/room transitions. INTER and
+         * INTER2 stay scripted: they're "look at this" pans (wallpaper
+         * purchase preview, event re-aims), not transitions. */
         int fp_now = g_pc_fp_mode && fp_player != NULL &&
                      (camera->now_main_index == CAMERA2_PROCESS_NORMAL ||
                       camera->now_main_index == CAMERA2_PROCESS_WADE ||
-                      camera->now_main_index == CAMERA2_PROCESS_TALK);
+                      camera->now_main_index == CAMERA2_PROCESS_TALK ||
+                      camera->now_main_index == CAMERA2_PROCESS_DOOR);
 
         pc_fp_set_in_talk(camera->now_main_index == CAMERA2_PROCESS_TALK ||
                           camera->now_main_index == CAMERA2_PROCESS_CUST_TALK);
