@@ -1,3 +1,6 @@
+#ifdef TARGET_PC
+#include "pc_vr.h" /* g_pc_town_residency */
+#endif
 #include "bg_item.h"
 
 #include "m_common_data.h"
@@ -231,6 +234,16 @@ static void bIT_actor_ct(ACTOR* actorx, GAME* game) {
     if (player != NULL) {
         mFI_GetItemTable(&bg_item->common.item_table, player->actor_class.world.position, __FILE__, 257);
         mFI_BornItemON();
+#ifdef TARGET_PC
+        /* Town residency: the item table now holds all 30 acres from the
+         * first frame, so the "table changed" rebuild never fires and the
+         * clear-tree bits only cover the small DMA window — without this
+         * latch, flora outside the starting acres is invisible-but-solid
+         * until the first FG mutation. Force one full draw-table build. */
+        if (g_pc_town_residency) {
+            mFI_SetFGUpData();
+        }
+#endif
     }
 
     max = common->item_table.count;

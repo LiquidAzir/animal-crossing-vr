@@ -10,6 +10,10 @@
 #include "m_bg_type.h"
 #include "m_fg_type.h"
 
+#ifdef TARGET_PC
+#include "pc_vr.h" /* g_pc_town_residency */
+#endif
+
 static mCoBG_Collision_u l_edge_ut = { { 0, 31, 31, 31, 31, 31, mCoBG_ATTRIBUTE_GRASS0 } };
 
 typedef struct collision_keep_s {
@@ -1533,7 +1537,6 @@ extern int mFI_GetItemTable_NoReset(mFI_item_table_c* item_table, xyz_t wpos) {
      * flora would be invisible-but-solid and fell in one swing.
      * Border acres are excluded: they share one aliased FG buffer. */
     {
-        extern int g_pc_town_residency;
         if (g_pc_town_residency &&
             bx >= 1 && bx <= FG_BLOCK_X_NUM && bz >= 1 && bz <= FG_BLOCK_Z_NUM) {
             int fx;

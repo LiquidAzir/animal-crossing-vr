@@ -7,7 +7,7 @@
 #include "m_player_lib.h"
 
 #ifdef TARGET_PC
-extern int g_pc_town_residency;
+#include "pc_vr.h" /* g_pc_town_residency */
 #endif
 
 static void aBC_actor_ct(ACTOR*, GAME*);

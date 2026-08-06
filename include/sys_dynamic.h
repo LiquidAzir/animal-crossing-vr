@@ -25,10 +25,10 @@ extern "C" {
 */
 
 #ifdef TARGET_PC
-/* PC/VR draws far more of the world at once (culling disabled, 5x5 acre
+/* PC/VR draws far more of the world at once (culling disabled, whole-town
  * grid): the GameCube-sized arenas would overflow, which silently drops
- * whole frames (graph_draw_finish error path). Plain BSS — costs ~500 KB
- * of ordinary memory, not the emulated 24 MB arena. */
+ * whole frames (graph_draw_finish error path). Plain BSS — costs ~1.7 MB
+ * of ordinary memory, not the emulated game arena. */
 #define POLY_OPA_SIZE 131072
 #define POLY_XLU_SIZE 32768
 #define OVERLAY_SIZE 1024
@@ -38,9 +38,10 @@ extern "C" {
 #define SHADOW_SIZE 16384
 #define LIGHT_SIZE 256
 /* NEW0/NEW1 are the BG arenas, but LightsN_disp_BG writes into them PER
- * ACTOR — with town-wide residency NEW1 overflows first. */
+ * ACTOR (8 Gfx each) — at the 1024-actor cap, 8192 saturates exactly and
+ * the frame-end terminator overflows, silently dropping every frame. */
 #define NEW0_SIZE 16384
-#define NEW1_SIZE 8192
+#define NEW1_SIZE 16384
 #else
 #define POLY_OPA_SIZE 9952
 #define POLY_XLU_SIZE 2048

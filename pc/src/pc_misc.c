@@ -11,9 +11,9 @@ volatile u32 __SIRegs[0x100] = {0};
 volatile u32 __EXIRegs[0x40] = {0};
 volatile u32 __AIRegs[8]     = {0};
 
-u32 __OSPhysicalMemSize = 24 * 1024 * 1024;
+u32 __OSPhysicalMemSize = PC_MAIN_MEMORY_SIZE;
 volatile int __OSTVMode = 0;
-u32 __OSSimulatedMemSize = 24 * 1024 * 1024;
+u32 __OSSimulatedMemSize = PC_MAIN_MEMORY_SIZE;
 u32 __OSBusClock = 162000000;
 u32 __OSCoreClock = 486000000;
 volatile u16 __OSDeviceCode = 0;

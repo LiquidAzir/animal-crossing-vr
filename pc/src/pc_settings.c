@@ -127,7 +127,8 @@ static const char* DEFAULT_SETTINGS =
     "# or a radius in acres (e.g. 3) if your machine needs the headroom\n"
     "vr_draw_radius = 0\n"
     "\n"
-    "# VR: keep every building, villager and prop in town loaded at once (0/1)\n"
+    "# VR: keep every building and prop in town loaded at once (0/1)\n"
+    "# (restart to apply)\n"
     "vr_town_residency = 1\n"
     "\n"
     "# VR first person: swing the right controller to use the held tool (0/1)\n"
@@ -349,7 +350,8 @@ void pc_settings_save(void) {
     fprintf(f, "# or a radius in acres (e.g. 3) if your machine needs the headroom\n");
     fprintf(f, "vr_draw_radius = %d\n", g_pc_settings.vr_draw_radius);
     fprintf(f, "\n");
-    fprintf(f, "# VR: keep every building, villager and prop in town loaded at once (0/1)\n");
+    fprintf(f, "# VR: keep every building and prop in town loaded at once (0/1)\n");
+    fprintf(f, "# (restart to apply)\n");
     fprintf(f, "vr_town_residency = %d\n", g_pc_settings.vr_town_residency);
     fprintf(f, "\n");
     fprintf(f, "# VR first person: swing the right controller to use the held tool (0/1)\n");
