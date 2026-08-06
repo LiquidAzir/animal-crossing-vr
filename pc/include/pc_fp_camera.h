@@ -27,6 +27,11 @@ extern "C" {
 /* First-person projection while the override is live */
 #define PC_FP_FOV_DEG 60.0f
 #define PC_FP_NEAR    8.0f
+/* Flat FP only: far plane covering the 4480x6400-unit town diagonal so the
+ * whole-town draw is visible. VR keeps the stock game far — emu64 inverts
+ * the game matrix for fog, and VR's render projection is replaced
+ * separately, so changing it under VR would shift VR fog. */
+#define PC_FP_FAR     8000.0f
 
 /* Mode flag: user wants first person (the view engages whenever the camera
  * is in a follow mode). */
