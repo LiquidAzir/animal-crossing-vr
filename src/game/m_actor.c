@@ -126,9 +126,13 @@ static void Actor_ct(ACTOR* actor, GAME* game) {
     Object_Bank_c* bank;
 
     exchange = &play->object_exchange;
-    bank = &exchange->banks[actor->data_bank_id];
-
-    bank->num_exist++;
+    /* data_bank_id is -1 for items/structures (no object bank) — indexing
+     * banks[-1] is an out-of-bounds write that scales with spawn count,
+     * which town-wide residency makes far more frequent. */
+    if (actor->data_bank_id >= 0) {
+        bank = &exchange->banks[actor->data_bank_id];
+        bank->num_exist++;
+    }
     if (actor->part == ACTOR_PART_NPC) {
         NPC_ACTOR* npc_actor = (NPC_ACTOR*)actor;
         aNPC_draw_data_c draw_data;
@@ -138,8 +142,12 @@ static void Actor_ct(ACTOR* actor, GAME* game) {
         tex_bank_id = mSc_bank_regist_check(exchange, draw_data.texture_bank);
         npc_actor->draw.texture_bank_idx = tex_bank_id;
 
-        bank = &exchange->banks[tex_bank_id];
-        bank->num_exist++;
+        /* mSc_bank_regist_check returns -1 when the texture bank isn't
+         * registered — banks[-1] is an out-of-bounds write. */
+        if (tex_bank_id >= 0) {
+            bank = &exchange->banks[tex_bank_id];
+            bank->num_exist++;
+        }
     }
 
     /* Initialize world position & rotation to home position & rotation */
@@ -343,6 +351,8 @@ static void Actor_delete_check(ACTOR* actor, GAME* game) {
             if (actor->block_x >= 0 && actor->block_z >= 0) {
                 int dx = ABS(actor->block_x - play->block_table.block_x);
                 int dz = ABS(actor->block_z - play->block_table.block_z);
+                /* NPC-only path (npc_id != EMPTY_NO): left at vanilla range
+                 * so villagers keep cycling through their 9 pool slots. */
                 int keep_range = g_mPlib_wade_disabled ? 1 : 0;
 
                 if (dx > keep_range || dz > keep_range) {

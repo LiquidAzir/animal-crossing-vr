@@ -200,8 +200,6 @@ static void aFD_PrepareFieldDraw(ACTOR* actorx, GAME* game) {
       3 4 5
       0 1 2
     */
-    /* First 9 entries are the classic 3x3 (flat mode uses only these);
-     * the outer ring extends to 5x5 for VR's free-look cameras. */
     static aFD_offset_c draw_block_offset_table[] = {
         { -1, 1 },  // bot-left
         { 0, 1 },   // bot
@@ -212,13 +210,6 @@ static void aFD_PrepareFieldDraw(ACTOR* actorx, GAME* game) {
         { -1, -1 }, // top-left
         { 0, -1 },  // top
         { 1, -1 },  // top-right
-#ifdef TARGET_PC
-        { -2, -2 }, { -1, -2 }, { 0, -2 }, { 1, -2 }, { 2, -2 },
-        { -2, -1 },                                   { 2, -1 },
-        { -2, 0 },                                    { 2, 0 },
-        { -2, 1 },                                    { 2, 1 },
-        { -2, 2 },  { -1, 2 },  { 0, 2 },  { 1, 2 },  { 2, 2 },
-#endif
     };
 
     GAME_PLAY* play = (GAME_PLAY*)game;
@@ -229,23 +220,62 @@ static void aFD_PrepareFieldDraw(ACTOR* actorx, GAME* game) {
     int bx;
     int bz;
     int i;
-    int draw_num = aFD_BLOCK_DRAW_NUM;
-
-#ifdef TARGET_PC
-    /* Flat mode keeps the original 3x3 footprint */
-    {
-        extern float g_pc_vr_cull_expand;
-        if (g_pc_vr_cull_expand <= 0.0f) {
-            draw_num = 9;
-        }
-    }
-#endif
 
     mFI_Wpos2BlockNum(&bx, &bz, player->actor_class.world.position);
     aFD_SetActorPosition(actorx, play);
 
+#ifdef TARGET_PC
+    /* VR: the terrain window is what streams acres in and out as you walk.
+     * Draw the whole town at absolute coordinates instead — nothing to
+     * stream, so ground/cliffs/river can never pop. vr_draw_radius > 0
+     * restores a player-centred window if a machine needs the headroom. */
+    {
+        extern float g_pc_vr_cull_expand;
+        extern int pc_vr_draw_radius(void);
+        if (g_pc_vr_cull_expand > 0.0f) {
+            int radius = pc_vr_draw_radius();
+            /* Clamp to the LIVE field size, not the compile-time maximum:
+             * interiors are 1x1, and a clamped window can never exceed the
+             * 70 slots so emission can't truncate mid-row. */
+            int xmax = (int)mFI_GetBlockXMax();
+            int zmax = (int)mFI_GetBlockZMax();
+            int x0 = 0, z0 = 0, xn = xmax, zn = zmax;
+            int slot = 0;
+
+            if (radius > 0) {
+                x0 = bx - radius; xn = bx + radius + 1;
+                z0 = bz - radius; zn = bz + radius + 1;
+            }
+            if (x0 < 0) x0 = 0;
+            if (z0 < 0) z0 = 0;
+            if (xn > xmax) xn = xmax;
+            if (zn > zmax) zn = zmax;
+
+            for (bz = z0; bz < zn && slot < aFD_BLOCK_DRAW_NUM; bz++) {
+                for (bx = x0; bx < xn && slot < aFD_BLOCK_DRAW_NUM; bx++) {
+                    block->bx = bx;
+                    block->bz = bz;
+                    mFI_BkNum2WposXZ(&block->wpos.x, &block->wpos.z, block->bx, block->bz);
+                    block->wpos.y = mFI_BkNum2BaseHeight(block->bx, block->bz);
+                    block->exist = TRUE;
+                    block++;
+                    slot++;
+                }
+            }
+            for (; slot < aFD_BLOCK_DRAW_NUM; slot++) {
+                block->exist = FALSE;
+                block++;
+            }
+
+            aFD_MakeMarinScrollInfo(actorx, game);
+            return;
+        }
+    }
+#endif
+
     for (i = 0; i < aFD_BLOCK_DRAW_NUM; i++) {
-        if (i >= draw_num) {
+        if (i >= 9) {
+            /* PC builds carry extra slots for the VR path; keep them idle */
             block->exist = FALSE;
             block++;
             continue;

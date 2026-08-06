@@ -9,9 +9,10 @@ extern "C" {
 #endif
 
 #ifdef TARGET_PC
-/* PC/VR draws a 5x5 acre grid (slots beyond the classic 3x3 are used only
- * when VR is active; unused slots carry exist=FALSE). */
-#define aFD_BLOCK_DRAW_NUM 25
+/* PC/VR draws the WHOLE town (7x10 = 70 acres) — no moving window, so
+ * terrain can never stream in or out. Flat mode keeps the classic 3x3 by
+ * only filling the first 9 slots (the rest carry exist=FALSE). */
+#define aFD_BLOCK_DRAW_NUM 70
 #else
 #define aFD_BLOCK_DRAW_NUM 9
 #endif

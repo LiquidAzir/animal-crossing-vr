@@ -30,6 +30,8 @@ typedef struct {
     int fp_eye_height;    /* first-person eye height above the player's feet, game units (default 52) */
     int fp_snap_degrees;  /* VR turning: 0 = smooth (default); >0 = snap angle in degrees */
     int vr_fp_world_scale;/* mm per game unit in first person (default 25 = life-size-ish) */
+    int vr_draw_radius;   /* VR terrain: 0 = draw the whole town (default), N = acres around the player */
+    int vr_town_residency;/* VR: keep the whole town's structures/villagers spawned (default 1) */
     int vr_motion_swing;  /* VR FP: swinging the right controller triggers the tool (default 1) */
     int vr_tool_on_hand;  /* VR FP: render the held tool at the real controller pose (default 1) */
     int vr_tool_pitch;    /* tool-on-hand pitch adjustment, degrees (default 0) */

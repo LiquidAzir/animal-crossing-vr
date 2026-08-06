@@ -308,6 +308,9 @@ static int aSNMgr_set_appear_info_regular(SET_NPC_MANAGER_ACTOR* manager, int bx
     int player_bz = manager->player_pos.next_block[1];
     int ret = FALSE;
 
+    /* NOTE: deliberately NOT widened for VR town residency — the villager
+     * pool is a fixed 9 slots and the scope queue only admits +/-1 acre,
+     * so a wider appear range starves villager spawning outright. */
     int appear_range = g_mPlib_wade_disabled ? 1 : 0;
 
     if (ABS(bx - player_bx) <= appear_range && ABS(bz - player_bz) <= appear_range) {

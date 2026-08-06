@@ -218,6 +218,13 @@ static struct {
 
 float g_pc_vr_cull_expand = 0.0f;
 float g_pc_vr_cull_znear_slack = 0.0f;
+/* Whole-town actor residency: buildings, villagers and props stay spawned
+ * across the entire town instead of a 2x2 acre quadrant. */
+int g_pc_town_residency = 0;
+
+extern "C" int pc_vr_draw_radius(void) {
+    return g_pc_settings.vr_draw_radius;
+}
 
 /* GX depth convention rows: near -> -1, far -> 0 (see emu64 projection load) */
 #define PC_VR_NEAR_M 0.05f
@@ -634,6 +641,7 @@ extern "C" void pc_vr_init(void) {
 
     g_pc_vr_cull_expand = 24.0f;
     g_pc_vr_cull_znear_slack = 8.0f;
+    g_pc_town_residency = g_pc_settings.vr_town_residency ? 1 : 0;
 
     /* Controller-tip -> tool-grip orientation: tools extend along the hand
      * matrix's +Z, the SteamVR tip pose points along -Z, so flip about Y,
@@ -690,6 +698,7 @@ static void pcvr_drop_to_flat(const char* why) {
     pcvr_log("%s - dropping to flat mode", why);
     g_pc_vr_cull_expand = 0.0f;
     g_pc_vr_cull_znear_slack = 0.0f;
+    g_pc_town_residency = 0;
     g_pc_target_w = g_pc_window_w;
     g_pc_target_h = g_pc_window_h;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

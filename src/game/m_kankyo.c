@@ -1886,8 +1886,29 @@ static void mEnv_SetFog(GAME_PLAY* play, Kankyo* kankyo, Global_light* global_li
         if  (play->camera.now_main_index == CAMERA2_PROCESS_NORMAL || play->camera.now_main_index == CAMERA2_PROCESS_WADE){
             global_light->fogFar = 1000;
             global_light->fogNear = 1000;
-        } 
-    }  
+        }
+    }
+#endif
+
+#ifdef TARGET_PC
+    /* VR outdoors: the stock fog band saturates around 1600 units — 2.5
+     * acres — so the town we now draw would dissolve into flat fog and
+     * read as pop-in. Push the band out to town scale (one acre = 640
+     * units) while keeping the time-of-day/weather ratio. Interiors keep
+     * their own short band above. Flat play is untouched. */
+    {
+        extern float g_pc_vr_cull_expand;
+        /* near == far is the game's fog-OFF sentinel (see m_rcp.c) — the
+         * C-stick reset above uses it. Never pull it apart. */
+        if (g_pc_vr_cull_expand > 0.0f && mFI_GET_TYPE(field_id) == mFI_FIELD_FG &&
+            global_light->fogNear != global_light->fogFar) {
+            int vr_near = global_light->fogNear * 3;
+            int vr_far = global_light->fogFar * 5;
+            if (vr_far < 6000) vr_far = 6000;
+            global_light->fogNear = vr_near;
+            global_light->fogFar = vr_far;
+        }
+    }
 #endif
 }
 

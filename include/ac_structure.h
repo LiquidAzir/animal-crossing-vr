@@ -12,7 +12,9 @@ extern "C" {
 #endif
 
 #ifdef TARGET_PC
-#define aSTR_ACTOR_TBL_COUNT 32
+/* Town-wide residency keeps every building in town spawned at once (a town
+ * has ~35 structures); the slack is plain BSS. */
+#define aSTR_ACTOR_TBL_COUNT 64
 #else
 #define aSTR_ACTOR_TBL_COUNT 9
 #endif
