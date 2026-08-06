@@ -37,7 +37,14 @@ extern "C" {
 #define BLOCKXZ_2_BLOCKIDX(x, z) ((z) * BLOCK_X_NUM + (x))
 #define UNITXZ_2_UNIT(x, z) ((z) * UT_X_NUM + (x))
 
+#ifdef TARGET_PC
+/* Enough slots for every playable acre (5x6 = 30) so trees, flowers and
+ * dropped items exist town-wide in VR instead of only in the few acres
+ * nearest the player. Sizes item tables and the bg_item draw tables. */
+#define mFM_VISIBLE_BLOCK_NUM 30
+#else
 #define mFM_VISIBLE_BLOCK_NUM 4 /* number of visible blocks (nearest to the Player) */
+#endif
 #define mFM_SOUND_SOURCE_NUM 6
 #define mFM_MOVE_ACTOR_NUM 16
 #define mFM_HANIWA_STEP_NUM 4

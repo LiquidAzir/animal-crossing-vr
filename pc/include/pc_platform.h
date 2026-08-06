@@ -29,7 +29,10 @@
 #define PC_SCREEN_HEIGHT  PC_GC_HEIGHT
 #define PC_WINDOW_TITLE   "Animal Crossing"
 
-#define PC_MAIN_MEMORY_SIZE   (24 * 1024 * 1024)
+/* The GameCube had 24 MB. Town-wide item residency adds ~0.5 MB of
+ * per-acre tables; 32 MB is ample headroom without charging flat-mode
+ * players for memory they never use (the arena is malloc'd AND memset). */
+#define PC_MAIN_MEMORY_SIZE   (32 * 1024 * 1024)
 #define PC_ARAM_SIZE          (16 * 1024 * 1024)
 #define PC_FIFO_SIZE          (256 * 1024)
 
