@@ -75,6 +75,9 @@ void pc_vr_notify_game_view(const float* mtx34);
 extern float g_pc_vr_cull_expand;
 /* Extra slack for the near-side Z cull test when VR is active. */
 extern float g_pc_vr_cull_znear_slack;
+/* Whole-town actor residency (buildings/props never distance-deleted).
+ * Declared here (extern "C") so C game code links against the C++ definition. */
+extern int g_pc_town_residency;
 
 /* --- Input --- */
 /* Merge VR controller state into the pad. Called from PADRead. */

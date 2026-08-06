@@ -1,3 +1,6 @@
+#ifdef TARGET_PC
+#include "pc_vr.h" /* g_pc_town_residency */
+#endif
 #include "bg_item.h"
 #include "bg_cherry_item.h"
 
@@ -232,6 +235,12 @@ static void bCI_actor_ct(ACTOR* actorx, GAME* game) {
     if (player != NULL) {
         mFI_GetItemTable(&bg_item->common.item_table, player->actor_class.world.position, __FILE__, 269);
         mFI_BornItemON();
+#ifdef TARGET_PC
+        /* Town residency: force one full draw-table build (see bg_item.c) */
+        if (g_pc_town_residency) {
+            mFI_SetFGUpData();
+        }
+#endif
     }
 
     for (i = 0; i < bg_item->common.item_table.count; i++) {

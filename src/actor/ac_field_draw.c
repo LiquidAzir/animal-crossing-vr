@@ -274,12 +274,14 @@ static void aFD_PrepareFieldDraw(ACTOR* actorx, GAME* game) {
 #endif
 
     for (i = 0; i < aFD_BLOCK_DRAW_NUM; i++) {
+#ifdef TARGET_PC
         if (i >= 9) {
             /* PC builds carry extra slots for the VR path; keep them idle */
             block->exist = FALSE;
             block++;
             continue;
         }
+#endif
         block->bx = bx + draw_block_offset_table[i].offset_x;
         block->bz = bz + draw_block_offset_table[i].offset_z;
         mFI_BkNum2WposXZ(&block->wpos.x, &block->wpos.z, block->bx, block->bz);

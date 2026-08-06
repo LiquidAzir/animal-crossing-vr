@@ -950,7 +950,10 @@ extern void cKF_Si3_draw_R_SV_solid(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
     if (mtxp != NULL && keyframe != NULL && keyframe->skeleton != NULL && cKF_shell_wanted()) {
         /* The shell needs its own Mtx pool: the caller sized its array to
          * exactly num_shown_joints, and the display list is replayed once
-         * per eye, so the matrices must stay live for the whole frame. */
+         * per eye, so the matrices must stay live for the whole frame.
+         * Note GRAPH_ALLOC today can NOT return NULL (it is an unchecked
+         * bump-down; exhaustion is caught at frame end by THA_GA_isCrash) —
+         * the check below only guards a future bounded allocator. */
         Mtx* shell_mtx = GRAPH_ALLOC_TYPE(game->graph, Mtx, (u32)keyframe->skeleton->num_shown_joints);
 
         if (shell_mtx != NULL) {
