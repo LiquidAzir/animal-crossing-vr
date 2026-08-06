@@ -6,6 +6,10 @@
 #include "GBA2/gba2.h"
 #include "m_player_lib.h"
 
+#ifdef TARGET_PC
+extern int g_pc_town_residency;
+#endif
+
 static void aBC_actor_ct(ACTOR*, GAME*);
 static void aBC_actor_move(ACTOR*, GAME*);
 
@@ -61,6 +65,18 @@ static void aBC_deleteActor_part(GAME_PLAY* play, int part) {
 
     check_bx = actor->block_x;
     check_bz = actor->block_z;
+
+#ifdef TARGET_PC
+    /* VR town residency: keep structures and props alive across the whole
+     * town so nothing pops in. NPCs are deliberately EXCLUDED — the
+     * villager pool is a fixed 9 slots (ac_npc.h keep_actors), so holding
+     * them resident permanently starves spawning once nine distinct
+     * villagers have been seen. Villagers wander anyway. */
+    if (g_pc_town_residency && part != ACTOR_PART_NPC) {
+      actor = actor->next_actor;
+      continue;
+    }
+#endif
 
     if (g_mPlib_wade_disabled) {
       dx = ABS(check_bx - now_bx);
@@ -356,6 +372,33 @@ void aBC_RequestNearbyRefresh(void) {
   aBC_nearby_refresh_request = TRUE;
 }
 
+#ifdef TARGET_PC
+/* Town residency: walk one playable acre per frame, forever, spawning its
+ * structures and props. The whole 5x6 town is covered in ~0.5s and then
+ * continuously re-checked, so nothing can be missing when you look at it.
+ * Restricted to playable acres — the 40 border acres alias one shared FG
+ * buffer (m_field_make.c l_fg_outer_fill) and hold no props anyway.
+ * setup_actor_flag is saved/restored so the sweep cannot perturb the
+ * player-acre state machine. */
+static void aBC_town_residency_sweep(BIRTH_CONTROL_ACTOR* birth_control, GAME_PLAY* play) {
+  static int sweep_idx = 0;
+  int bx = FGIDX_2_BLOCK_X(sweep_idx);
+  int bz = FGIDX_2_BLOCK_Z(sweep_idx);
+  int saved_flag = birth_control->setup_actor_flag;
+
+  sweep_idx++;
+  if (sweep_idx >= FG_BLOCK_TOTAL_NUM) {
+    sweep_idx = 0;
+  }
+
+  if (mFI_BlockCheck(bx, bz) == TRUE) {
+    aBC_setupActor(birth_control, play, bx, bz);
+  }
+
+  birth_control->setup_actor_flag = saved_flag;
+}
+#endif
+
 static int aBC_check_update_actors_in_nearby_blocks(BIRTH_CONTROL_ACTOR* birth_control, GAME_PLAY* play) {
   int quadrant;
   int block_ux;
@@ -414,6 +457,12 @@ static void aBC_actor_move(ACTOR* actorx, GAME* game) {
       aBC_deleteActor_part(play, ACTOR_PART_ITEM);
       aBC_setupActor(birth_control, play, play->block_table.block_x, play->block_table.block_z);
     }
+
+#ifdef TARGET_PC
+    if (g_pc_town_residency) {
+      aBC_town_residency_sweep(birth_control, play);
+    }
+#endif
 
     if (birth_control->move_actor_list_exists_flag == TRUE && birth_control->move_actor_bitfield != 0) {
       int bx = play->block_table.block_x;

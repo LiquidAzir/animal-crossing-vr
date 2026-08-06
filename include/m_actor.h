@@ -18,7 +18,13 @@ extern "C" {
 typedef void (*mActor_proc)(ACTOR*, GAME*);
 #define NONE_ACTOR_PROC ((mActor_proc)&none_proc1)
 
+#ifdef TARGET_PC
+/* Town-wide residency keeps every building, villager and prop in the town
+ * spawned at once. The cap is a bare guard (m_actor.c), not an array size. */
+#define mAc_MAX_ACTORS 1024
+#else
 #define mAc_MAX_ACTORS 200
+#endif
 
 #define ACTOR_STATE_NONE 0
 #define ACTOR_STATE_0 (1 << 0)

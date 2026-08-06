@@ -2453,11 +2453,12 @@ void emu64::cullmode() {
     }
 
 #ifdef TARGET_PC
-    /* First person: world geometry is single-sided (authored for a camera
-     * that always looks north) — backface culling makes walls invisible
-     * when viewed from behind ("half-rendered" buildings). Draw both
-     * sides while the FP view is live. */
-    if (cullmode == GX_CULL_BACK && pc_fp_view_is_active()) {
+    /* World geometry is single-sided (authored for a camera that could
+     * never see the back of anything) — in VR that reads as missing walls.
+     * pc_gx.c's GXSetCullMode is the authoritative override (it catches
+     * every caller); this keeps emu64's own state honest. */
+    if ((cullmode == GX_CULL_BACK || cullmode == GX_CULL_FRONT) &&
+        (g_pc_vr_cull_expand > 0.0f || pc_fp_view_is_active())) {
         cullmode = GX_CULL_NONE;
     }
 #endif

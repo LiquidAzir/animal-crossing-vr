@@ -24,8 +24,10 @@ ACTOR_PROFILE Structure_Profile = { mAc_PROFILE_STRUCTURE,
 
 static u8 aSTR_overlay[aSTR_ACTOR_TBL_COUNT][aSTR_OVERLAY_SIZE];
 #ifdef TARGET_PC
-/* Structure profiles such as TOUDAI_ACTOR are larger than STRUCTURE_ACTOR because of Delta time. 
- * If you are modding, be careful to not make the same mistake. */
+/* Structure actors share fixed-size slots. Actor_init_actor_class mem_clears
+ * profile->class_size bytes into a slot, so any structure profile larger
+ * than this would scribble into the next slot. The static assert below
+ * turns that into a build error instead of silent heap corruption. */
 #define aSTR_PC_ACTOR_SLOT_SIZE 0x300
 
 typedef union {
@@ -33,6 +35,8 @@ typedef union {
     STRUCTURE_ACTOR actor;
     u8 bytes[aSTR_PC_ACTOR_SLOT_SIZE];
 } aSTR_pc_actor_storage_c;
+
+typedef char aSTR_slot_fits_check[(aSTR_PC_ACTOR_SLOT_SIZE >= sizeof(STRUCTURE_ACTOR)) ? 1 : -1];
 
 static aSTR_pc_actor_storage_c aSTR_actor_cl[aSTR_ACTOR_TBL_COUNT];
 

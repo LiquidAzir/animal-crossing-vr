@@ -52,6 +52,7 @@ typedef struct { u8 r, g, b, a; } GXColor;
 PCGXState g_gx;
 
 #include "pc_vr.h"
+#include "pc_fp_camera.h"
 
 /* Current render target dims. Equal to the window normally; pc_vr points them
  * at the eye/UI FBOs during VR passes. All GC->pixel scaling uses these. */
@@ -1820,6 +1821,18 @@ void GXSetPixelFmt(u32 pix_fmt, u32 z_fmt) { (void)pix_fmt; (void)z_fmt; }
 void GXSetCullMode(u32 mode) {
     pc_gx_flush_if_begin_complete();
     if (g_pc_model_viewer_no_cull) mode = GX_CULL_NONE;
+    /* VR: world geometry is single-sided — authored for a camera that could
+     * never see the back of anything. Head tracking and first person both
+     * expose those faces, which read as missing walls. Draw both sides.
+     * Hooked here (the port's only GXSetCullMode) rather than in emu64 so
+     * no caller can bypass it. GX_CULL_ALL is left alone: it means "draw
+     * nothing", not a facing optimization. */
+    if (mode == GX_CULL_BACK || mode == GX_CULL_FRONT) {
+        extern float g_pc_vr_cull_expand;
+        if (g_pc_vr_cull_expand > 0.0f || pc_fp_view_is_active()) {
+            mode = GX_CULL_NONE;
+        }
+    }
     if (g_gx.cull_mode == (int)mode) return;
     DIRTY(PC_GX_DIRTY_CULL);
     g_gx.cull_mode = mode;

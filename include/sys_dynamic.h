@@ -29,16 +29,18 @@ extern "C" {
  * grid): the GameCube-sized arenas would overflow, which silently drops
  * whole frames (graph_draw_finish error path). Plain BSS — costs ~500 KB
  * of ordinary memory, not the emulated 24 MB arena. */
-#define POLY_OPA_SIZE 40000
-#define POLY_XLU_SIZE 8192
+#define POLY_OPA_SIZE 131072
+#define POLY_XLU_SIZE 32768
 #define OVERLAY_SIZE 1024
 #define WORK_SIZE 128
 #define UNK_BUF0_SIZE 32
 #define FONT_SIZE 1792
-#define SHADOW_SIZE 4096
+#define SHADOW_SIZE 16384
 #define LIGHT_SIZE 256
-#define NEW0_SIZE 4096
-#define NEW1_SIZE 2048
+/* NEW0/NEW1 are the BG arenas, but LightsN_disp_BG writes into them PER
+ * ACTOR — with town-wide residency NEW1 overflows first. */
+#define NEW0_SIZE 16384
+#define NEW1_SIZE 8192
 #else
 #define POLY_OPA_SIZE 9952
 #define POLY_XLU_SIZE 2048

@@ -30,6 +30,8 @@ PCSettings g_pc_settings = {
     .fp_eye_height = 52,
     .fp_snap_degrees = 0,
     .vr_fp_world_scale = 25,
+    .vr_draw_radius = 0,
+    .vr_town_residency = 1,
     .vr_motion_swing = 1,
     .vr_tool_on_hand = 1,
     .vr_tool_pitch = 0,
@@ -111,6 +113,13 @@ static const char* DEFAULT_SETTINGS =
     "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n"
     "vr_fp_world_scale = 25\n"
     "\n"
+    "# VR terrain draw distance: 0 = the whole town at once (no pop-in, default),\n"
+    "# or a radius in acres (e.g. 3) if your machine needs the headroom\n"
+    "vr_draw_radius = 0\n"
+    "\n"
+    "# VR: keep every building, villager and prop in town loaded at once (0/1)\n"
+    "vr_town_residency = 1\n"
+    "\n"
     "# VR first person: swing the right controller to use the held tool (0/1)\n"
     "vr_motion_swing = 1\n"
     "\n"
@@ -187,6 +196,10 @@ static void apply_setting(const char* key, const char* value) {
         if (val >= 0 && val <= 90) g_pc_settings.fp_snap_degrees = val;
     } else if (strcmp(key, "vr_fp_world_scale") == 0) {
         if (val >= 1 && val <= 1000) g_pc_settings.vr_fp_world_scale = val;
+    } else if (strcmp(key, "vr_draw_radius") == 0) {
+        if (val >= 0 && val <= 10) g_pc_settings.vr_draw_radius = val;
+    } else if (strcmp(key, "vr_town_residency") == 0) {
+        if (val == 0 || val == 1) g_pc_settings.vr_town_residency = val;
     } else if (strcmp(key, "vr_motion_swing") == 0) {
         if (val == 0 || val == 1) g_pc_settings.vr_motion_swing = val;
     } else if (strcmp(key, "vr_tool_on_hand") == 0) {
@@ -309,6 +322,13 @@ void pc_settings_save(void) {
     fprintf(f, "\n");
     fprintf(f, "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n");
     fprintf(f, "vr_fp_world_scale = %d\n", g_pc_settings.vr_fp_world_scale);
+    fprintf(f, "\n");
+    fprintf(f, "# VR terrain draw distance: 0 = the whole town at once (no pop-in, default),\n");
+    fprintf(f, "# or a radius in acres (e.g. 3) if your machine needs the headroom\n");
+    fprintf(f, "vr_draw_radius = %d\n", g_pc_settings.vr_draw_radius);
+    fprintf(f, "\n");
+    fprintf(f, "# VR: keep every building, villager and prop in town loaded at once (0/1)\n");
+    fprintf(f, "vr_town_residency = %d\n", g_pc_settings.vr_town_residency);
     fprintf(f, "\n");
     fprintf(f, "# VR first person: swing the right controller to use the held tool (0/1)\n");
     fprintf(f, "vr_motion_swing = %d\n", g_pc_settings.vr_motion_swing);
