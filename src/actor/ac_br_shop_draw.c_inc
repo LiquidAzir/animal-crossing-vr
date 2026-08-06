@@ -99,7 +99,7 @@ static void aBRS_actor_draw(ACTOR* actor, GAME* game) {
         SET_POLY_OPA_DISP(gfx);
         CLOSE_DISP(graph);
 
-        cKF_Si3_draw_R_SV(game, keyframe, mtx, &aBRS_actor_draw_before, &aBRS_actor_draw_after, actor);
+        cKF_Si3_draw_R_SV_solid(game, keyframe, mtx, &aBRS_actor_draw_before, &aBRS_actor_draw_after, actor, NULL);
         (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aBRS_shadow_data, FALSE);
     }
 }

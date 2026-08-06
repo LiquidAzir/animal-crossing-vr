@@ -307,6 +307,26 @@ extern void cKF_Si3_draw_SV_R_child(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
 extern void cKF_Si3_draw_R_SV(GAME* game, cKF_SkeletonInfo_R_c* keyframe, Mtx* mtxp,
                               cKF_draw_callback prerender_callback, cKF_draw_callback postrender_callback, void* arg);
 
+#ifdef TARGET_PC
+/* As cKF_Si3_draw_R_SV, plus the VR "solid buildings" shell pass that fills
+ * in the far side of structures the stock game never authored. Call this
+ * ONLY from building draw procs.
+ * pipeline_reset (may be NULL) re-runs the caller's own RDP setup between
+ * the shell and the real pass — required for any model whose joints change
+ * combiner/render mode, or the real building inherits the shell's state. */
+typedef void (*cKF_pipeline_reset_proc)(struct graph_s* graph);
+
+extern void cKF_Si3_draw_R_SV_solid(GAME* game, cKF_SkeletonInfo_R_c* keyframe, Mtx* mtxp,
+                                    cKF_draw_callback prerender_callback,
+                                    cKF_draw_callback postrender_callback, void* arg,
+                                    cKF_pipeline_reset_proc pipeline_reset);
+extern int cKF_shell_wanted(void);
+extern int g_ckf_shell_pass;
+#else
+#define cKF_Si3_draw_R_SV_solid(game, kf, mtxp, pre, post, arg, reset) \
+    cKF_Si3_draw_R_SV(game, kf, mtxp, pre, post, arg)
+#endif
+
 /**
  * Initializes a skeleton info structure for repeating animation with specified speed and morph counter.
  *

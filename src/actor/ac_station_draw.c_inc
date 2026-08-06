@@ -66,7 +66,7 @@ static void aSTA_actor_draw(ACTOR* actor, GAME* game) {
 
     CLOSE_POLY_OPA_DISP(graph);
 
-    cKF_Si3_draw_R_SV(game, keyframe, mtx, &aSTA_actor_draw_before, NULL, actor);
+    cKF_Si3_draw_R_SV_solid(game, keyframe, mtx, &aSTA_actor_draw_before, NULL, actor, NULL);
     type = station->struct_class.structure_type - aSTR_TYPE_STATION1;
     (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, shadow_low_data[type], FALSE);
     (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, shadow_hi_data[type], TRUE);
