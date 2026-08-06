@@ -302,7 +302,13 @@ static void Camera2_SetView(GAME_PLAY* play) {
             up_v.x = fp_up[0];   up_v.y = fp_up[1];   up_v.z = fp_up[2];
 
             setScaleView(view, camera->perspective.scale);
-            setPerspectiveView(view, PC_FP_FOV_DEG, PC_FP_NEAR, camera->perspective.far);
+            {
+                /* Flat FP sees the whole drawn town; VR keeps the stock far
+                 * (its own render projection is applied later in pc_gx). */
+                extern int pc_vr_active(void);
+                setPerspectiveView(view, PC_FP_FOV_DEG, PC_FP_NEAR,
+                                   pc_vr_active() ? camera->perspective.far : PC_FP_FAR);
+            }
             setLookAtView(view, &eye_v, &at_v, &up_v);
             pc_fp_set_active(1);
             return;

@@ -1891,25 +1891,41 @@ static void mEnv_SetFog(GAME_PLAY* play, Kankyo* kankyo, Global_light* global_li
 #endif
 
 #ifdef TARGET_PC
-    /* VR/first person outdoors: the stock fog band saturates around 1600
-     * units — 2.5 acres — so the town we now draw would dissolve into flat
-     * fog and read as pop-in. Push the band out to town scale (one acre =
-     * 640 units) while keeping the time-of-day/weather ratio. Interiors
-     * keep their own short band above. Per-frame gate: fog is recomputed
-     * every frame, so flat third person reverts instantly on F5-off. */
+    /* VR/first person outdoors: the stock fog band would dissolve the
+     * whole-town draw into flat fog. IMPORTANT: fogNear/fogFar are NOT
+     * distances — they are gbi fog POSITIONS on a 0..1000 scale where
+     * 1000 = the projection far plane (gbi.h gsSPFogPosition). Values far
+     * outside that range cross the pole of emu64's projection inversion
+     * and the fog factor saturates to 1.0 at EVERY pixel (whole-screen
+     * fog colour — the flat-FP "all blue" bug). Per-frame gate: fog is
+     * recomputed every frame, so flat third person reverts on F5-off. */
     {
         extern int pc_vr_active(void);
         extern int pc_fp_view_is_active(void);
         /* near == far is the game's fog-OFF sentinel (see m_rcp.c) — the
          * C-stick reset above uses it. Never pull it apart. */
-        if ((pc_vr_active() || pc_fp_view_is_active()) &&
-            mFI_GET_TYPE(field_id) == mFI_FIELD_FG &&
+        if (mFI_GET_TYPE(field_id) == mFI_FIELD_FG &&
             global_light->fogNear != global_light->fogFar) {
-            int vr_near = global_light->fogNear * 3;
-            int vr_far = global_light->fogFar * 5;
-            if (vr_far < 6000) vr_far = 6000;
-            global_light->fogNear = vr_near;
-            global_light->fogFar = vr_far;
+            if (pc_vr_active()) {
+                /* VR: byte-identical to the band the user has been playing
+                 * with — VR's fog path rescales separately in pc_gx. */
+                int vr_near = global_light->fogNear * 3;
+                int vr_far = global_light->fogFar * 5;
+                if (vr_far < 6000) vr_far = 6000;
+                global_light->fogNear = vr_near;
+                global_light->fogFar = vr_far;
+            } else if (pc_fp_view_is_active()) {
+                /* Flat FP: with the far plane at PC_FP_FAR (8000), the
+                 * tightest legal band ending AT the far plane. 996/1000
+                 * stays inside the valid position range under ANY
+                 * projection (so the one-frame F5-toggle mismatch is
+                 * benign), the width-4 band keeps 128000/width inside the
+                 * s16 emu64 reads, and through near=8/far=8000 it becomes
+                 * a linear haze from ~2.6 acres out to exactly the far
+                 * plane — the far clip is born 100% fog and invisible. */
+                global_light->fogNear = 996;
+                global_light->fogFar = 1000;
+            }
         }
     }
 #endif
