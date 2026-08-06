@@ -2289,7 +2289,16 @@ static void m_GetCItTable_TreeTblChk(bg_item_block_info_tbl_c* block_info_table,
     }
 
     mFI_GetItemTable(item_table, wpos, __FILE__, 4856);
+#ifdef TARGET_PC
+    /* The VR item table can hold more acres than the 8-bit save field can
+     * index; mFI_GetItemTable publishes the remapped slot bits there. */
+    remove_cut_tree_info_bitfield = (int)mFI_PcGetClearTreeSlots();
+    if (remove_cut_tree_info_bitfield == 0) {
+        remove_cut_tree_info_bitfield = Common_Get(remove_cut_tree_info_bitfield);
+    }
+#else
     remove_cut_tree_info_bitfield = Common_Get(remove_cut_tree_info_bitfield);
+#endif
     block_info[1].count = item_table->count;
 
     for (i = 0; i < mFM_VISIBLE_BLOCK_NUM; i++) {
@@ -2741,7 +2750,13 @@ static void bg_item_common_chg_draw_tbl_perfect(GAME_PLAY* play, bg_item_common_
     int* order_tbl = common->_139F4;
     mFI_block_tbl_c* block_tbl;
     int flag0;
+#ifdef TARGET_PC
+    /* Must be wide enough for the VR item table's slot count (u8 truncates
+     * every slot past index 7, so those acres never refresh). */
+    u32 clear_tree_cut_flags;
+#else
     u8 clear_tree_cut_flags;
+#endif
     int t0[mFM_VISIBLE_BLOCK_NUM];
     int t1[mFM_VISIBLE_BLOCK_NUM];
     int t2[mFM_VISIBLE_BLOCK_NUM];
@@ -2798,10 +2813,17 @@ static void bg_item_common_chg_draw_tbl_perfect(GAME_PLAY* play, bg_item_common_
             common->draw_table[common->_139F4[i]].draw_flag = TRUE;
         }
 
+#ifdef TARGET_PC
+        clear_tree_cut_flags = mFI_PcGetClearTreeSlots();
+        if (clear_tree_cut_flags == 0) {
+            clear_tree_cut_flags = Common_Get(remove_cut_tree_info_bitfield);
+        }
+#else
         clear_tree_cut_flags = Common_Get(remove_cut_tree_info_bitfield);
+#endif
         if (flag0 || clear_tree_cut_flags != 0) {
             for (i = 0; i < count; i++) {
-                if (t0[i] < 0 || (clear_tree_cut_flags & (1 << i)) != 0) {
+                if (t0[i] < 0 || (clear_tree_cut_flags & ((u32)1 << i)) != 0) {
                     bg_item_common_set_draw_tbl(play, &common->draw_table[common->_139F4[i]],
                                                 &common->item_table.block_info_tbl[i], type_data_table,
                                                 common->common_info.draw_part_table_p);

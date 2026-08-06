@@ -221,6 +221,11 @@ extern int mFI_CheckShopFieldName(mActor_name_t field_name);
 extern int mFI_CheckShop();
 extern u8 mFI_GetBlockXMax();
 extern u8 mFI_GetBlockZMax();
+#ifdef TARGET_PC
+/* Wider replacement for remove_cut_tree_info_bitfield when the VR item
+ * table spans more acres than the 8-bit save field can address. */
+extern u32 mFI_PcGetClearTreeSlots(void);
+#endif
 extern f32 mFI_GetBlockWidth();
 extern f32 mFI_GetBlockHeight();
 extern int mFI_GetBlockNum(int block_x, int block_z);

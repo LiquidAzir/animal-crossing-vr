@@ -570,8 +570,19 @@ static int mFI_GetFreeRegisterBgInfo() {
     mFI_register_bg_info_c* bg_info = l_register_bg_info;
     int res = -1;
     int i;
+#ifdef TARGET_PC
+    /* Must match mFI_BGDispMatch's bound (g_fdinfo->bg_num), not the array
+     * size: handing back a slot index BGDispMatch can never find makes the
+     * same acre re-register every frame, which re-fires the block DMA and
+     * its hole/beehive clearing on live field data. Harmless while the two
+     * happen to be equal; catastrophic once the array is larger. */
+    int slot_max = g_fdinfo->bg_num;
+    if (slot_max > mFM_VISIBLE_BLOCK_NUM) slot_max = mFM_VISIBLE_BLOCK_NUM;
 
+    for (i = 0; i < slot_max; i++) {
+#else
     for (i = 0; i < mFM_VISIBLE_BLOCK_NUM; i++) {
+#endif
         if (mFI_CheckFreeRegisterBgInfo(bg_info)) {
             res = i;
             break;
@@ -1477,6 +1488,17 @@ static void mFI_SetBlockTable(mFI_block_tbl_c* block_table, int bx, int bz) {
     block_table->pos_z = z;
 }
 
+#ifdef TARGET_PC
+/* Wider stand-in for remove_cut_tree_info_bitfield while the VR item table
+ * holds more acres than the 8-bit save-resident field can address. Valid
+ * only for the table produced by the most recent mFI_GetItemTable call. */
+static u32 l_pc_clear_tree_slots = 0;
+
+extern u32 mFI_PcGetClearTreeSlots(void) {
+    return l_pc_clear_tree_slots;
+}
+#endif
+
 extern int mFI_GetItemTable_NoReset(mFI_item_table_c* item_table, xyz_t wpos) {
     static int table_no[3] = { 0, 1, 1 };
     static int check_x[3] = { 0, 1, -1 };
@@ -1501,6 +1523,71 @@ extern int mFI_GetItemTable_NoReset(mFI_item_table_c* item_table, xyz_t wpos) {
         block_x_tbl[i] = item_table->block_info_tbl[i].block_x;
         block_z_tbl[i] = item_table->block_info_tbl[i].block_z;
     }
+
+#ifdef TARGET_PC
+    /* VR: keep EVERY playable acre's item table resident, in a fixed order,
+     * so trees/flowers/rocks/dropped items exist town-wide instead of only
+     * in the acres whose background happens to be DMA'd.
+     * Only while the player is inside the 5x6 town grid — Animal Island
+     * lives at a block row outside it and must use the stock path, or its
+     * flora would be invisible-but-solid and fell in one swing.
+     * Border acres are excluded: they share one aliased FG buffer. */
+    {
+        extern int g_pc_town_residency;
+        if (g_pc_town_residency &&
+            bx >= 1 && bx <= FG_BLOCK_X_NUM && bz >= 1 && bz <= FG_BLOCK_Z_NUM) {
+            int fx;
+            int fz;
+            int k;
+            u32 src_bits;
+            u32 dst_bits = 0;
+
+            _num = 0;
+            for (fz = 1; fz <= FG_BLOCK_Z_NUM && _num < mFM_VISIBLE_BLOCK_NUM; fz++) {
+                for (fx = 1; fx <= FG_BLOCK_X_NUM && _num < mFM_VISIBLE_BLOCK_NUM; fx++) {
+                    if (mFI_BlockCheck(fx, fz) == TRUE) {
+                        mFI_SetBlockTable(&item_table->block_info_tbl[_num], fx, fz);
+                        _num++;
+                    }
+                }
+            }
+
+            /* remove_cut_tree_info_bitfield marks DMA-COMPLETED bg slots —
+             * it is what drives per-acre tree-attribute / hole / beehive
+             * clearing. Our table no longer maps 1:1 to those slots, so
+             * translate each completed slot's acre into its index in the
+             * new table and hand that on through a wider side channel (the
+             * save-resident field is only 8 bits). Dropping this makes
+             * planted trees need ~255 swings, or stumps fall in one. */
+            src_bits = (u32)Common_Get(remove_cut_tree_info_bitfield);
+            for (k = 0; k < g_fdinfo->bg_num && k < mFM_VISIBLE_BLOCK_NUM; k++) {
+                if (((src_bits >> k) & 1) == 0) {
+                    continue;
+                }
+                for (i = 0; i < _num; i++) {
+                    if (item_table->block_info_tbl[i].block_x == g_fdinfo->bg_draw_info[k].block_x &&
+                        item_table->block_info_tbl[i].block_z == g_fdinfo->bg_draw_info[k].block_z) {
+                        dst_bits |= (u32)1 << i;
+                        break;
+                    }
+                }
+            }
+            l_pc_clear_tree_slots = dst_bits;
+            Common_Set(remove_cut_tree_info_bitfield, 0);
+
+            for (i = _num; i < mFM_VISIBLE_BLOCK_NUM; i++) {
+                item_table->block_info_tbl[i].block_x = 0xFF;
+                item_table->block_info_tbl[i].block_z = 0xFF;
+            }
+
+            mFI_MakeOldItemTableIdxTable(item_table->block_info_tbl, _num, block_x_tbl, block_z_tbl,
+                                         item_table->count);
+            item_table->count = _num;
+            return TRUE;
+        }
+        l_pc_clear_tree_slots = 0;
+    }
+#endif
 
     for (i = 0; i < mFM_VISIBLE_BLOCK_NUM; i++) {
         if (mFI_CheckFinishBgDma(i) == TRUE && bg_disp->block_z == bz) {
