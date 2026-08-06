@@ -767,6 +767,32 @@ extern int cKF_SkeletonInfo_R_play(cKF_SkeletonInfo_R_c* keyframe) {
 }
 #endif
 
+#ifdef TARGET_PC
+/* --- VR "solid buildings" shell pass ---
+ * Every town camera in the stock game looks from a fixed direction, so the
+ * far side of buildings was never authored — in VR you can walk around and
+ * see straight through them. We re-draw a structure's skeleton spun 180
+ * degrees about its own root pivot and shrunk a few percent, so the front
+ * wall's geometry lands where the missing back wall belongs while the copy
+ * stays inside the original's hull everywhere real geometry already exists
+ * (the real pass is drawn second and wins depth ties).
+ *
+ * The spin has to be applied AFTER the root joint's own transform: root
+ * offsets are large (house1 sits 2000 units out), so rotating at the actor
+ * level would fling the copy a whole tile away. */
+int   g_ckf_shell_pass  = 0;
+float g_ckf_shell_scale = 0.97f;
+
+extern int pc_vr_active(void);
+extern int pc_fp_view_is_active(void);
+extern int g_pc_solid_buildings;
+extern int g_pc_solid_shell_pct;
+
+int cKF_shell_wanted(void) {
+    return g_pc_solid_buildings && (pc_vr_active() || pc_fp_view_is_active());
+}
+#endif
+
 extern void cKF_Si3_draw_SV_R_child(GAME* game, cKF_SkeletonInfo_R_c* keyframe, int* joint_num,
                                     cKF_draw_callback prerender_callback, cKF_draw_callback postrender_callback,
                                     void* arg, Mtx** mtxpp) {
@@ -828,7 +854,29 @@ extern void cKF_Si3_draw_SV_R_child(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
     if ((prerender_callback == NULL) ||
         ((prerender_callback != NULL) &&
          (prerender_callback(game, keyframe, *joint_num, &mjoint_m, &joint_f, arg, &joint1, &trans)) != FALSE)) {
+#ifdef TARGET_PC
+        if (g_ckf_shell_pass && *joint_num == 0) {
+            /* Spin about the model pivot, in the PARENT frame: translate to
+             * the root pivot, turn, shrink, and let the root's own rotation
+             * follow. Turning after the root rotation would use joint-local
+             * axes — wrong for the island houses, whose roots are rotated
+             * (-90, 0, +90) so model +X is world up (the copy would end up
+             * upside down). */
+            Matrix_translate(trans.x, trans.y, trans.z, MTX_MULT);
+            Matrix_RotateY((s16)0x8000, MTX_MULT);
+            Matrix_scale(g_ckf_shell_scale, g_ckf_shell_scale, g_ckf_shell_scale, MTX_MULT);
+            trans.x = 0.0f;
+            trans.y = 0.0f;
+            trans.z = 0.0f;
+        }
+#endif
         Matrix_softcv3_mult(&trans, &joint1);
+#ifdef TARGET_PC
+        if (g_ckf_shell_pass && (joint_f & cKF_JOINT_FLAG_DISP_XLU)) {
+            /* Translucent parts (glass, glow) would double-blend */
+            mjoint_m = NULL;
+        }
+#endif
         if (mjoint_m != NULL) {
             _Matrix_to_Mtx(*mtxpp);
             if (joint_f & cKF_JOINT_FLAG_DISP_XLU) {
@@ -890,6 +938,79 @@ extern void cKF_Si3_draw_R_SV(GAME* game, cKF_SkeletonInfo_R_c* keyframe, Mtx* m
         cKF_Si3_draw_SV_R_child(game, keyframe, &joint_num, prerender_callback, postrender_callback, arg, &mtx_p);
     }
 }
+
+#ifdef TARGET_PC
+/* Structure draw with the VR solid-shell pass (see cKF_shell_wanted above).
+ * Opt-in: only the building draw procs call this — the base function has
+ * ~175 callers (every villager, fish and insect) that must not double. */
+extern void cKF_Si3_draw_R_SV_solid(GAME* game, cKF_SkeletonInfo_R_c* keyframe, Mtx* mtxp,
+                                    cKF_draw_callback prerender_callback,
+                                    cKF_draw_callback postrender_callback, void* arg,
+                                    cKF_pipeline_reset_proc pipeline_reset) {
+    if (mtxp != NULL && keyframe != NULL && keyframe->skeleton != NULL && cKF_shell_wanted()) {
+        /* The shell needs its own Mtx pool: the caller sized its array to
+         * exactly num_shown_joints, and the display list is replayed once
+         * per eye, so the matrices must stay live for the whole frame. */
+        Mtx* shell_mtx = GRAPH_ALLOC_TYPE(game->graph, Mtx, (u32)keyframe->skeleton->num_shown_joints);
+
+        if (shell_mtx != NULL) {
+            int pct = g_pc_solid_shell_pct;
+
+            /* One line per distinct building model, so a report of "the
+             * shell looks wrong on X" can be traced without guesswork:
+             * a non-zero root rotation or an unexpected joint count is
+             * exactly what would displace or tilt the copy. */
+            {
+                extern int g_pc_verbose;
+                static cKF_Skeleton_R_c* logged[24];
+                static int logged_count = 0;
+                if (g_pc_verbose && logged_count < 24) {
+                    int seen = 0;
+                    int li;
+                    for (li = 0; li < logged_count; li++) {
+                        if (logged[li] == keyframe->skeleton) { seen = 1; break; }
+                    }
+                    if (!seen) {
+                        /* current_joint[0] is the live root translation and
+                         * [1] the live root rotation — the rotation is what
+                         * decides whether a plain Y spin is upright for this
+                         * model, so log what the transform actually reads. */
+                        s_xyz* root_t = &keyframe->current_joint[0];
+                        s_xyz* root_r = &keyframe->current_joint[1];
+                        logged[logged_count++] = keyframe->skeleton;
+                        printf("[SolidBuildings] model %p joints=%d shown=%d pos=(%d,%d,%d) rot=(%d,%d,%d)\n",
+                               (void*)keyframe->skeleton, keyframe->skeleton->num_joints,
+                               keyframe->skeleton->num_shown_joints,
+                               root_t->x, root_t->y, root_t->z,
+                               root_r->x, root_r->y, root_r->z);
+                    }
+                }
+            }
+
+            if (pct < 50) pct = 50;
+            if (pct > 100) pct = 100;
+            g_ckf_shell_scale = pct * 0.01f;
+            g_ckf_shell_pass = 1;
+            /* Prerender only: postrender callbacks emit extra display lists
+             * (window glow, attachment matrices) that must not be doubled. */
+            cKF_Si3_draw_R_SV(game, keyframe, shell_mtx, prerender_callback, NULL, arg);
+            g_ckf_shell_pass = 0;
+
+            /* Some models' joints set combiner / render mode / texture state
+             * that the following joints inherit (Nook's "light" part is the
+             * last joint drawn and leaves an ENVIRONMENT combiner behind).
+             * Without re-running the caller's pipeline setup, the REAL pass
+             * inherits the shell's leftover state and the building renders
+             * as a flat black silhouette in daylight. */
+            if (pipeline_reset != NULL) {
+                pipeline_reset(game->graph);
+            }
+        }
+    }
+
+    cKF_Si3_draw_R_SV(game, keyframe, mtxp, prerender_callback, postrender_callback, arg);
+}
+#endif
 
 extern void cKF_SkeletonInfo_R_init_standard_repeat_speedsetandmorph(cKF_SkeletonInfo_R_c* keyframe,
                                                                      cKF_Animation_R_c* animation,

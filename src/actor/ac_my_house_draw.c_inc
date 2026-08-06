@@ -249,7 +249,7 @@ static void aMHS_actor_draw(ACTOR* actorx, GAME* game) {
         SET_POLY_OPA_DISP(gfx);
         CLOSE_DISP(graph);
 
-        cKF_Si3_draw_R_SV((GAME*)play, keyframe, mtx, &aMHS_actor_draw_before, &aMHS_actor_draw_after, my_house);
+        cKF_Si3_draw_R_SV_solid((GAME*)play, keyframe, mtx, &aMHS_actor_draw_before, &aMHS_actor_draw_after, my_house, NULL);
         shadow_data_pp = shadow_data[my_house->arg0];
         Matrix_translate(my_house->actor_class.world.position.x, my_house->actor_class.world.position.y,
                          my_house->actor_class.world.position.z, MTX_LOAD);

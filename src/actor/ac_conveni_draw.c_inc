@@ -100,7 +100,7 @@ static void aCNV_actor_draw(ACTOR* actor, GAME* game) {
 
     CLOSE_POLY_OPA_DISP(graph);
 
-    cKF_Si3_draw_R_SV(game, keyframe, mtx, &aCNV_actor_draw_before, &aCNV_actor_draw_after, actor);
+    cKF_Si3_draw_R_SV_solid(game, keyframe, mtx, &aCNV_actor_draw_before, &aCNV_actor_draw_after, actor, NULL);
     _texture_z_light_fog_prim_shadow(graph);
     (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aCNV_shadow_data, FALSE);
 }

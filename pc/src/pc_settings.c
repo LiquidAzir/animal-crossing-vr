@@ -30,6 +30,8 @@ PCSettings g_pc_settings = {
     .fp_eye_height = 52,
     .fp_snap_degrees = 0,
     .vr_fp_world_scale = 25,
+    .vr_solid_buildings = 1,
+    .vr_solid_shell = 97,
     .vr_draw_radius = 0,
     .vr_town_residency = 1,
     .vr_motion_swing = 1,
@@ -112,6 +114,14 @@ static const char* DEFAULT_SETTINGS =
     "\n"
     "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n"
     "vr_fp_world_scale = 25\n"
+    "\n"
+    "# Fill in the far side of buildings, which the original game never modelled\n"
+    "# (you could not walk behind them). 0 = off, 1 = on. VR and first person only.\n"
+    "vr_solid_buildings = 1\n"
+    "\n"
+    "# Size of that fill-in shell as a percent of the building (50-100). Lower it\n"
+    "# if a shell edge ever pokes through a wall or roof.\n"
+    "vr_solid_shell = 97\n"
     "\n"
     "# VR terrain draw distance: 0 = the whole town at once (no pop-in, default),\n"
     "# or a radius in acres (e.g. 3) if your machine needs the headroom\n"
@@ -196,6 +206,10 @@ static void apply_setting(const char* key, const char* value) {
         if (val >= 0 && val <= 90) g_pc_settings.fp_snap_degrees = val;
     } else if (strcmp(key, "vr_fp_world_scale") == 0) {
         if (val >= 1 && val <= 1000) g_pc_settings.vr_fp_world_scale = val;
+    } else if (strcmp(key, "vr_solid_buildings") == 0) {
+        if (val == 0 || val == 1) g_pc_settings.vr_solid_buildings = val;
+    } else if (strcmp(key, "vr_solid_shell") == 0) {
+        if (val >= 50 && val <= 100) g_pc_settings.vr_solid_shell = val;
     } else if (strcmp(key, "vr_draw_radius") == 0) {
         if (val >= 0 && val <= 10) g_pc_settings.vr_draw_radius = val;
     } else if (strcmp(key, "vr_town_residency") == 0) {
@@ -323,6 +337,14 @@ void pc_settings_save(void) {
     fprintf(f, "# VR world scale in first person, mm per game unit (25 = one tile is 1 m)\n");
     fprintf(f, "vr_fp_world_scale = %d\n", g_pc_settings.vr_fp_world_scale);
     fprintf(f, "\n");
+    fprintf(f, "# Fill in the far side of buildings, which the original game never modelled\n");
+    fprintf(f, "# (you could not walk behind them). 0 = off, 1 = on. VR and first person only.\n");
+    fprintf(f, "vr_solid_buildings = %d\n", g_pc_settings.vr_solid_buildings);
+    fprintf(f, "\n");
+    fprintf(f, "# Size of that fill-in shell as a percent of the building (50-100). Lower it\n");
+    fprintf(f, "# if a shell edge ever pokes through a wall or roof.\n");
+    fprintf(f, "vr_solid_shell = %d\n", g_pc_settings.vr_solid_shell);
+    fprintf(f, "\n");
     fprintf(f, "# VR terrain draw distance: 0 = the whole town at once (no pop-in, default),\n");
     fprintf(f, "# or a radius in acres (e.g. 3) if your machine needs the headroom\n");
     fprintf(f, "vr_draw_radius = %d\n", g_pc_settings.vr_draw_radius);
@@ -433,9 +455,22 @@ void pc_settings_cycle_resolution(int* width, int* height, int dir) {
     *height = res_h_tbl[cur];
 }
 
+/* Read by the skeleton draw layer (src/c_keyframe.c). Kept here rather than
+ * in pc_vr.cpp so the shell also works in flat first person. */
+int g_pc_solid_buildings = 1;
+int g_pc_solid_shell_pct = 97;
+
+static void apply_solid_buildings_setting(void) {
+    g_pc_solid_buildings = g_pc_settings.vr_solid_buildings != 0;
+    g_pc_solid_shell_pct = g_pc_settings.vr_solid_shell;
+    if (g_pc_solid_shell_pct < 50) g_pc_solid_shell_pct = 50;
+    if (g_pc_solid_shell_pct > 100) g_pc_solid_shell_pct = 100;
+}
+
 void pc_settings_apply(void) {
     apply_frame_limit_setting();
     apply_borderless_acres_setting();
+    apply_solid_buildings_setting();
 
     if (!g_pc_window) return;
 
@@ -494,6 +529,7 @@ void pc_settings_load(void) {
         write_defaults(SETTINGS_FILE);
         apply_frame_limit_setting();
         apply_borderless_acres_setting();
+        apply_solid_buildings_setting();
         printf("[Settings] Created default %s\n", SETTINGS_FILE);
         return;
     }
@@ -520,6 +556,7 @@ void pc_settings_load(void) {
     fclose(f);
     apply_frame_limit_setting();
     apply_borderless_acres_setting();
+    apply_solid_buildings_setting();
 
     printf("[Settings] Loaded %s: %dx%d fullscreen=%d vsync=%d max_fps=%d msaa=%d preload_textures=%d borderless_acres=%d\n",
            SETTINGS_FILE, g_pc_settings.window_width, g_pc_settings.window_height,

@@ -20,7 +20,13 @@ static int aDPT_actor_draw_before(GAME* game, cKF_SkeletonInfo_R_c* keyframe, in
         CLOSE_POLY_OPA_DISP(graph);
     } else if (joint_idx == 8) {
         *joint_shape = NULL;
-    } else if (joint_idx == 1) {
+    } else if (joint_idx == 1
+#ifdef TARGET_PC
+               /* Once per frame: the solid-buildings shell runs this
+                * prerender callback a second time (see cKF_Si3_draw_R_SV_solid). */
+               && !g_ckf_shell_pass
+#endif
+    ) {
         Matrix_Position_Zero(&pos);
         Setpos_HiliteReflect_xlu_init(&pos, (GAME_PLAY*)game);
     }
@@ -105,7 +111,7 @@ static void aDPT_actor_draw(ACTOR* actor, GAME* game) {
 
     CLOSE_POLY_OPA_DISP(graph);
 
-    cKF_Si3_draw_R_SV(game, keyframe, mtx, &aDPT_actor_draw_before, &aDPT_actor_draw_after, actor);
+    cKF_Si3_draw_R_SV_solid(game, keyframe, mtx, &aDPT_actor_draw_before, &aDPT_actor_draw_after, actor, NULL);
     _texture_z_light_fog_prim_shadow(graph);
     (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aDPT_shadow_data, FALSE);
 }
