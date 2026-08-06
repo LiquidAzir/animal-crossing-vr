@@ -230,9 +230,9 @@ static void aFD_PrepareFieldDraw(ACTOR* actorx, GAME* game) {
      * stream, so ground/cliffs/river can never pop. vr_draw_radius > 0
      * restores a player-centred window if a machine needs the headroom. */
     {
-        extern float g_pc_vr_cull_expand;
+        extern int g_pc_full_world;
         extern int pc_vr_draw_radius(void);
-        if (g_pc_vr_cull_expand > 0.0f) {
+        if (g_pc_full_world) {
             int radius = pc_vr_draw_radius();
             /* Clamp to the LIVE field size, not the compile-time maximum:
              * interiors are 1x1, and a clamped window can never exceed the

@@ -79,6 +79,12 @@ extern float g_pc_vr_cull_znear_slack;
  * Declared here (extern "C") so C game code links against the C++ definition. */
 extern int g_pc_town_residency;
 
+/* Sticky session flag: on once VR or first person has ever been active.
+ * Gates every "draw/keep the whole world" system. Defined in pc_fp_camera.c.
+ * NEVER cleared mid-session (see the comment at its definition). */
+extern int g_pc_full_world;
+void pc_full_world_enable(void);
+
 /* --- Input --- */
 /* Merge VR controller state into the pad. Called from PADRead. */
 void pc_vr_merge_pad(unsigned short* buttons,

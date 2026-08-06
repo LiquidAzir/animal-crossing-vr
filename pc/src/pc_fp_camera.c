@@ -70,6 +70,30 @@ extern int g_pc_paused;      /* pc_pause_menu.c */
  * the movement yaw redirected under a camera we no longer control. */
 extern u32 pc_frame_counter;
 
+/* --- Full-world rendering ---
+ * Sticky for the whole session: once VR or first person has been active,
+ * every "draw/keep everything" system stays on. NEVER cleared mid-session:
+ * per-frame gating would let the stock distance-cull DELETE resident
+ * structures after an F5-off, and the residency sweep would respawn them
+ * ~70 frames later, forever (delete/respawn cycle). Distant actors in
+ * third person just draw (stock fog hides them); that is the safe state. */
+int g_pc_full_world = 0;
+
+void pc_full_world_enable(void) {
+    extern void mFI_BornItemON();
+
+    if (g_pc_full_world) {
+        return;
+    }
+    g_pc_full_world = 1;
+    g_pc_town_residency = g_pc_settings.vr_town_residency ? 1 : 0;
+    /* Pre-boot this is a guarded no-op; mid-session (first F5) it raises
+     * the born-item flag so the residency item table admits the acres it
+     * has not seen yet. */
+    mFI_BornItemON();
+    printf("[FullWorld] on (residency=%d)\n", g_pc_town_residency);
+}
+
 void pc_fp_init(void) {
     g_pc_fp_mode = g_pc_settings.fp_mode != 0;
     s_yaw = 0.0f;
@@ -77,6 +101,7 @@ void pc_fp_init(void) {
     s_active_stamp = (u32)-1000;
     s_snap_latch = 0;
     if (g_pc_fp_mode) {
+        pc_full_world_enable();
         printf("[FP] starting in first person (F5 toggles)\n");
     }
 }
@@ -84,6 +109,7 @@ void pc_fp_init(void) {
 void pc_fp_toggle(void) {
     g_pc_fp_mode = !g_pc_fp_mode;
     if (g_pc_fp_mode) {
+        pc_full_world_enable();
         /* Face wherever the game camera was facing */
         s_yaw = (float)(u16)s_last_cam_yaw;
         s_pitch = 0.0f;

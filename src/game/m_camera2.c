@@ -749,12 +749,13 @@ extern int Camera2_CheckCullingMode() {
     int main_index = camera->now_main_index;
 
 #ifdef TARGET_PC
-    /* VR: cinematic culling hides objects between the camera and the
-     * conversation/door — with the camera AT the player it just erases
-     * the buildings around you. Never engage it. */
+    /* VR/first person: cinematic culling hides objects between the camera
+     * and the conversation/door — with the camera AT the player it just
+     * erases the buildings around you. Per-frame gate: flat third person
+     * keeps the stock cinematic behaviour. */
     {
-        extern float g_pc_vr_cull_expand;
-        if (g_pc_vr_cull_expand > 0.0f) {
+        extern int pc_vr_active(void);
+        if (pc_vr_active() || pc_fp_view_is_active()) {
             return FALSE;
         }
     }

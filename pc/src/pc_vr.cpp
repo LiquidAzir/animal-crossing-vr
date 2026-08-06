@@ -641,7 +641,7 @@ extern "C" void pc_vr_init(void) {
 
     g_pc_vr_cull_expand = 24.0f;
     g_pc_vr_cull_znear_slack = 8.0f;
-    g_pc_town_residency = g_pc_settings.vr_town_residency ? 1 : 0;
+    pc_full_world_enable();
 
     /* Controller-tip -> tool-grip orientation: tools extend along the hand
      * matrix's +Z, the SteamVR tip pose points along -Z, so flip about Y,
@@ -698,7 +698,8 @@ static void pcvr_drop_to_flat(const char* why) {
     pcvr_log("%s - dropping to flat mode", why);
     g_pc_vr_cull_expand = 0.0f;
     g_pc_vr_cull_znear_slack = 0.0f;
-    g_pc_town_residency = 0;
+    /* g_pc_full_world / g_pc_town_residency deliberately stay on: clearing
+     * them mid-session starts the delete-vs-respawn cycle (see pc_fp_camera.c). */
     g_pc_target_w = g_pc_window_w;
     g_pc_target_h = g_pc_window_h;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

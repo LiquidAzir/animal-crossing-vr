@@ -768,28 +768,337 @@ extern int cKF_SkeletonInfo_R_play(cKF_SkeletonInfo_R_c* keyframe) {
 #endif
 
 #ifdef TARGET_PC
-/* --- VR "solid buildings" shell pass ---
+/* --- VR/FP "solid buildings" shell pass ---
  * Every town camera in the stock game looks from a fixed direction, so the
- * far side of buildings was never authored — in VR you can walk around and
- * see straight through them. We re-draw a structure's skeleton spun 180
- * degrees about its own root pivot and shrunk a few percent, so the front
- * wall's geometry lands where the missing back wall belongs while the copy
- * stays inside the original's hull everywhere real geometry already exists
- * (the real pass is drawn second and wins depth ties).
+ * far side of buildings was never authored — with a free camera you see
+ * straight through them. We re-draw a structure's skeleton spun 180
+ * degrees and shrunk a few percent, so the front wall's geometry lands
+ * where the missing back wall belongs while the copy stays inside the
+ * original's hull everywhere real geometry already exists (the real pass
+ * is drawn second and wins depth ties).
  *
- * The spin has to be applied AFTER the root joint's own transform: root
- * offsets are large (house1 sits 2000 units out), so rotating at the actor
- * level would fling the copy a whole tile away. */
+ * THE PIVOT MUST BE THE BUILDING'S TRUE CENTRE. Root joints are NOT the
+ * centre (house1's root sits at {2000,0,0}; shop2's at {17213,0,56808}) —
+ * pivoting there displaces the copy by twice the offset, which rendered
+ * as a visible second house. Since vertex data only exists at runtime
+ * (loaded from the user's disc), the centre is MEASURED on first draw by
+ * walking the skeleton's display lists and computing the vertex AABB in
+ * the parent frame. Skeletons whose display lists can't be parsed simply
+ * skip the shell (and say so once in the log). */
+#include "libforest/gbi_extensions.h"
+#include "pc_platform.h"
+
 int   g_ckf_shell_pass  = 0;
 float g_ckf_shell_scale = 0.97f;
+/* AABB mid minus root translation (parent frame). Stored relative so an
+ * animated root translation can never stale it; the live root trans is
+ * re-added at draw time. */
+static f32 g_ckf_shell_rel_x, g_ckf_shell_rel_y, g_ckf_shell_rel_z;
 
 extern int pc_vr_active(void);
 extern int pc_fp_view_is_active(void);
 extern int g_pc_solid_buildings;
 extern int g_pc_solid_shell_pct;
+extern int g_pc_verbose;
 
 int cKF_shell_wanted(void) {
     return g_pc_solid_buildings && (pc_vr_active() || pc_fp_view_is_active());
+}
+
+/* --- skeleton AABB measurement --- */
+
+typedef struct {
+    f32 min_x, min_y, min_z;
+    f32 max_x, max_y, max_z;
+    f32 root_px, root_py, root_pz;
+    int verts;
+    int fail;
+    int packets;
+} ckf_measure_box_t;
+
+/* Static-data pointer resolution, mirroring emu64::seg2k0 minus the live
+ * segment table: a LIVE segment address means we cannot know what the DL
+ * references at measure time, so the measurement fails (never guess). */
+static u32 ckf_measure_resolve(u32 adr) {
+    uintptr_t p = pc_gbi_unpack_runtime_ptr(adr);
+    if (p != 0) {
+        return (u32)p;
+    }
+    if (adr & 1) {
+        return adr & ~1u;
+    }
+    if ((adr >> 28) != 0 || adr < 0x03000000) {
+        return adr;
+    }
+    if (adr >= pc_image_base && adr < pc_image_end) {
+        return adr;
+    }
+    return 0;
+}
+
+static void ckf_measure_dl(Gfx* g, ckf_measure_box_t* box, int depth) {
+    MtxF* m = get_Matrix_now();
+
+    if (depth > 4) {
+        box->fail = 1;
+        return;
+    }
+
+    for (;;) {
+        u32 w0;
+        u32 w1;
+        u8 cmd;
+
+        if (box->fail || ++box->packets > 8192) {
+            box->fail = 1;
+            return;
+        }
+
+        w0 = g->words.w0;
+        w1 = g->words.w1;
+        cmd = (u8)(w0 >> 24);
+
+        if (cmd == G_ENDDL) {
+            return;
+        }
+
+        if (cmd == G_VTX) {
+            Gvtx* gv = (Gvtx*)g;
+            u32 n = gv->n;
+            u32 a = ckf_measure_resolve(gv->addr);
+            Vtx* v = (Vtx*)(uintptr_t)a;
+            u32 i;
+
+            if (a == 0 || n == 0 || n > 128) {
+                box->fail = 1;
+                return;
+            }
+            for (i = 0; i < n; i++) {
+                f32 x = v[i].n.ob[0];
+                f32 y = v[i].n.ob[1];
+                f32 z = v[i].n.ob[2];
+                f32 wx = m->xx * x + m->xy * y + m->xz * z + m->xw;
+                f32 wy = m->yx * x + m->yy * y + m->yz * z + m->yw;
+                f32 wz = m->zx * x + m->zy * y + m->zz * z + m->zw;
+
+                if (box->verts == 0) {
+                    box->min_x = box->max_x = wx;
+                    box->min_y = box->max_y = wy;
+                    box->min_z = box->max_z = wz;
+                } else {
+                    if (wx < box->min_x) box->min_x = wx;
+                    if (wx > box->max_x) box->max_x = wx;
+                    if (wy < box->min_y) box->min_y = wy;
+                    if (wy > box->max_y) box->max_y = wy;
+                    if (wz < box->min_z) box->min_z = wz;
+                    if (wz > box->max_z) box->max_z = wz;
+                }
+                box->verts++;
+            }
+        } else if (cmd == G_TRIN || cmd == G_TRIN_INDEPEND) {
+            /* Packed triangles: the continuation words carry NO opcode byte
+             * and must be skipped by face count, exactly as emu64::dl_G_TRIN
+             * consumes them (5-bit words: 3 faces on the first word then 4;
+             * 7-bit words: 2 then 3). */
+            int n_faces = (int)((w0 >> 17) & 0x7F) + 1;
+            int first = 1;
+            Gfx* w = g;
+
+            while (n_faces > 0) {
+                int is5 = ((w->words.w1 & POLY_BITMASK) == POLY_5b);
+
+                n_faces -= is5 ? (first ? 3 : 4) : (first ? 2 : 3);
+                first = 0;
+                w++;
+                if (++box->packets > 8192) {
+                    box->fail = 1;
+                    return;
+                }
+            }
+            g = w;
+            continue;
+        } else if (cmd == G_DL) {
+            u32 par = (w0 >> 16) & 0xFF;
+            u32 a = ckf_measure_resolve(w1);
+
+            /* Only plain push/nopush calls are parseable; GXDL payloads are
+             * raw GX data and anything else is unknown territory. */
+            if (a == 0 || (par != G_DL_PUSH && par != G_DL_NOPUSH)) {
+                box->fail = 1;
+                return;
+            }
+            if (par == G_DL_NOPUSH) {
+                g = (Gfx*)(uintptr_t)a;
+                continue;
+            }
+            ckf_measure_dl((Gfx*)(uintptr_t)a, box, depth + 1);
+            if (box->fail) {
+                return;
+            }
+        } else if (cmd == G_MTX) {
+            /* A matrix load inside the model (yamishop's sliding door does
+             * this) means later vertices land somewhere we cannot compute —
+             * measuring them under the wrong matrix would poison the centre.
+             * Fail honestly; that model just gets no shell. */
+            box->fail = 1;
+            return;
+        } else if (cmd == 0x0D) {
+            /* G_QUADN: packed quads whose continuation words carry no opcode
+             * byte — we do not parse them, and single-packet skipping would
+             * misinterpret the stream. No building model uses them today. */
+            box->fail = 1;
+            return;
+        }
+        /* Everything else (DP state, Dolphin extensions) is a single 8-byte
+         * packet — skip it without dereferencing anything. */
+        g++;
+    }
+}
+
+/* Mirrors cKF_Si3_draw_SV_R_child's transform selection exactly, minus the
+ * drawing, so the AABB lands where the geometry really renders. */
+static void ckf_measure_joint(cKF_SkeletonInfo_R_c* keyframe, int* joint_num, ckf_measure_box_t* box) {
+    cKF_Joint_R_c* skel_c_joint = keyframe->skeleton->joint_table + *joint_num;
+    s_xyz* cur_joint = &keyframe->current_joint[*joint_num];
+    xyz_t trans;
+    s_xyz joint1;
+    int an_flag;
+    int i;
+
+    if (*joint_num != 0) {
+        trans.x = skel_c_joint->translation.x;
+        trans.y = skel_c_joint->translation.y;
+        trans.z = skel_c_joint->translation.z;
+    } else {
+        an_flag = keyframe->animation_enabled;
+        if (an_flag & cKF_ANIMATION_TRANS_XZ) {
+            trans.x = keyframe->base_model_translation.x;
+            trans.z = keyframe->base_model_translation.z;
+        } else {
+            trans.x = cur_joint->x;
+            trans.z = cur_joint->z;
+        }
+        if (an_flag & cKF_ANIMATION_TRANS_Y) {
+            trans.y = keyframe->base_model_translation.y;
+        } else {
+            trans.y = cur_joint->y;
+        }
+        box->root_px = trans.x;
+        box->root_py = trans.y;
+        box->root_pz = trans.z;
+    }
+
+    joint1 = cur_joint[1];
+    if ((joint_num[0] == 0) && (keyframe->animation_enabled & cKF_ANIMATION_ROT_Y)) {
+        joint1.x = keyframe->base_model_rotation.x;
+        joint1.y = keyframe->updated_base_model_rotation.y;
+        joint1.z = keyframe->updated_base_model_rotation.z;
+    }
+
+    Matrix_push();
+    Matrix_softcv3_mult(&trans, &joint1);
+
+    if (skel_c_joint->model != NULL && !box->fail) {
+        ckf_measure_dl(skel_c_joint->model, box, 0);
+    }
+
+    joint_num[0]++;
+    for (i = 0; i < skel_c_joint->child; i++) {
+        ckf_measure_joint(keyframe, joint_num, box);
+    }
+
+    Matrix_pull();
+}
+
+/* Per-skeleton measurement cache. state: 0 empty, 1 ok, -1 failed. */
+typedef struct {
+    cKF_Skeleton_R_c* skel;
+    int state;
+    f32 rel_x, rel_y, rel_z;
+} ckf_shell_cache_t;
+
+#define CKF_SHELL_CACHE_MAX 48
+static ckf_shell_cache_t s_shell_cache[CKF_SHELL_CACHE_MAX];
+static int s_shell_cache_count;
+
+static ckf_shell_cache_t* ckf_shell_measure(cKF_SkeletonInfo_R_c* keyframe) {
+    ckf_shell_cache_t* slot;
+    ckf_measure_box_t box;
+    MtxF ident;
+    int jn;
+    int i;
+
+    for (i = 0; i < s_shell_cache_count; i++) {
+        if (s_shell_cache[i].skel == keyframe->skeleton) {
+            return &s_shell_cache[i];
+        }
+    }
+
+    /* Never bake a mid-animation pose into the cache: a save resumed at
+     * the house-exit animation boots with the door OPEN, and a centre
+     * measured then would be skewed for the whole session. Frames 1 and
+     * end are the shut poses in every door animation; anything between is
+     * mid-swing, so DEFER (no cache write, retry next frame). NOTE: do not
+     * gate on speed — the island cottage idles at speed 0.5 forever and a
+     * speed test would starve its shell permanently. */
+    {
+        f32 cf = keyframe->frame_control.current_frame;
+
+        if (cf != 1.0f && cf != keyframe->frame_control.end_frame) {
+            return NULL;
+        }
+    }
+
+    if (s_shell_cache_count >= CKF_SHELL_CACHE_MAX) {
+        static int warned;
+
+        if (!warned) {
+            warned = 1;
+            printf("[SolidBuildings] shell cache full (%d); later models get no shell\n",
+                   CKF_SHELL_CACHE_MAX);
+        }
+        return NULL; /* treat as failure; never evict */
+    }
+
+    slot = &s_shell_cache[s_shell_cache_count++];
+    slot->skel = keyframe->skeleton;
+    slot->state = -1;
+    slot->rel_x = slot->rel_y = slot->rel_z = 0.0f;
+
+    bzero(&box, sizeof(box));
+
+    bzero(&ident, sizeof(ident));
+    ident.xx = 1.0f;
+    ident.yy = 1.0f;
+    ident.zz = 1.0f;
+    ident.ww = 1.0f;
+
+    /* Measure in the PARENT frame: seed an identity so the island houses'
+     * rotated roots ((-90,0,+90)) are handled by the walk itself. */
+    Matrix_push();
+    Matrix_put(&ident);
+    jn = 0;
+    ckf_measure_joint(keyframe, &jn, &box);
+    Matrix_pull();
+
+    if (!box.fail && box.verts > 0) {
+        slot->state = 1;
+        slot->rel_x = (box.min_x + box.max_x) * 0.5f - box.root_px;
+        slot->rel_y = (box.min_y + box.max_y) * 0.5f - box.root_py;
+        slot->rel_z = (box.min_z + box.max_z) * 0.5f - box.root_pz;
+    }
+
+    if (g_pc_verbose || slot->state != 1) {
+        printf("[SolidBuildings] skel=%p joints=%d verts=%d root=(%.0f,%.0f,%.0f) centre_rel=(%.0f,%.0f,%.0f) ext=(%.0f,%.0f,%.0f)%s\n",
+               (void*)keyframe->skeleton, keyframe->skeleton->num_joints, box.verts,
+               box.root_px, box.root_py, box.root_pz,
+               slot->rel_x, slot->rel_y, slot->rel_z,
+               (box.max_x - box.min_x) * 0.5f, (box.max_y - box.min_y) * 0.5f,
+               (box.max_z - box.min_z) * 0.5f,
+               slot->state == 1 ? "" : "  MEASUREMENT FAILED - shell disabled for this model");
+    }
+
+    return slot;
 }
 #endif
 
@@ -856,18 +1165,23 @@ extern void cKF_Si3_draw_SV_R_child(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
          (prerender_callback(game, keyframe, *joint_num, &mjoint_m, &joint_f, arg, &joint1, &trans)) != FALSE)) {
 #ifdef TARGET_PC
         if (g_ckf_shell_pass && *joint_num == 0) {
-            /* Spin about the model pivot, in the PARENT frame: translate to
-             * the root pivot, turn, shrink, and let the root's own rotation
-             * follow. Turning after the root rotation would use joint-local
-             * axes — wrong for the island houses, whose roots are rotated
-             * (-90, 0, +90) so model +X is world up (the copy would end up
-             * upside down). */
-            Matrix_translate(trans.x, trans.y, trans.z, MTX_MULT);
+            /* Spin and shrink about the MEASURED building centre, in the
+             * PARENT frame: M · T(c) · RotY(180) · S · T(-c) · <normal
+             * chain>. The fixed point is c, so the copy lands exactly on
+             * the original's footprint (the old root-pivot version was
+             * displaced by twice the pivot-to-centre offset and read as a
+             * second house). Parent-frame rotation also keeps the island
+             * houses upright — their roots are rotated (-90,0,+90). */
+            f32 cx = g_ckf_shell_rel_x + trans.x;
+            f32 cy = g_ckf_shell_rel_y + trans.y;
+            f32 cz = g_ckf_shell_rel_z + trans.z;
+
+            Matrix_translate(cx, cy, cz, MTX_MULT);
             Matrix_RotateY((s16)0x8000, MTX_MULT);
             Matrix_scale(g_ckf_shell_scale, g_ckf_shell_scale, g_ckf_shell_scale, MTX_MULT);
-            trans.x = 0.0f;
-            trans.y = 0.0f;
-            trans.z = 0.0f;
+            Matrix_translate(-cx, -cy, -cz, MTX_MULT);
+            /* trans deliberately NOT zeroed: the unmodified normal chain
+             * (softcv3_mult with the real trans and rotation) follows. */
         }
 #endif
         Matrix_softcv3_mult(&trans, &joint1);
@@ -948,65 +1262,47 @@ extern void cKF_Si3_draw_R_SV_solid(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
                                     cKF_draw_callback postrender_callback, void* arg,
                                     cKF_pipeline_reset_proc pipeline_reset) {
     if (mtxp != NULL && keyframe != NULL && keyframe->skeleton != NULL && cKF_shell_wanted()) {
-        /* The shell needs its own Mtx pool: the caller sized its array to
-         * exactly num_shown_joints, and the display list is replayed once
-         * per eye, so the matrices must stay live for the whole frame.
-         * Note GRAPH_ALLOC today can NOT return NULL (it is an unchecked
-         * bump-down; exhaustion is caught at frame end by THA_GA_isCrash) —
-         * the check below only guards a future bounded allocator. */
-        Mtx* shell_mtx = GRAPH_ALLOC_TYPE(game->graph, Mtx, (u32)keyframe->skeleton->num_shown_joints);
+        /* Measure (or look up) the building's true centre BEFORE any
+         * allocation or state change: a skeleton whose display lists can't
+         * be parsed skips the shell entirely with zero side effects. */
+        ckf_shell_cache_t* cache = ckf_shell_measure(keyframe);
 
-        if (shell_mtx != NULL) {
-            int pct = g_pc_solid_shell_pct;
+        if (cache != NULL && cache->state == 1) {
+            /* The shell needs its own Mtx pool: the caller sized its array
+             * to exactly num_shown_joints, and the display list is replayed
+             * once per eye, so the matrices must stay live for the whole
+             * frame. Note GRAPH_ALLOC today can NOT return NULL (it is an
+             * unchecked bump-down; exhaustion is caught at frame end by
+             * THA_GA_isCrash) — the check only guards a future bounded
+             * allocator. */
+            Mtx* shell_mtx = GRAPH_ALLOC_TYPE(game->graph, Mtx, (u32)keyframe->skeleton->num_shown_joints);
 
-            /* One line per distinct building model, so a report of "the
-             * shell looks wrong on X" can be traced without guesswork:
-             * a non-zero root rotation or an unexpected joint count is
-             * exactly what would displace or tilt the copy. */
-            {
-                extern int g_pc_verbose;
-                static cKF_Skeleton_R_c* logged[24];
-                static int logged_count = 0;
-                if (g_pc_verbose && logged_count < 24) {
-                    int seen = 0;
-                    int li;
-                    for (li = 0; li < logged_count; li++) {
-                        if (logged[li] == keyframe->skeleton) { seen = 1; break; }
-                    }
-                    if (!seen) {
-                        /* current_joint[0] is the live root translation and
-                         * [1] the live root rotation — the rotation is what
-                         * decides whether a plain Y spin is upright for this
-                         * model, so log what the transform actually reads. */
-                        s_xyz* root_t = &keyframe->current_joint[0];
-                        s_xyz* root_r = &keyframe->current_joint[1];
-                        logged[logged_count++] = keyframe->skeleton;
-                        printf("[SolidBuildings] model %p joints=%d shown=%d pos=(%d,%d,%d) rot=(%d,%d,%d)\n",
-                               (void*)keyframe->skeleton, keyframe->skeleton->num_joints,
-                               keyframe->skeleton->num_shown_joints,
-                               root_t->x, root_t->y, root_t->z,
-                               root_r->x, root_r->y, root_r->z);
-                    }
+            if (shell_mtx != NULL) {
+                int pct = g_pc_solid_shell_pct;
+
+                if (pct < 50) pct = 50;
+                if (pct > 100) pct = 100;
+                g_ckf_shell_scale = pct * 0.01f;
+                g_ckf_shell_rel_x = cache->rel_x;
+                g_ckf_shell_rel_y = cache->rel_y;
+                g_ckf_shell_rel_z = cache->rel_z;
+                g_ckf_shell_pass = 1;
+                /* Prerender only: postrender callbacks emit extra display
+                 * lists (window glow, attachment matrices) that must not be
+                 * doubled. */
+                cKF_Si3_draw_R_SV(game, keyframe, shell_mtx, prerender_callback, NULL, arg);
+                g_ckf_shell_pass = 0;
+
+                /* Some models' joints set combiner / render mode / texture
+                 * state that the following joints inherit (Nook's "light"
+                 * part is the last joint drawn and leaves an ENVIRONMENT
+                 * combiner behind). Without re-running the caller's pipeline
+                 * setup, the REAL pass inherits the shell's leftover state
+                 * and the building renders as a flat black silhouette in
+                 * daylight. */
+                if (pipeline_reset != NULL) {
+                    pipeline_reset(game->graph);
                 }
-            }
-
-            if (pct < 50) pct = 50;
-            if (pct > 100) pct = 100;
-            g_ckf_shell_scale = pct * 0.01f;
-            g_ckf_shell_pass = 1;
-            /* Prerender only: postrender callbacks emit extra display lists
-             * (window glow, attachment matrices) that must not be doubled. */
-            cKF_Si3_draw_R_SV(game, keyframe, shell_mtx, prerender_callback, NULL, arg);
-            g_ckf_shell_pass = 0;
-
-            /* Some models' joints set combiner / render mode / texture state
-             * that the following joints inherit (Nook's "light" part is the
-             * last joint drawn and leaves an ENVIRONMENT combiner behind).
-             * Without re-running the caller's pipeline setup, the REAL pass
-             * inherits the shell's leftover state and the building renders
-             * as a flat black silhouette in daylight. */
-            if (pipeline_reset != NULL) {
-                pipeline_reset(game->graph);
             }
         }
     }

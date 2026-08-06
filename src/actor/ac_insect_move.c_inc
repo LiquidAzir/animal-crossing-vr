@@ -263,12 +263,13 @@ static void aINS_cull_check(ACTOR* actorx, GAME* game) {
     }
 
 #ifdef TARGET_PC
-    /* VR: the visibility test always passes (culling disabled), so the
-     * off-screen despawns below never run and the 9-slot insect pool
-     * degrades. Despawn on block distance (beyond the drawn 5x5) instead. */
+    /* Full world: the visibility test always passes (culling disabled), so
+     * the off-screen despawns below never run and the 9-slot insect pool
+     * degrades. Despawn on block distance instead. MUST use the same
+     * sticky gate as the m_actor cull bypass. */
     {
-        extern float g_pc_vr_cull_expand;
-        if (g_pc_vr_cull_expand > 0.0f) {
+        extern int g_pc_full_world;
+        if (g_pc_full_world) {
             int dbx = actorx->block_x - play->block_table.block_x;
             int dbz = actorx->block_z - play->block_table.block_z;
             if (dbx < 0) dbx = -dbx;
