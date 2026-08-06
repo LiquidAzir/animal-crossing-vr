@@ -116,18 +116,18 @@ static const char* DEFAULT_SETTINGS =
     "vr_fp_world_scale = 25\n"
     "\n"
     "# Fill in the far side of buildings, which the original game never modelled\n"
-    "# (you could not walk behind them). 0 = off, 1 = on. VR and first person only.\n"
+    "# (you could not walk behind them). 0 = off, 1 = on. VR and first person.\n"
     "vr_solid_buildings = 1\n"
     "\n"
     "# Size of that fill-in shell as a percent of the building (50-100). Lower it\n"
     "# if a shell edge ever pokes through a wall or roof.\n"
     "vr_solid_shell = 97\n"
     "\n"
-    "# VR terrain draw distance: 0 = the whole town at once (no pop-in, default),\n"
+    "# VR / first person terrain draw distance: 0 = whole town at once (default),\n"
     "# or a radius in acres (e.g. 3) if your machine needs the headroom\n"
     "vr_draw_radius = 0\n"
     "\n"
-    "# VR: keep every building and prop in town loaded at once (0/1)\n"
+    "# VR / first person: keep every building and prop in town loaded at once (0/1)\n"
     "# (restart to apply)\n"
     "vr_town_residency = 1\n"
     "\n"
@@ -207,13 +207,13 @@ static void apply_setting(const char* key, const char* value) {
         if (val >= 0 && val <= 90) g_pc_settings.fp_snap_degrees = val;
     } else if (strcmp(key, "vr_fp_world_scale") == 0) {
         if (val >= 1 && val <= 1000) g_pc_settings.vr_fp_world_scale = val;
-    } else if (strcmp(key, "vr_solid_buildings") == 0) {
+    } else if (strcmp(key, "vr_solid_buildings") == 0 || strcmp(key, "solid_buildings") == 0) {
         if (val == 0 || val == 1) g_pc_settings.vr_solid_buildings = val;
-    } else if (strcmp(key, "vr_solid_shell") == 0) {
+    } else if (strcmp(key, "vr_solid_shell") == 0 || strcmp(key, "solid_shell") == 0) {
         if (val >= 50 && val <= 100) g_pc_settings.vr_solid_shell = val;
-    } else if (strcmp(key, "vr_draw_radius") == 0) {
+    } else if (strcmp(key, "vr_draw_radius") == 0 || strcmp(key, "draw_radius") == 0) {
         if (val >= 0 && val <= 10) g_pc_settings.vr_draw_radius = val;
-    } else if (strcmp(key, "vr_town_residency") == 0) {
+    } else if (strcmp(key, "vr_town_residency") == 0 || strcmp(key, "town_residency") == 0) {
         if (val == 0 || val == 1) g_pc_settings.vr_town_residency = val;
     } else if (strcmp(key, "vr_motion_swing") == 0) {
         if (val == 0 || val == 1) g_pc_settings.vr_motion_swing = val;
@@ -339,18 +339,18 @@ void pc_settings_save(void) {
     fprintf(f, "vr_fp_world_scale = %d\n", g_pc_settings.vr_fp_world_scale);
     fprintf(f, "\n");
     fprintf(f, "# Fill in the far side of buildings, which the original game never modelled\n");
-    fprintf(f, "# (you could not walk behind them). 0 = off, 1 = on. VR and first person only.\n");
+    fprintf(f, "# (you could not walk behind them). 0 = off, 1 = on. VR and first person.\n");
     fprintf(f, "vr_solid_buildings = %d\n", g_pc_settings.vr_solid_buildings);
     fprintf(f, "\n");
     fprintf(f, "# Size of that fill-in shell as a percent of the building (50-100). Lower it\n");
     fprintf(f, "# if a shell edge ever pokes through a wall or roof.\n");
     fprintf(f, "vr_solid_shell = %d\n", g_pc_settings.vr_solid_shell);
     fprintf(f, "\n");
-    fprintf(f, "# VR terrain draw distance: 0 = the whole town at once (no pop-in, default),\n");
+    fprintf(f, "# VR / first person terrain draw distance: 0 = whole town at once (default),\n");
     fprintf(f, "# or a radius in acres (e.g. 3) if your machine needs the headroom\n");
     fprintf(f, "vr_draw_radius = %d\n", g_pc_settings.vr_draw_radius);
     fprintf(f, "\n");
-    fprintf(f, "# VR: keep every building and prop in town loaded at once (0/1)\n");
+    fprintf(f, "# VR / first person: keep every building and prop in town loaded at once (0/1)\n");
     fprintf(f, "# (restart to apply)\n");
     fprintf(f, "vr_town_residency = %d\n", g_pc_settings.vr_town_residency);
     fprintf(f, "\n");

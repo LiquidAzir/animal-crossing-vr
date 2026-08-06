@@ -32,13 +32,14 @@ static void aGYO_BGcheck(aGYO_CTRL_ACTOR* ctrl) {
 static void aGYO_cull_check(ACTOR* actorx, GAME_PLAY* play) {
     Skin_Matrix_PrjMulVector(&play->projection_matrix, &actorx->world.position, &actorx->camera_position, &actorx->camera_w);
 #ifdef TARGET_PC
-    /* VR: the visibility test below always passes (culling disabled), which
-     * would starve the 2-slot fish pool — a distant idle fish never frees
-     * its slot and fishing dies town-wide. Despawn on block distance
-     * (beyond the drawn 5x5 grid) so nothing visibly pops. */
+    /* Full world: the visibility test below always passes (culling
+     * disabled), which would starve the 2-slot fish pool — a distant idle
+     * fish never frees its slot and fishing dies town-wide. Despawn on
+     * block distance instead so nothing visibly pops. MUST use the same
+     * sticky gate as the m_actor cull bypass. */
     {
-        extern float g_pc_vr_cull_expand;
-        if (g_pc_vr_cull_expand > 0.0f) {
+        extern int g_pc_full_world;
+        if (g_pc_full_world) {
             int dbx = actorx->block_x - play->block_table.block_x;
             int dbz = actorx->block_z - play->block_table.block_z;
             if (dbx < 0) dbx = -dbx;

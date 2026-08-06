@@ -310,15 +310,16 @@ extern int Actor_draw_actor_no_culling_check2(ACTOR* actor, xyz_t* camera_pos, f
     int res = FALSE;
 
 #ifdef TARGET_PC
-    /* VR: this test runs against the mono game projection with a hard
-     * ~1000-unit distance cutoff — neither matches the head-tracked
-     * wide-FOV eyes, so actors/trees/buildings pop as you look around.
-     * Everything is visible in VR; the GPU cost is trivial on PC. This
-     * also covers every BG item (trees/rocks/flowers) — they funnel
-     * through this same function — and prevents cull-driven deletion. */
+    /* Full world (VR or first person, sticky for the session): this test
+     * runs against the mono game projection with a hard ~1000-unit distance
+     * cutoff — neither matches a free-look camera, so actors/trees/
+     * buildings pop as you look around. Everything is visible; the GPU
+     * cost is trivial on PC. This also covers every BG item (trees/rocks/
+     * flowers) — they funnel through this same function — and prevents
+     * cull-driven deletion (which would fight the residency sweep). */
     {
-        extern float g_pc_vr_cull_expand;
-        if (g_pc_vr_cull_expand > 0.0f) {
+        extern int g_pc_full_world;
+        if (g_pc_full_world) {
             return TRUE;
         }
     }
