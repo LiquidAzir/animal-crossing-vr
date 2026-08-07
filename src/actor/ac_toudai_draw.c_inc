@@ -102,7 +102,11 @@ static void aTOU_actor_draw(ACTOR* actor, GAME* game){
         Setpos_HiliteReflect_init(pos, play);
         Setpos_HiliteReflect_xlu_init(pos, play);
         
-        cKF_Si3_draw_R_SV(game, keyf, mtx, aTOU_actor_draw_before, aTOU_actor_draw_after, light);
+        /* pipeline_reset required: the glass/mirror joints leave prim colour
+         * and a prim-multiplying combiner behind — without the reset the
+         * real tower body renders blue-tinted (same class as Nook's). */
+        cKF_Si3_draw_R_SV_solid(game, keyf, mtx, aTOU_actor_draw_before, aTOU_actor_draw_after, light,
+                                &_texture_z_light_fog_prim_npc);
         (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aTOU_shadow_data, TRUE);
         CLOSE_DISP(graph);
     }

@@ -3093,6 +3093,54 @@ static void bg_item_common_draw_item_body(GRAPH* graph, Gfx** gfx_pp, bg_item_dr
     }
 }
 
+#ifdef TARGET_PC
+/* Solid shell for ROCKS: like buildings, stone models were authored for
+ * the fixed camera and have no back faces. Instances carry position-only
+ * matrices (no per-instance rotation), so a 180-degree spin about each
+ * model's measured centre stays inside the silhouette. Emitted BEFORE the
+ * real pass so real geometry wins depth ties; the real pass re-emits its
+ * own material DL, so no state restore is needed. */
+static void pc_bg_stone_shell(GRAPH* graph, Gfx** gfx_pp, bg_item_draw_part_c* draw_part,
+                              bg_item_draw_pos_c* draw_pos) {
+    extern int cKF_shell_wanted(void);
+    extern int pc_solid_shell_measure_dls(Gfx* const* dls, int count, f32* out_centre);
+    extern int g_pc_solid_shell_pct;
+    bg_item_draw_list_c* draw_list;
+    Gfx** display_list_table;
+    f32 s;
+
+    if (!cKF_shell_wanted() || draw_part->draw_list_count < 1) {
+        return;
+    }
+    draw_list = draw_part->draw_list_table_p[0];
+    display_list_table = draw_part->display_list_table_p;
+    s = g_pc_solid_shell_pct * 0.01f;
+
+    gSPDisplayList((*gfx_pp)++, display_list_table[draw_list->gfx_idx]);
+
+    while (draw_pos->next_add_cnt != 256) {
+        if (draw_pos->cull_flag == FALSE) {
+            Gfx* dl = display_list_table[draw_list->mat_idx + draw_pos->sub_idx];
+            f32 c[3];
+
+            if (pc_solid_shell_measure_dls(&dl, 1, c)) {
+                /* instance matrix is T(pos)*S(0.01); the pivot ops compose
+                 * in model space after it, exactly like the real pass */
+                Matrix_put(&draw_pos->mtxf);
+                Matrix_translate(c[0], c[1], c[2], MTX_MULT);
+                Matrix_RotateY((s16)0x8000, MTX_MULT);
+                Matrix_scale(s, s, s, MTX_MULT);
+                Matrix_translate(-c[0], -c[1], -c[2], MTX_MULT);
+                gSPMatrix((*gfx_pp)++, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+                gSPDisplayList((*gfx_pp)++, dl);
+            }
+        }
+
+        draw_pos += draw_pos->next_add_cnt;
+    }
+}
+#endif
+
 typedef void (*bIT_DRAW_SHADOW_PROC)(GRAPH*, Gfx**, bg_item_draw_list_c*, int, Vtx*, bg_item_draw_pos_c*, Gfx**);
 
 static void bg_item_common_draw_item_shadow(GRAPH* graph, Gfx** gfx_pp, bg_item_draw_part_c* draw_part,
@@ -3134,6 +3182,12 @@ static void bg_item_common_draw_item(GAME_PLAY* play, bg_item_draw_table_c* draw
 
     for (i = 0; i < draw_tbl->draw_data.val; i++, start_idx++, draw_part_table_p++) {
         if (*start_idx != 0) {
+#ifdef TARGET_PC
+            if (i >= bIT_DRAW_TYPE_STONE_A && i <= bIT_DRAW_TYPE_STONE_E) {
+                pc_bg_stone_shell(graph, &gfx, draw_part_table_p->draw_part_p,
+                                  draw_tbl->draw_data.draw_pos + *start_idx);
+            }
+#endif
             bg_item_common_draw_item_body(graph, &gfx, draw_part_table_p->draw_part_p,
                                           draw_tbl->draw_data.draw_pos + *start_idx);
         }
