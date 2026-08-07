@@ -299,6 +299,46 @@ static void aMsm_actor_draw(ACTOR* actor, GAME* game) {
 
     OPEN_DISP(graph);
     {
+#ifdef TARGET_PC
+        /* Solid-buildings shell (see c_keyframe.c): the museum draws plain
+         * DLs, not a skeleton, so it needs its own copy of the pass — the
+         * OPA body redrawn spun 180 about its measured centre, emitted
+         * FIRST so the real pass wins depth ties. XLU window skipped. */
+        {
+            extern int cKF_shell_wanted(void);
+            extern int pc_solid_shell_measure_dls(Gfx* const* dls, int count, f32* out_centre);
+            extern int g_pc_solid_shell_pct;
+            f32 shell_c[3];
+
+            if (cKF_shell_wanted() && pc_solid_shell_measure_dls(disp, 4, shell_c)) {
+                f32 s = g_pc_solid_shell_pct * 0.01f;
+                f32 scol = museum->arg0_f;
+                int sr = (int)((scol * 255.0f) + 0.5f);
+                int sg = (int)((scol * 255.0f) + 0.5f);
+                int sb = (int)((scol * 150.0f) + 0.5f);
+                Mtx* smtx;
+
+                Matrix_push();
+                Matrix_translate(shell_c[0], shell_c[1], shell_c[2], MTX_MULT);
+                Matrix_RotateY((s16)0x8000, MTX_MULT);
+                Matrix_scale(s, s, s, MTX_MULT);
+                Matrix_translate(-shell_c[0], -shell_c[1], -shell_c[2], MTX_MULT);
+                smtx = _Matrix_to_Mtx_new(graph);
+                Matrix_pull();
+
+                gSPMatrix(NEXT_POLY_OPA_DISP, smtx, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+                gSPSegment(NEXT_POLY_OPA_DISP, G_MWO_SEGMENT_8, pal);
+                gDPPipeSync(NEXT_POLY_OPA_DISP);
+                gDPSetPrimColor(NEXT_POLY_OPA_DISP, 0, 0, sr, sg, sb, 255);
+                gSPDisplayList(NEXT_POLY_OPA_DISP, disp[0]);
+                gSPDisplayList(NEXT_POLY_OPA_DISP, disp[1]);
+                gSPDisplayList(NEXT_POLY_OPA_DISP, disp[2]);
+                gSPDisplayList(NEXT_POLY_OPA_DISP, disp[3]);
+                /* restore the base OPA pipeline the real pass expects */
+                _texture_z_light_fog_prim_npc(graph);
+            }
+        }
+#endif
         gSPMatrix(NEXT_POLY_OPA_DISP, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
         gSPMatrix(NEXT_POLY_XLU_DISP, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
         gSPMatrix(NEXT_SHADOW_DISP, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);

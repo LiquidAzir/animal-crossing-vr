@@ -71,6 +71,9 @@ void pc_platform_init(void) {
     SetProcessDPIAware();
     SDL_SetHint(SDL_HINT_WINDOWS_INTRESOURCE_ICON, "1");
 #endif
+    /* Keep pad input alive when the window is unfocused — in VR the flat
+     * mirror window is rarely the foreground window. */
+    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         exit(1);
@@ -268,6 +271,18 @@ int pc_platform_poll_events(void) {
                     pc_pause_menu_handle_event(&event);
                 }
                 break;
+            case SDL_CONTROLLERDEVICEADDED: {
+                /* Bluetooth pads connect (and reconnect after sleeping)
+                 * mid-session — open them on arrival. */
+                extern void pc_pad_device_added(int device_index);
+                pc_pad_device_added(event.cdevice.which);
+                break;
+            }
+            case SDL_CONTROLLERDEVICEREMOVED: {
+                extern void pc_pad_device_removed(int instance_id);
+                pc_pad_device_removed((int)event.cdevice.which);
+                break;
+            }
             case SDL_TEXTINPUT:
                 if (g_pc_paused) break;
                 pc_typing_handle_event(&event);

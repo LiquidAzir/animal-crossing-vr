@@ -44,13 +44,69 @@ static u8 pad_trigger_value(PCPadCode code) {
     return SDL_GameControllerGetButton(g_controller, (SDL_GameControllerButton)code) ? 255 : 0;
 }
 
-BOOL PADInit(void) {
-    for (int i = 0; i < SDL_NumJoysticks(); i++) {
+static SDL_JoystickID g_controller_id = -1;
+
+/* Hotplug (called from the SDL event loop): Bluetooth pads routinely
+ * connect AFTER launch and reconnect after sleeping — without this, only
+ * a controller present at boot ever worked. */
+void pc_pad_device_added(int device_index) {
+    if (!SDL_IsGameController(device_index)) {
+        /* Present but unmapped (common for off-brand Bluetooth pads):
+         * say so loudly instead of silently ignoring it. */
+        char guid[64];
+        const char* nm = SDL_JoystickNameForIndex(device_index);
+
+        SDL_JoystickGetGUIDString(SDL_JoystickGetDeviceGUID(device_index), guid, sizeof(guid));
+        printf("[Pad] joystick '%s' has no gamepad mapping (GUID %s) - "
+               "drop a community gamecontrollerdb.txt next to the exe to add it\n",
+               nm ? nm : "(unknown)", guid);
+        return;
+    }
+    if (g_controller != NULL) {
+        return; /* first pad wins; a second pad is ignored */
+    }
+    g_controller = SDL_GameControllerOpen(device_index);
+    if (g_controller != NULL) {
+        const char* nm = SDL_GameControllerName(g_controller);
+
+        g_controller_id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(g_controller));
+        printf("[Pad] controller connected: %s\n", nm ? nm : "(unknown)");
+    }
+}
+
+void pc_pad_device_removed(int instance_id) {
+    int i;
+
+    if (g_controller == NULL || (SDL_JoystickID)instance_id != g_controller_id) {
+        return;
+    }
+    SDL_GameControllerClose(g_controller);
+    g_controller = NULL;
+    g_controller_id = -1;
+    printf("[Pad] controller disconnected\n");
+
+    /* adopt any other pad that is already present */
+    for (i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
-            g_controller = SDL_GameControllerOpen(i);
-            if (g_controller) {
-                break;
-            }
+            pc_pad_device_added(i);
+            break;
+        }
+    }
+}
+
+BOOL PADInit(void) {
+    /* Community controller database: covers Bluetooth pads SDL's built-in
+     * list doesn't know. Optional file, silently skipped when absent. */
+    int mapped = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
+
+    if (mapped > 0) {
+        printf("[Pad] loaded %d controller mappings from gamecontrollerdb.txt\n", mapped);
+    }
+
+    for (int i = 0; i < SDL_NumJoysticks(); i++) {
+        pc_pad_device_added(i);
+        if (g_controller) {
+            break;
         }
     }
     return TRUE;
@@ -105,12 +161,15 @@ u32 PADRead(PADStatus* status) {
         #undef INPUT_PRESSED
     }
 
-    /* hotplug */
+    /* hotplug fallback poll (the SDL device events are the primary path) */
     if (!g_controller) {
         for (int i = 0; i < SDL_NumJoysticks(); i++) {
             if (SDL_IsGameController(i)) {
                 g_controller = SDL_GameControllerOpen(i);
-                if (g_controller) break;
+                if (g_controller) {
+                    g_controller_id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(g_controller));
+                    break;
+                }
             }
         }
     }
@@ -119,6 +178,7 @@ u32 PADRead(PADStatus* status) {
         if (!SDL_GameControllerGetAttached(g_controller)) {
             SDL_GameControllerClose(g_controller);
             g_controller = NULL;
+            g_controller_id = -1;
         }
     }
     if (g_controller) {
@@ -204,6 +264,7 @@ void PADCleanup(void) {
     if (g_controller) {
         SDL_GameControllerClose(g_controller);
         g_controller = NULL;
+        g_controller_id = -1;
     }
 }
 

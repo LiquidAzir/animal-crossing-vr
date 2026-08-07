@@ -322,6 +322,9 @@ extern void cKF_Si3_draw_R_SV_solid(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
                                     cKF_pipeline_reset_proc pipeline_reset);
 extern int cKF_shell_wanted(void);
 extern int g_ckf_shell_pass;
+/* Measured centre for plain-DL fixtures (museum, police box): combined
+ * AABB of the lists, cached by dls[0]. Returns 1 when a shell may draw. */
+extern int pc_solid_shell_measure_dls(Gfx* const* dls, int count, f32* out_centre);
 #else
 #define cKF_Si3_draw_R_SV_solid(game, kf, mtxp, pre, post, arg, reset) \
     cKF_Si3_draw_R_SV(game, kf, mtxp, pre, post, arg)

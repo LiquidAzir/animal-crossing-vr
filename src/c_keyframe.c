@@ -998,7 +998,10 @@ static void ckf_measure_joint(cKF_SkeletonInfo_R_c* keyframe, int* joint_num, ck
     Matrix_push();
     Matrix_softcv3_mult(&trans, &joint1);
 
-    if (skel_c_joint->model != NULL && !box->fail) {
+    /* XLU joints (glass, glow, the lighthouse beam) are suppressed in the
+     * shell pass — leave them out of the AABB too, so a big translucent
+     * part can't skew the centre of what actually draws. */
+    if (skel_c_joint->model != NULL && !(skel_c_joint->flags & cKF_JOINT_FLAG_DISP_XLU) && !box->fail) {
         ckf_measure_dl(skel_c_joint->model, box, 0);
     }
 
@@ -1034,17 +1037,22 @@ static ckf_shell_cache_t* ckf_shell_measure(cKF_SkeletonInfo_R_c* keyframe) {
         }
     }
 
-    /* Never bake a mid-animation pose into the cache: a save resumed at
-     * the house-exit animation boots with the door OPEN, and a centre
-     * measured then would be skewed for the whole session. Frames 1 and
-     * end are the shut poses in every door animation; anything between is
-     * mid-swing, so DEFER (no cache write, retry next frame). NOTE: do not
-     * gate on speed — the island cottage idles at speed 0.5 forever and a
-     * speed test would starve its shell permanently. */
+    /* Never bake a mid-swing pose into the cache: a save resumed at the
+     * house-exit animation boots with the door OPEN, and a centre measured
+     * then would be skewed for the whole session. Accepted poses:
+     *  - frames 1 / end (the shut poses in every door animation), OR
+     *  - a PARKED animation (speed 0): the lighthouse idles at speed 0 on
+     *    a frame that is neither endpoint and would otherwise starve
+     *    forever. Residual risk: the house-exit idle is also parked with
+     *    the door open — a measurement taken in that brief window skews
+     *    that one centre by a few percent until next launch. Anything
+     *    RUNNING mid-frame defers (no cache write, retry next frame);
+     *    looping structures get caught at speed 0 or an endpoint. */
     {
         f32 cf = keyframe->frame_control.current_frame;
 
-        if (cf != 1.0f && cf != keyframe->frame_control.end_frame) {
+        if (cf != 1.0f && cf != keyframe->frame_control.end_frame &&
+            keyframe->frame_control.speed != 0.0f) {
             return NULL;
         }
     }
@@ -1099,6 +1107,89 @@ static ckf_shell_cache_t* ckf_shell_measure(cKF_SkeletonInfo_R_c* keyframe) {
     }
 
     return slot;
+}
+
+/* --- plain-display-list variant ---
+ * For the fixtures that draw straight DLs instead of skeletons (museum,
+ * police box, ...). Measures the combined vertex AABB of the given lists
+ * in model space (identity frame — callers draw at the actor matrix) and
+ * returns the centre to spin about. Cached by the first DL pointer, so
+ * seasonal variants get their own entries. Returns 1 when a shell may be
+ * drawn, 0 when measurement failed (skip the shell, logged once). */
+typedef struct {
+    Gfx* key;
+    int state;
+    f32 cx, cy, cz;
+} ckf_dl_shell_cache_t;
+
+/* 5 summer + 5 winter stones, museum/police/shrine seasonal pairs, slack */
+#define CKF_DL_SHELL_CACHE_MAX 32
+static ckf_dl_shell_cache_t s_dl_shell_cache[CKF_DL_SHELL_CACHE_MAX];
+static int s_dl_shell_cache_count;
+
+extern int pc_solid_shell_measure_dls(Gfx* const* dls, int count, f32* out_centre) {
+    ckf_dl_shell_cache_t* slot = NULL;
+    ckf_measure_box_t box;
+    MtxF ident;
+    int i;
+
+    if (count <= 0 || dls == NULL || dls[0] == NULL) {
+        return 0;
+    }
+
+    for (i = 0; i < s_dl_shell_cache_count; i++) {
+        if (s_dl_shell_cache[i].key == dls[0]) {
+            slot = &s_dl_shell_cache[i];
+            out_centre[0] = slot->cx;
+            out_centre[1] = slot->cy;
+            out_centre[2] = slot->cz;
+            return slot->state == 1;
+        }
+    }
+    if (s_dl_shell_cache_count >= CKF_DL_SHELL_CACHE_MAX) {
+        return 0;
+    }
+
+    slot = &s_dl_shell_cache[s_dl_shell_cache_count++];
+    slot->key = dls[0];
+    slot->state = -1;
+    slot->cx = slot->cy = slot->cz = 0.0f;
+
+    bzero(&box, sizeof(box));
+    bzero(&ident, sizeof(ident));
+    ident.xx = 1.0f;
+    ident.yy = 1.0f;
+    ident.zz = 1.0f;
+    ident.ww = 1.0f;
+
+    Matrix_push();
+    Matrix_put(&ident);
+    for (i = 0; i < count && !box.fail; i++) {
+        if (dls[i] != NULL) {
+            ckf_measure_dl(dls[i], &box, 0);
+        }
+    }
+    Matrix_pull();
+
+    if (!box.fail && box.verts > 0) {
+        slot->state = 1;
+        slot->cx = (box.min_x + box.max_x) * 0.5f;
+        slot->cy = (box.min_y + box.max_y) * 0.5f;
+        slot->cz = (box.min_z + box.max_z) * 0.5f;
+    }
+
+    if (g_pc_verbose || slot->state != 1) {
+        printf("[SolidBuildings] dl=%p lists=%d verts=%d centre=(%.0f,%.0f,%.0f) ext=(%.0f,%.0f,%.0f)%s\n",
+               (void*)dls[0], count, box.verts, slot->cx, slot->cy, slot->cz,
+               (box.max_x - box.min_x) * 0.5f, (box.max_y - box.min_y) * 0.5f,
+               (box.max_z - box.min_z) * 0.5f,
+               slot->state == 1 ? "" : "  MEASUREMENT FAILED - shell disabled for this model");
+    }
+
+    out_centre[0] = slot->cx;
+    out_centre[1] = slot->cy;
+    out_centre[2] = slot->cz;
+    return slot->state == 1;
 }
 #endif
 
