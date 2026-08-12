@@ -241,10 +241,15 @@ static void Camera2_SetView(GAME_PLAY* play) {
     {
         static int pc_fp_last_index = -1;
         PLAYER_ACTOR* fp_player = get_player_actor_withoutCheck(play);
+        extern int mEv_CheckTitleDemo();
         /* DOOR keeps first person through door/room transitions. INTER and
          * INTER2 stay scripted: they're "look at this" pans (wallpaper
-         * purchase preview, event re-aims), not transitions. */
+         * purchase preview, event re-aims), not transitions. The title-demo
+         * attract loop stays on its stock camera: with fp_mode=1 in
+         * settings, FP should begin with gameplay, not on the title
+         * screen (mEv_TITLEDEMO_NONE == 0). */
         int fp_now = g_pc_fp_mode && fp_player != NULL &&
+                     mEv_CheckTitleDemo() == 0 &&
                      (camera->now_main_index == CAMERA2_PROCESS_NORMAL ||
                       camera->now_main_index == CAMERA2_PROCESS_WADE ||
                       camera->now_main_index == CAMERA2_PROCESS_TALK ||

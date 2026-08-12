@@ -3213,10 +3213,52 @@ void emu64::dirty_check(int tile, int n_tiles, int do_texture_matrix) {
             CLEAR_DIRTY(EMU64_DIRTY_FLAG_FOG);
 
             /* Calculate startz & endz fog parameters */
+#ifdef TARGET_PC
+            /* Fog positions are only meaningful up to the far plane (1000
+             * on the gbi 0..1000 scale = z_ndc 0 in the GC convention this
+             * matrix was rewritten to). The projection inversion below has
+             * a pole just past the far plane (z_ndc = n/(f-n)): positions
+             * beyond it reconstruct BEHIND the camera, and the render-side
+             * lerp then saturates at every pixel — the entire frame turns
+             * fog colour. The GC never hit this (game code never writes
+             * >1000), but PC-side far-plane overrides move the pole and
+             * PC-side fog writers have produced such values. Clamp to the
+             * far plane: a band pushed past the far plane degrades to "no
+             * visible fog", never to a fogged-out frame. */
+            f32 pc_zmin_ndc = ((f32)(u32)min - 1000.0f) / 1064.0f;
+            f32 pc_zmax_ndc = ((f32)(u32)max - 1000.0f) / 1016.0f;
+            if (pc_zmin_ndc > 0.0f) pc_zmin_ndc = 0.0f;
+            if (pc_zmax_ndc > 0.0f) pc_zmax_ndc = 0.0f;
+            f32 startz = -guMtxXFM1F_dol3(this->projection_mtx, this->projection_type, pc_zmin_ndc);
+            f32 endz = -guMtxXFM1F_dol3(this->projection_mtx, this->projection_type, pc_zmax_ndc);
+#else
             f32 startz =
                 -guMtxXFM1F_dol3(this->projection_mtx, this->projection_type, ((f32)(u32)min - 1000.0f) / 1064.0f);
             f32 endz =
                 -guMtxXFM1F_dol3(this->projection_mtx, this->projection_type, ((f32)(u32)max - 1000.0f) / 1016.0f);
+#endif
+
+#ifdef TARGET_PC
+            /* --verbose: one line whenever the resolved fog band changes.
+             * startz/endz are eye-space distances; negative or inverted
+             * values mean the band reconstructed behind the camera and the
+             * shader lerp will saturate at every pixel (whole-frame fog). */
+            {
+                extern int g_pc_verbose;
+                if (g_pc_verbose) {
+                    static int last_min = -99999, last_max = -99999;
+                    static f32 last_far = -1.0f;
+                    if (min != last_min || max != last_max || this->far != last_far) {
+                        last_min = min; last_max = max; last_far = this->far;
+                        printf("[FOG] pos=(%d,%d) proj=(%.1f,%.1f) type=%d -> startz=%.1f endz=%.1f vr=%d%s%s\n",
+                               min, max, this->near, this->far, (int)this->projection_type,
+                               startz, endz, pc_vr_active(),
+                               (min > 1000 || max > 1000) ? "  [clamped to far plane: no fog]" : "",
+                               (startz < 0.0f || endz < startz) ? "  ** ILLEGAL BAND: will saturate **" : "");
+                    }
+                }
+            }
+#endif
 
 #ifdef TARGET_PC
             /* On LE, EmuColor.raw is shift-packed (R<<24|G<<16|B<<8|A) but the
