@@ -1907,13 +1907,19 @@ static void mEnv_SetFog(GAME_PLAY* play, Kankyo* kankyo, Global_light* global_li
         if (mFI_GET_TYPE(field_id) == mFI_FIELD_FG &&
             global_light->fogNear != global_light->fogFar) {
             if (pc_vr_active()) {
-                /* VR: byte-identical to the band the user has been playing
-                 * with — VR's fog path rescales separately in pc_gx. */
-                int vr_near = global_light->fogNear * 3;
-                int vr_far = global_light->fogFar * 5;
-                if (vr_far < 6000) vr_far = 6000;
-                global_light->fogNear = vr_near;
-                global_light->fogFar = vr_far;
+                /* VR: no atmospheric fog. The old *3/*5 "push the band out"
+                 * produced positions past the far plane; the emu64 inversion
+                 * reconstructs those BEHIND the camera and the fog factor
+                 * saturates at every pixel — the whole world rendered in fog
+                 * colour (sky blue by day, navy at night), which reads as
+                 * "the world stops 2.5 acres out". Verified live vs the
+                 * [FOG] diagnostic. The whole-town draw wants no fog wall at
+                 * all, and the VR far plane (>= 200 m, pcvr_far_m) already
+                 * covers the town, so there is no far clip to hide. Use the
+                 * game's own fog-off sentinel (near == far -> fm=0 ->
+                 * GX_FOG_NONE) — decode-proof under every projection. */
+                global_light->fogNear = 1000;
+                global_light->fogFar = 1000;
             } else if (pc_fp_view_is_active()) {
                 /* Flat FP: with the far plane at PC_FP_FAR (8000), the
                  * tightest legal band ending AT the far plane. 996/1000
