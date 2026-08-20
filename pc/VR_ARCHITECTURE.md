@@ -82,10 +82,38 @@ seated origin (an unbound `recenter` action also exists for rebinding). Users
 can rebind everything in SteamVR's controller settings. GC rumble mirrors to
 controller haptics.
 
+## First person & motion tools
+
+`pc/src/pc_fp_camera.c` runs the first-person camera as a small state machine
+hooked into `Camera2_SetView` (src/game/m_camera2.c): when active it replaces
+the game's eye/at/up with a first-person view at the player's head, redirects
+stick movement to the view yaw (`getCamera2AngleY`), and hides the player
+model (src/game/m_player_draw.c_inc) while keeping its shadow. Scripted
+cameras — doors, events, demos — simply fall through to the stock path, and
+first person resumes when they end. Starting a conversation snaps the view to
+face the speaker. In VR, first person switches the world scale to
+`vr_fp_world_scale` (life size) and back.
+
+Motion tools are two independent pieces:
+
+- **Swing gesture** (`pc_vr_frame_begin`, pc_vr.cpp): sustained right-controller
+  speed above 2.2 m/s for ≥ 22 ms fires one virtual A press into the pad
+  merge, with a 350 ms refractory so one arc can't double-trigger. Thresholds
+  are time-based, so behavior is identical at 72/90/120 Hz. Gated to first
+  person with a swingable tool out and no conversation active.
+- **Tool on hand** (`pc_vr_hand_tool_mtx`, pc_vr.cpp): exports the controller
+  pose as the matrix src/game/m_player_item.c_inc pushes in place of the
+  player's `right_hand_mtx` — tool procs derive both their attach point and
+  their collision from that stack top, so the net catches where you actually
+  swing.
+
 ## Files
 
 - `pc/include/pc_vr.h`, `pc/src/pc_vr.cpp` — OpenVR runtime, FBOs, matrices,
-  compositor submit, input actions, UI panel composite (C++ behind a C API).
+  compositor submit, input actions, swing gesture, UI panel composite (C++
+  behind a C API).
+- `pc/src/pc_fp_camera.c`, `pc/include/pc_fp_camera.h` — first-person camera
+  state machine (hooked from src/game/m_camera2.c).
 - `pc/lib/openvr/` — vendored OpenVR SDK header + win32 `openvr_api.dll`
   (BSD-3-Clause).
 - `pc/src/pc_gx.c` — render-target-aware viewport/scissor/copy scaling,
@@ -98,10 +126,15 @@ controller haptics.
 
 ## Settings
 
-`settings.ini` `[vr]`: `vr=auto|on|off` (auto = use headset when present),
-`world_scale`, `ui_distance`, `ui_size`, `height_offset`. CLI: `--vr`,
-`--no-vr`. If OpenVR init fails the game logs once and runs flat — the same
-binary serves both modes.
+`settings.ini` `[VR]`: `vr_mode` (0 = off, 1 = auto — use headset when
+present, 2 = force), `vr_world_scale` (mm per game unit), `vr_ui_distance` /
+`vr_ui_size` (cm), `vr_height_offset` (cm). First-person and motion-tool keys
+live under `[FirstPerson]`: `fp_mode`, `fp_eye_height`, `fp_snap_degrees`,
+`vr_fp_world_scale`, `vr_solid_buildings`, `vr_solid_shell`, `vr_draw_radius`,
+`vr_town_residency`, `vr_motion_swing`, `vr_tool_on_hand`, `vr_tool_pitch`.
+The generated settings.ini documents each. CLI: `--vr`, `--no-vr`. If OpenVR
+init fails the game logs once and runs flat — the same binary serves both
+modes.
 
 ## Frame pacing
 

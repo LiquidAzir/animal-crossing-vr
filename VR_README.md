@@ -1,19 +1,23 @@
-# Animal Crossing VR — Quest 3 Setup Guide
+# Animal Crossing VR — Setup Guide
 
 Native SteamVR support for the Animal Crossing PC port. The village renders in
 true stereo 3D with full 6-DOF head tracking — lean in and look around your
 town like a living diorama. Game UI (dialogue, menus, inventory) floats on a
-panel in front of you, and Touch controllers act as the GameCube pad.
+panel in front of you, and your VR controllers act as the GameCube pad
+(bindings ship for Touch and Index controllers; everything is rebindable).
 
 ## What you need
 
-1. **This build** (`AnimalCrossing.exe` + `openvr_api.dll` + `vr_actions/`
-   next to it — the build produces all of it in `pc/build32/bin/`).
+1. **This software** — the release zip has everything: `AnimalCrossing.exe`
+   with `openvr_api.dll` and `vr_actions/` next to it. (Building from
+   source produces all of it in `pc/build32/bin/`.)
 2. **Your Animal Crossing (USA) disc image** (`.iso`, `.gcm`, or `.ciso`)
    in the `rom/` folder next to the exe.
 3. **SteamVR** installed on the PC (free, on Steam). You do NOT need to own
    any Steam game.
-4. **A way to connect the Quest 3 to the PC** — any of these works:
+4. **A SteamVR-compatible headset.** Native PCVR headsets (Index, Vive, and
+   friends) just work once SteamVR is running. A Quest 2/3/Pro needs one of
+   these to reach the PC — any of them works:
    - **Steam Link** (Quest app, easiest): install Steam Link inside the
      headset, connect to your PC, SteamVR starts automatically.
    - **Virtual Desktop**: launch SteamVR from within VD.

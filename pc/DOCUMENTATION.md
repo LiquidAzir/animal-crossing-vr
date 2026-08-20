@@ -74,6 +74,9 @@ User provides disc image (.ciso/.iso/.gcm)
 
 ### PC Port Layer (what we wrote)
 
+The VR / first-person layer (`pc/src/pc_vr.cpp`, `pc/src/pc_fp_camera.c`,
+`pc/vr_actions/`) is documented separately in [VR_ARCHITECTURE.md](VR_ARCHITECTURE.md).
+
 #### Core
 
 | File | Purpose |
@@ -111,9 +114,15 @@ User provides disc image (.ciso/.iso/.gcm)
 
 | File | Purpose |
 |------|---------|
-| `pc/src/pc_settings.c` | Runtime `settings.ini` parser/writer (resolution up to 4K, fullscreen, vsync, MSAA) |
+| `pc/src/pc_settings.c` | Runtime `settings.ini` parser/writer (resolution up to 4K, fullscreen, vsync, MSAA, VR/first-person keys) |
 | `pc/src/pc_texture_pack.c` | Dolphin-compatible HD texture pack loader (XXHash64 matching, DDS, preloading) |
 | `pc/src/pc_model_viewer.c` | Debug model viewer: 75 building/structure models, orbit camera |
+| `pc/src/pc_keybindings.c` | Keyboard remapping via `keybindings.ini` (defaults + parser) |
+| `pc/src/pc_pause_menu.c` | In-game pause overlay (Esc) |
+| `pc/src/pc_settings_menu.c` | In-game settings editor (writes `settings.ini`) |
+| `pc/src/pc_menu_util.c` | Shared drawing helpers for the PC menus |
+| `pc/src/pc_text_draw.c` | Text rendering matching the game's font pipeline |
+| `pc/src/pc_typing.c` | Keyboard typing mode for the in-game text editor (Tab toggles) |
 
 #### Support
 
@@ -121,7 +130,9 @@ User provides disc image (.ciso/.iso/.gcm)
 |------|---------|
 | `pc/src/pc_stubs.c` | Remaining link stubs (GBA, famicom, libultra, threads) |
 | `pc/src/pc_stubs_cpp.cpp` | JSystem C++ vtable stubs |
-| `pc/src/pc_fontdata.c` | Embedded font (byte-swapped for LE) |
+| `pc/src/pc_nes_fixnes.c` | fixNES integration as a library (in-game NES titles) |
+| `pc/src/pc_gbi_runtime.c` | Runtime GBI pointer-token indirection for display lists |
+| `pc/src/pc_profiler.c` | Optional frame profiler (interval timing stats) |
 | `pc/shaders/default.vert` | GLSL vertex shader (runtime-loaded, required) |
 | `pc/shaders/default.frag` | GLSL fragment shader (runtime-loaded, uniform-driven TEV stages with bias/scale/clamp/swap) |
 
@@ -304,8 +315,9 @@ Keyboard mapping:
 - **Space** = A, **LShift** = B, **Enter** = Start
 - **IJKL** = D-pad
 - **Q/E** = L/R triggers, **Z** = Z trigger
-- **F3** = toggle frame limiter
-- **ESC** = quit
+- **F3** = toggle the 5x speedhack (debug)
+- **F5** = toggle first person
+- **ESC** = pause menu (controller: Back/Select)
 
 SDL2 gamepad with hotplug, analog sticks (deadzone 500), triggers, D-pad, and rumble.
 
@@ -313,7 +325,7 @@ PADRead returns GC button format. Conversion to N64 format happens in `padmgr_Up
 
 ## Fault Handling
 
-The PC port does not install a VEH/signal crash recovery handler. Faults are allowed to propagate to the OS/debugger.
+On Windows, `pc_main.c` installs an unhandled-exception filter that writes `crash.txt` (the faulting module and offset) before the process exits; beyond that, faults propagate to the OS/debugger.
 Actor profile validation remains in `m_actor.c` to skip NULL/invalid profiles before dispatch.
 
 ## Build System

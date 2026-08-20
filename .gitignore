@@ -18,6 +18,18 @@ orig/*/*
 *.map
 *.MAP
 
+# Game data, saves, and runtime files — never commit these
+*.iso
+*.gcm
+*.ciso
+*.gci
+*.bin
+rom/
+save/
+settings.ini
+keybindings.ini
+*.log
+
 # Build files
 build/
 build32/
