@@ -22,37 +22,37 @@ land.
 | Motion tools | Swing the net/axe/shovel/rod with your right controller — or just press A; both always work |
 | Flat mode | The unmodified game experience, plus the first-person camera if you want it |
 
-## What you need
+## Installation
 
-1. **This software** — grab the latest zip from
-   [Releases](../../releases) (no build tools required).
-2. **Your own Animal Crossing (USA) disc image** (`.iso`, `.gcm`, or
-   `.ciso`), dumped from a cartridge/disc you own, placed in the `rom/`
-   folder next to the exe.
+The release zip is the complete game — you do **not** need the original
+PC port, an emulator, or any build tools. The only thing you bring is
+your own disc image.
+
+1. **Download** the latest `AnimalCrossing-VR-...-win32.zip` from the
+   [Releases page](../../releases).
+2. **Unzip it anywhere** (right-click → Extract All). You get an
+   `AnimalCrossing-VR` folder.
+3. **Put your game in the `rom` folder** inside that folder: your own
+   Animal Crossing (USA) disc image — `.iso`, `.gcm`, or `.ciso`, any
+   filename — dumped from a disc you own.
    **This project contains no game assets and never will. Do not ask for
    ROMs and do not link to them in issues or discussions.**
-3. **For VR:** [SteamVR](https://store.steampowered.com/app/250820/SteamVR/)
-   (free) and any SteamVR-compatible headset. Quest 2/3/Pro work over Steam
-   Link, Virtual Desktop, or Quest Link; Index, Vive, and other native PCVR
-   headsets work directly. Any reasonably VR-capable GPU is enough — the
-   game is light.
-4. **For flat play:** nothing else. SteamVR is not required; the game
-   detects the absence of a headset and runs as a normal window.
+4. **VR only:** install
+   [SteamVR](https://store.steampowered.com/app/250820/SteamVR/) (free)
+   and connect your headset — Quest 2/3/Pro via Steam Link, Virtual
+   Desktop, or Quest Link; Index, Vive, and other PCVR headsets work
+   directly. Playing flat? Skip this step — SteamVR is not needed.
+5. **Run `AnimalCrossing.exe`** in that folder. With a headset active it
+   starts in VR; without one it runs as a normal window.
+
+`settings.ini` and `keybindings.ini` appear next to the exe after the
+first run — resolution, world scale, first-person options, motion-tool
+toggles. `F5` toggles first person any time; in VR, left grip + Y does
+the same.
 
 Setup details, the full VR control table, comfort tuning, and
 troubleshooting: **[VR_README.md](VR_README.md)**. A guided test route for
 verifying a VR session end to end: [VR_PLAYTEST.md](VR_PLAYTEST.md).
-
-## Quick start
-
-1. Extract the release zip anywhere.
-2. Put your disc image in `rom/`.
-3. (VR) Start SteamVR with your headset connected.
-4. Run `AnimalCrossing.exe`.
-
-Settings live in `settings.ini` (created on first run) — resolution,
-world scale, first-person options, motion-tool toggles. `F5` toggles
-first person any time; in VR, left grip + Y does the same.
 
 ## Building from source
 
