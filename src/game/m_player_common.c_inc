@@ -2079,6 +2079,15 @@ static void Player_actor_SetPosition_OBJtoLine_forItem(ACTOR* actorx, GAME* game
         xyz_t right_pos;
         xyz_t left_pos;
         s16 angle_y = actorx->shape_info.rotation.y;
+#ifdef TARGET_PC
+        /* OCC runs before player movement using this previous-frame probe.
+         * Keep it facing the gaze too, or an actor behind the headset can
+         * override the gaze-aligned tree query when a swing begins. This
+         * changes the probe only; an in-progress chop keeps its target. */
+        if (pc_vr_tool_input_allowed()) {
+            angle_y = pc_fp_camera_yaw();
+        }
+#endif
         s16 right_angle_y = angle_y - DEG2SHORT_ANGLE2(8.0255126953125f);
         s16 left_angle_y = angle_y + DEG2SHORT_ANGLE2(8.0255126953125f);
 
@@ -2268,6 +2277,14 @@ static s16 Player_actor_Get_ControllerAngle(GAME* game) {
 static int Player_actor_Get_DiffWorldAngleToControllerAngle(ACTOR* actorx) {
     s16 angle_y = actorx->world.angle.y;
     s16 controller_y = DEG2SHORT_ANGLE2(90.0f) + Player_actor_GetController_move_angle();
+#ifdef TARGET_PC
+    /* Sprint's skid test must use the same world heading as locomotion.
+     * The original camera points at 180 degrees; that fixed-camera shortcut
+     * otherwise requests TURN_DASH repeatedly at some headset headings. */
+    if (pc_fp_view_is_active() && !mEv_IsTitleDemo()) {
+        controller_y = Player_actor_Get_ControllerAngle(gamePT);
+    }
+#endif
     int diff_y = (s16)(angle_y - controller_y);
 
     diff_y = diff_y < 0 ? -diff_y : diff_y;
@@ -3170,6 +3187,23 @@ static int Player_actor_Check_is_demo_mode(int main_index) {
     return FALSE;
 }
 
+#ifdef TARGET_PC
+/* Walking uses the gaze yaw, but tool world queries use body yaw. Apply it
+ * only at the action boundary, after movement and before target selection.
+ * Never steer an already committed swing/cast as the user looks around. */
+static void Player_actor_face_vr_tool_target(ACTOR* actorx) {
+    PLAYER_ACTOR* player = (PLAYER_ACTOR*)actorx;
+    if (!pc_vr_tool_input_allowed() || mEv_IsTitleDemo() ||
+        Player_actor_Check_is_demo_mode(player->now_main_index) ||
+        (player->requested_main_index_changed &&
+         Player_actor_Check_is_demo_mode(player->requested_main_index))) {
+        return;
+    }
+    actorx->shape_info.rotation.y = pc_fp_camera_yaw();
+    actorx->world.angle.y = actorx->shape_info.rotation.y;
+}
+#endif
+
 static int Player_actor_Check_axe_after(ACTOR* actorx, xyz_t* target_pos_p, mActor_name_t* fg_p,
                                         ACTOR** reflect_actor_pp) {
     PLAYER_ACTOR* player = (PLAYER_ACTOR*)actorx;
@@ -3525,8 +3559,15 @@ static int Player_actor_CheckAndRequest_main_axe_all(GAME* game, int prio) {
     xyz_t target_pos;
     mActor_name_t item;
     ACTOR* reflect_actor_p;
+    int accepted = FALSE;
 
     if (Player_actor_CheckController_forAxe(game)) {
+#ifdef TARGET_PC
+        ACTOR* actorx = GET_PLAYER_ACTOR_GAME_ACTOR(game);
+        s16 old_shape_yaw = actorx->shape_info.rotation.y;
+        s16 old_world_yaw = actorx->world.angle.y;
+        Player_actor_face_vr_tool_target(actorx);
+#endif
         int result =
             Player_actor_Check_axe_after(GET_PLAYER_ACTOR_GAME_ACTOR(game), &target_pos, &item, &reflect_actor_p);
 
@@ -3539,31 +3580,37 @@ static int Player_actor_CheckAndRequest_main_axe_all(GAME* game, int prio) {
                     Player_actor_GetitemNo_forDamageAxe(Player_actor_Get_ItemNoSubmenu(), FALSE);
 
                 if (damage_itemNo == EMPTY_NO) {
-                    return Player_actor_request_main_broken_axe_type_swing(game, &target_pos, item, tree_ut_x,
+                    accepted = Player_actor_request_main_broken_axe_type_swing(game, &target_pos, item, tree_ut_x,
                                                                            tree_ut_z, prio);
                 } else {
-                    return Player_actor_request_main_swing_axe_all(game, &target_pos, item, damage_itemNo, tree_ut_x,
+                    accepted = Player_actor_request_main_swing_axe_all(game, &target_pos, item, damage_itemNo, tree_ut_x,
                                                                    tree_ut_z, prio);
                 }
             }
-
-            return FALSE;
         } else if (result == mPlayer_AXE_HIT_REFLECT) {
             mActor_name_t damage_itemNo = Player_actor_GetitemNo_forDamageAxe(Player_actor_Get_ItemNoSubmenu(), TRUE);
 
             if (damage_itemNo == EMPTY_NO) {
-                return Player_actor_request_main_broken_axe_type_reflect(game, &target_pos, item, reflect_actor_p,
+                accepted = Player_actor_request_main_broken_axe_type_reflect(game, &target_pos, item, reflect_actor_p,
                                                                          prio);
             } else {
-                return Player_actor_request_main_reflect_axe_all(game, &target_pos, item, damage_itemNo,
+                accepted = Player_actor_request_main_reflect_axe_all(game, &target_pos, item, damage_itemNo,
                                                                  reflect_actor_p, prio);
             }
         } else {
-            return Player_actor_request_main_air_axe_all(game, prio);
+            accepted = Player_actor_request_main_air_axe_all(game, prio);
         }
+#ifdef TARGET_PC
+        /* Target queries need gaze yaw, but a refused action must not turn
+         * the player out of an ongoing action or higher-priority request. */
+        if (!accepted) {
+            actorx->shape_info.rotation.y = old_shape_yaw;
+            actorx->world.angle.y = old_world_yaw;
+        }
+#endif
     }
 
-    return FALSE;
+    return accepted;
 }
 
 static int Player_actor_CheckAbleSpeed_forItem(GAME* game) {
@@ -4363,6 +4410,11 @@ static int Player_actor_CheckAndRequest_main_scoop_all(GAME* game, int priority)
         ACTOR* reflect_actor_p;
         PLAYER_ACTOR* player = GET_PLAYER_ACTOR_GAME(game);
         int gold_shovel = player->item_kind == mPlayer_ITEM_KIND_GOLD_SHOVEL;
+#ifdef TARGET_PC
+        s16 old_shape_yaw = player->actor_class.shape_info.rotation.y;
+        s16 old_world_yaw = player->actor_class.world.angle.y;
+        Player_actor_face_vr_tool_target(&player->actor_class);
+#endif
         int scoop_request_index =
             Player_actor_Check_scoop_after(game, &target_pos, &item, &reflect_actor_p, gold_shovel);
 
@@ -4387,6 +4439,10 @@ static int Player_actor_CheckAndRequest_main_scoop_all(GAME* game, int priority)
                 return TRUE;
             }
         }
+#ifdef TARGET_PC
+        player->actor_class.shape_info.rotation.y = old_shape_yaw;
+        player->actor_class.world.angle.y = old_world_yaw;
+#endif
     }
 
     return FALSE;

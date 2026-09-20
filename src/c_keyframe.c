@@ -771,11 +771,12 @@ extern int cKF_SkeletonInfo_R_play(cKF_SkeletonInfo_R_c* keyframe) {
 /* --- VR/FP "solid buildings" shell pass ---
  * Every town camera in the stock game looks from a fixed direction, so the
  * far side of buildings was never authored — with a free camera you see
- * straight through them. We re-draw a structure's skeleton spun 180
- * degrees and shrunk a few percent, so the front wall's geometry lands
+ * straight through them. We reflect a structure's depth about its measured
+ * centre and inset it a few percent, so the front wall's geometry lands
  * where the missing back wall belongs while the copy stays inside the
- * original's hull everywhere real geometry already exists (the real pass
- * is drawn second and wins depth ties).
+ * existing envelope as closely as the approximation allows. This preserves
+ * left/right asymmetry instead of spinning another copy. The real pass
+ * is drawn second and wins depth ties; original meshes are never changed.
  *
  * THE PIVOT MUST BE THE BUILDING'S TRUE CENTRE. Root joints are NOT the
  * centre (house1's root sits at {2000,0,0}; shop2's at {17213,0,56808}) —
@@ -1268,8 +1269,9 @@ extern void cKF_Si3_draw_SV_R_child(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
             f32 cz = g_ckf_shell_rel_z + trans.z;
 
             Matrix_translate(cx, cy, cz, MTX_MULT);
-            Matrix_RotateY((s16)0x8000, MTX_MULT);
-            Matrix_scale(g_ckf_shell_scale, g_ckf_shell_scale, g_ckf_shell_scale, MTX_MULT);
+            /* Reflect depth only: a 180-degree rotation also swaps left
+             * and right, displacing asymmetric roofs and side details. */
+            Matrix_scale(g_ckf_shell_scale, g_ckf_shell_scale, -g_ckf_shell_scale, MTX_MULT);
             Matrix_translate(-cx, -cy, -cz, MTX_MULT);
             /* trans deliberately NOT zeroed: the unmodified normal chain
              * (softcv3_mult with the real trans and rotation) follows. */

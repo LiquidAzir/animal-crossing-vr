@@ -13,6 +13,7 @@ PCSettings g_pc_settings = {
     .max_fps       = 60,
     .msaa          = 4,
     .texture_filtering = 1,
+    .skybox = 1,
     .preload_textures = 0,
     .disable_resetti = 0,
     .disable_shop_visitor_req = 0,
@@ -61,6 +62,9 @@ static const char* DEFAULT_SETTINGS =
     "\n"
     "# Texture filtering: 0 = nearest-neighbor, 1 = use the game's filtering\n"
     "texture_filtering = 1\n"
+    "\n"
+    "# Outdoor gradient and clouds: 0 = stock background, 1 = skybox\n"
+    "skybox = 1\n"
     "\n"
     "[Enhancements]\n"
     "# Preload HD textures at startup: 0 = off (load on demand), 1 = preload, 2 = preload + cache file (fastest)\n"
@@ -199,6 +203,8 @@ static void apply_setting(const char* key, const char* value) {
         if (val >= 50 && val <= 1000) g_pc_settings.vr_ui_size = val;
     } else if (strcmp(key, "vr_height_offset") == 0) {
         if (val >= -300 && val <= 300) g_pc_settings.vr_height_offset = val;
+    } else if (strcmp(key, "skybox") == 0) {
+        if (val == 0 || val == 1) g_pc_settings.skybox = val;
     } else if (strcmp(key, "fp_mode") == 0) {
         if (val == 0 || val == 1) g_pc_settings.fp_mode = val;
     } else if (strcmp(key, "fp_eye_height") == 0) {
@@ -285,6 +291,8 @@ void pc_settings_save(void) {
     fprintf(f, "# Texture filtering: 0 = nearest-neighbor, 1 = use the game's filtering\n");
     fprintf(f, "texture_filtering = %d\n", g_pc_settings.texture_filtering);
     fprintf(f, "\n");
+    fprintf(f, "# Outdoor gradient and clouds: 0 = stock background, 1 = skybox\n");
+    fprintf(f, "skybox = %d\n\n", g_pc_settings.skybox);
     fprintf(f, "[Enhancements]\n");
     fprintf(f, "# Preload HD textures at startup: 0 = off (load on demand), 1 = preload, 2 = preload + cache file (fastest)\n");
     fprintf(f, "preload_textures = %d\n", g_pc_settings.preload_textures);

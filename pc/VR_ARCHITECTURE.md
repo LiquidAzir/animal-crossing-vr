@@ -63,6 +63,16 @@ is composited into each eye as a slightly curved-feel flat panel fixed in the
 anchor frame (~2 m ahead), so head movement lets you look around it. Frames
 that are entirely ortho (main menu) appear as just the panel.
 
+## Outdoor sky
+
+`pc_sky.cpp` draws a procedural sky once per world pass, before the first
+perspective batch. The lookAt notification supplies its game view; VR uses
+the rotation of `view_correction * game_view` and each eye's asymmetric
+projection to reconstruct world rays. Removing translation and scale places
+the sky at infinity. The renderer restores its GL state and never writes
+depth. `m_kankyo.c` supplies outdoor/submenu eligibility, game time, and the
+weather transition. See [skybox notes](../docs/skybox.md).
+
 ## Culling
 
 emu64 performs CPU vertex culling against the game's narrow (FOV ~20°)
@@ -98,14 +108,28 @@ Motion tools are two independent pieces:
 
 - **Swing gesture** (`pc_vr_frame_begin`, pc_vr.cpp): sustained right-controller
   speed above 2.2 m/s for ≥ 22 ms fires one virtual A press into the pad
-  merge, with a 350 ms refractory so one arc can't double-trigger. Thresholds
-  are time-based, so behavior is identical at 72/90/120 Hz. Gated to first
-  person with a swingable tool out and no conversation active.
+  merge. `pc_vr_swing.h` retains the two-frame pulse and 350 ms cooldown,
+  requires slowing to 1.1 m/s to rearm after a fired arc, and uses wrap-safe
+  elapsed times. Qualification resets on tracking loss or disabled input.
+  `pc_vr_tool_input_allowed()` excludes pause, submenus, conversations,
+  invalid current headset poses, and non-first-person play. The pad merger
+  checks again before injection; physical A is independently preserved.
+  Tool-selection grip also cancels synthetic input, and invalid velocity
+  cancels both partial qualification and any remaining virtual A pulse.
 - **Tool on hand** (`pc_vr_hand_tool_mtx`, pc_vr.cpp): exports the controller
   pose as the matrix src/game/m_player_item.c_inc pushes in place of the
   player's `right_hand_mtx` — tool procs derive both their attach point and
   their collision from that stack top, so the net catches where you actually
   swing.
+
+Tool target selection still uses the game's original range and collision rules.
+The PC-only `Player_actor_face_vr_tool_target` sets body yaw from
+`pc_fp_camera_yaw()` at axe/shovel target queries and accepted rod/net actions.
+The axe's existing collision triangle is also built with gaze yaw in active VR
+first person, without rotating the body each frame. Committed action targets
+are not updated as the headset moves. Flat and diorama paths retain body yaw.
+If an axe/shovel request is refused after its query, its temporary gaze
+alignment is rolled back to the prior logical and visual facing.
 
 ## Files
 

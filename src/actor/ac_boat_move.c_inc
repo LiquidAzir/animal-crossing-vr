@@ -110,7 +110,11 @@ static int aBT_check_alive(BOAT_ACTOR* boat_actor, GAME_PLAY* play) {
     int alive = FALSE;
 
     if (mFI_Wpos2BlockNum(&bx, &bz, boat_actor->actor_class.world.position) == TRUE &&
-        play->block_table.block_x == bx && play->block_table.block_z == bz) {
+        (
+#ifdef TARGET_PC
+         g_pc_town_residency ||
+#endif
+         (play->block_table.block_x == bx && play->block_table.block_z == bz))) {
         alive = TRUE;
     }
 
@@ -313,6 +317,13 @@ static void aBT_calc_speed(BOAT_ACTOR* boat_actor) {
 }
 
 static void aBT_demo_ctrl_birth_wait(BOAT_ACTOR* boat_actor, GAME_PLAY* play) {
+#ifdef TARGET_PC
+    /* A resident dock may be born during another outdoor demo. Wait for
+     * its shared control slot rather than replacing its clip pointer. */
+    if (Common_Get(clip).demo_clip2 != NULL) {
+        return;
+    }
+#endif
     ACTOR* boat_demo = Actor_info_make_actor(&play->actor_info, (GAME*)play, mAc_PROFILE_BOAT_DEMO, 0.0f, 0.0f, 0.0f, 0,
                                              0, 0, -1, -1, -1, EMPTY_NO, -1, -1, -1);
 

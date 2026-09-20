@@ -27,6 +27,8 @@
 #include "pc_diag.h"
 #include "pc_vr.h"
 #include "pc_fp_camera.h"
+#include "pc_vr_swing.h"
+#include "pc_sky.h"
 
 #include "openvr_capi.h"
 
@@ -160,6 +162,7 @@ static struct {
     M34 eye_to_head[2];         /* E */
     M34 inv_eye_pose[2];        /* (H*E)^-1, refreshed each frame */
     int have_pose;
+    int head_pose_valid;       /* current frame; have_pose is the render fallback */
 
     /* Game view + derived correction */
     M34 game_view;              /* V: world -> game camera view, game units */
@@ -195,9 +198,7 @@ static struct {
     int hand_valid;             /* pose valid this frame */
     M34 hand_world;             /* tool anchor in game-world units */
     M34 tool_local;             /* controller-tip -> tool grip orientation */
-    Uint32 swing_hi_since;      /* ticks when speed first exceeded threshold (0 = below) */
-    Uint32 swing_block_until;   /* refractory deadline, ms ticks */
-    int swing_pulse;            /* inject A this frame */
+    PCVRSwing swing;
     int hand_ever_valid;        /* pose has been valid at least once */
     int hand_missing_logged;    /* one-shot diagnostic for unbound pose */
     Uint32 active_since_ticks;  /* when the session went active */
@@ -534,10 +535,11 @@ static void pcvr_update_view_correction(void) {
 }
 
 extern "C" void pc_vr_notify_game_view(const float* mtx34) {
-    if (!s_vr.active) return;
     /* A batch may still be buffered from before this view change — flush it
      * so it renders with the correction that was current when it was drawn. */
     pc_gx_flush_if_begin_complete();
+    pc_sky_set_view(mtx34);
+    if (!s_vr.active) return;
     memcpy(s_vr.game_view, mtx34, sizeof(M34));
     pcvr_update_view_correction();
 }
@@ -763,8 +765,9 @@ extern "C" void pc_vr_frame_begin(void) {
     struct TrackedDevicePose_t poses[64]; /* k_unMaxTrackedDeviceCount */
     EVRCompositorError cerr =
         s_vr.comp->WaitGetPoses(poses, k_unMaxTrackedDeviceCount, NULL, 0);
-    if (cerr == EVRCompositorError_VRCompositorError_None &&
-        poses[k_unTrackedDeviceIndex_Hmd].bPoseIsValid) {
+    s_vr.head_pose_valid = cerr == EVRCompositorError_VRCompositorError_None &&
+        poses[k_unTrackedDeviceIndex_Hmd].bPoseIsValid;
+    if (s_vr.head_pose_valid) {
         m34_from_hmd(&poses[k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking,
                      s_vr.head_pose);
         s_vr.have_pose = 1;
@@ -781,7 +784,7 @@ extern "C" void pc_vr_frame_begin(void) {
 
     /* --- Motion tools: right-controller pose + swing gesture --- */
     s_vr.hand_valid = 0;
-    if (s_vr.swing_pulse > 0) s_vr.swing_pulse--;
+    float hand_speed = 0.0f;
     if (s_vr.input_ready && s_vr.act_hand_r != k_ulInvalidActionHandle) {
         InputPoseActionData_t pd;
         if (s_vr.input->GetPoseActionDataForNextFrame(
@@ -806,37 +809,18 @@ extern "C" void pc_vr_frame_begin(void) {
             s_vr.hand_valid = 1;
             s_vr.hand_ever_valid = 1;
 
-            /* Unified swing gesture: sustained fast controller motion fires
-             * one A press (tool use). Time-based thresholds so behavior is
-             * identical at 72/90/120 Hz: ~22ms sustained rejects tracking
-             * spikes, 350ms refractory stops re-triggers within one swing
-             * arc. Only with a swingable tool out, in FP, not during
-             * conversations (A would advance dialogue). */
-            if (g_pc_settings.vr_motion_swing && pc_fp_view_is_active() &&
-                pc_fp_swingable_equipped() && !pc_fp_in_talk()) {
-                float vx = pd.pose.vVelocity.v[0];
-                float vy = pd.pose.vVelocity.v[1];
-                float vz = pd.pose.vVelocity.v[2];
-                float speed = sqrtf(vx * vx + vy * vy + vz * vz);
-                Uint32 tnow = SDL_GetTicks();
-                if (speed > 2.2f) {
-                    if (s_vr.swing_hi_since == 0) s_vr.swing_hi_since = tnow;
-                    if (tnow - s_vr.swing_hi_since >= 22 && tnow >= s_vr.swing_block_until) {
-                        s_vr.swing_pulse = 2;      /* consumed by next PADRead */
-                        s_vr.swing_block_until = tnow + 350;
-                        s_vr.swing_hi_since = 0;
-                    }
-                } else {
-                    s_vr.swing_hi_since = 0;
-                }
-            } else {
-                s_vr.swing_hi_since = 0;
-                /* A pulse must not carry into a conversation a villager
-                 * just started — it would skip the opening dialogue page */
-                if (pc_fp_in_talk()) s_vr.swing_pulse = 0;
-            }
+            float vx = pd.pose.vVelocity.v[0];
+            float vy = pd.pose.vVelocity.v[1];
+            float vz = pd.pose.vVelocity.v[2];
+            hand_speed = sqrtf(vx * vx + vy * vy + vz * vz);
         }
     }
+    /* Always update, including tracking loss: a partial gesture or pending
+     * virtual A must not survive a pause, submenu, or invalid pose. */
+    pc_vr_swing_update(&s_vr.swing, SDL_GetTicks(), hand_speed,
+        s_vr.hand_valid && pc_vr_tool_input_allowed() &&
+        g_pc_settings.vr_motion_swing && pc_fp_swingable_equipped() &&
+        !pcvr_digital(s_vr.act_l));
 
     /* One-shot setup diagnostic: motion tools enabled but the pose action
      * never bound (stale vr_actions folder or a custom binding without the
@@ -897,6 +881,7 @@ extern "C" void pc_vr_frame_begin(void) {
 extern "C" void pc_vr_begin_eye(int eye) {
     if (!s_vr.active) return;
     pc_gx_draw_pending();
+    pc_sky_begin_pass();
     s_vr.in_scene_pass = 1;
     s_vr.current_eye = eye;
     s_vr.ui_bound = 0;
@@ -965,9 +950,15 @@ extern "C" float pc_vr_world_scale(void) {
     return s_vr.world_scale;
 }
 
+extern "C" int pc_vr_tool_input_allowed(void) {
+    extern int g_pc_paused;
+    return s_vr.active && s_vr.head_pose_valid && !g_pc_paused &&
+        pc_fp_view_is_active() && !pc_vr_flat_scene_active() && !pc_fp_in_talk();
+}
+
 /* Yaw of the headset gaze relative to the FP anchor, in binary-angle units.
  * Positive = turned left, matching the game's yaw sense. Lets movement (and
- * A-targeting via getCamera2AngleY) follow where you're LOOKING, not just
+ * tool-target facing at the action boundary) follow where you're LOOKING, not just
  * where the stick-turned anchor points. Head turned left by d: RotY(+d),
  * so H[0][2]=sin d, H[2][2]=cos d -> atan2 recovers d. */
 extern "C" float pc_vr_head_yaw_offset_bang(void) {
@@ -1171,7 +1162,7 @@ extern "C" void pc_vr_merge_pad(unsigned short* buttons,
 
     int l_held = pcvr_digital(s_vr.act_l);
 
-    if (l_held && (fabsf(mx) > 0.5f || fabsf(my) > 0.5f)) {
+    if (l_held) {
         /* Left grip held: left stick becomes the D-pad (tool switching) */
         if (my > 0.5f)  *buttons |= BTN_UP;
         if (my < -0.5f) *buttons |= BTN_DOWN;
@@ -1205,7 +1196,10 @@ extern "C" void pc_vr_merge_pad(unsigned short* buttons,
     s_y_prev = y_now;
 
     /* Motion swing: inject the tool-use press (ORed with real A) */
-    if (s_vr.swing_pulse > 0) *buttons |= BTN_A;
+    /* Selecting a tool must not also use the old tool from a pending gesture.
+     * Real A is still merged independently below. */
+    if (!pc_vr_tool_input_allowed() || l_held) pc_vr_swing_cancel(&s_vr.swing);
+    if (s_vr.swing.pulse > 0) *buttons |= BTN_A;
 
     if (pcvr_digital(s_vr.act_a)) *buttons |= BTN_A;
     if (pcvr_digital(s_vr.act_b)) *buttons |= BTN_B;

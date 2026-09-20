@@ -63,6 +63,17 @@ static int l_wade_disabled_bak = FALSE;
 static void aBTD_actor_ct(ACTOR* actorx, GAME* game) {
     BOAT_DEMO_ACTOR* boat_demo = (BOAT_DEMO_ACTOR*)actorx;
     GAME_PLAY* play = (GAME_PLAY*)game;
+    int dock_bx = play->block_table.block_x;
+    int dock_bz = play->block_table.block_z;
+
+#ifdef TARGET_PC
+    /* Town residency can create the dock while the player is elsewhere.
+     * Trip direction belongs to the boat's acre, not the player's acre. */
+    ACTOR* boat = Actor_info_fgName_search(&play->actor_info, BOAT, ACTOR_PART_ITEM);
+    if (boat != NULL) {
+        mFI_Wpos2BlockNum(&dock_bx, &dock_bz, boat->world.position);
+    }
+#endif
 
     Common_Get(clip).demo_clip2 = &aBTD_clip;
     bzero(&aBTD_clip, sizeof(aBTD_clip));
@@ -71,7 +82,7 @@ static void aBTD_actor_ct(ACTOR* actorx, GAME* game) {
     boat_demo->island_gba_loader_p = aBTD_island_ldr;
     boat_demo->island_gba_program_p = aBTD_island_prg;
 
-    if (mFI_CheckBlockKind(play->block_table.block_x, play->block_table.block_z, mRF_BLOCKKIND_ISLAND) == TRUE) {
+    if (mFI_CheckBlockKind(dock_bx, dock_bz, mRF_BLOCKKIND_ISLAND) == TRUE) {
         boat_demo->at_island = TRUE;
         boat_demo->island_npc_info_registered = TRUE;
     }
@@ -80,7 +91,7 @@ static void aBTD_actor_ct(ACTOR* actorx, GAME* game) {
 }
 
 static void aBTD_actor_dt(ACTOR* actorx, GAME* game) {
-    if (Common_Get(clip).demo_clip2 != NULL) {
+    if (Common_Get(clip).demo_clip2 != NULL && Common_Get(clip).demo_clip2->demo_class == (void*)actorx) {
         Common_Get(clip).demo_clip2 = NULL;
     }
 }

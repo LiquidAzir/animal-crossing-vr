@@ -53,6 +53,7 @@ PCGXState g_gx;
 
 #include "pc_vr.h"
 #include "pc_fp_camera.h"
+#include "pc_sky.h"
 
 /* Current render target dims. Equal to the window normally; pc_vr points them
  * at the eye/UI FBOs during VR passes. All GC->pixel scaling uses these. */
@@ -428,6 +429,7 @@ void pc_gx_begin_frame(void) {
     pc_gx_draw_call_count = 0;
     g_pc_widescreen_stretch = 0;
     pc_gx_draw_pending();
+    pc_sky_begin_pass();
     /* glClear respects write masks — must enable all before clearing */
     glDepthMask(GL_TRUE);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -477,6 +479,7 @@ void pc_gx_restore_after_nes(void) {
 }
 
 void pc_gx_shutdown(void) {
+    pc_sky_shutdown();
     pc_gx_tev_shutdown();
     pc_gx_texture_shutdown();
 #ifdef PC_ENHANCEMENTS
@@ -851,6 +854,14 @@ void pc_gx_flush_vertices(void) {
             pc_profiler_add_time(PC_PROF_TIMER_GX_FLUSH, flush_start);
             return;
         }
+    }
+
+    /* Draw once behind the outdoor world, after the current lookAt and eye
+     * routing are known. Never draw behind inventory item previews or UI. */
+    if (g_gx.projection_type == GX_PERSPECTIVE && !pc_vr_flat_scene_active()) {
+        int vr = pc_vr_in_scene_pass();
+        pc_sky_draw(vr ? pc_vr_eye_projection() : (const float*)g_gx.projection_mtx,
+                    vr ? pc_vr_view_correction() : NULL);
     }
 
     if (shader && shader != g_gx.current_shader) {

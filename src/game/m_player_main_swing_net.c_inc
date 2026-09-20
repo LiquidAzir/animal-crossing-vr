@@ -9,6 +9,11 @@ static int Player_actor_request_main_swing_net(GAME* game, int priority) {
         }
 
         if (net) {
+#ifdef TARGET_PC
+            /* Net use happens on A release, possibly after holding/creeping
+             * and looking elsewhere since the initial ready action. */
+            Player_actor_face_vr_tool_target(&player->actor_class);
+#endif
             Player_actor_request_main_index(game, mPlayer_INDEX_SWING_NET, priority);
 
             return TRUE;

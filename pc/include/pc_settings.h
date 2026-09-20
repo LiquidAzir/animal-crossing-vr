@@ -13,6 +13,7 @@ typedef struct {
     int max_fps;          /* 0=uncapped, otherwise frame limiter target */
     int msaa;             /* 0=off, 2/4/8=samples */
     int texture_filtering; /* 0=force nearest-neighbor, 1=use the game's texture filtering */
+    int skybox;          /* outdoor gradient/cloud sky; 0 restores stock background */
     int preload_textures; /* 0=off (load on demand), 1=on (load all at startup), 2=on + cache file */
     int disable_resetti;  /* 0=normal (Resetti appears on reset), 1=disable reset penalty */
     int disable_shop_visitor_req; /* 0=normal (Nookington's needs a foreign-town shopper), 1=skip requirement */

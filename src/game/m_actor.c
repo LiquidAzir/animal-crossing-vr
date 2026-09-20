@@ -698,7 +698,10 @@ static int Actor_malloc_actor_class(ACTOR** actor_pp, ACTOR_PROFILE* profile, AC
         case NAME_TYPE_SPNPC:
         case NAME_TYPE_NPC: {
 #ifdef TARGET_PC
-            if (CLIP(npc_clip) == NULL) {
+            /* Kapp'n stays resident with the dock in VR. Give him his own
+             * allocation so he cannot consume one of the nine villager slots.
+             * Always use the same allocation policy, even after leaving VR. */
+            if (id == SP_NPC_SENDO || CLIP(npc_clip) == NULL) {
                 *actor_pp = (ACTOR*)zelda_malloc(profile->class_size);
                 break;
             }
@@ -907,6 +910,12 @@ extern ACTOR* Actor_info_delete(Actor_info* actor_info, ACTOR* actor, GAME* game
     switch (ITEM_NAME_GET_TYPE(name_id)) {
         case NAME_TYPE_SPNPC:
         case NAME_TYPE_NPC: {
+#ifdef TARGET_PC
+            if (name_id == SP_NPC_SENDO) {
+                zelda_free(actor);
+                break;
+            }
+#endif
             (*Common_Get(clip).npc_clip->free_actor_area_proc)(actor);
             break;
         }
@@ -926,7 +935,8 @@ extern ACTOR* Actor_info_delete(Actor_info* actor_info, ACTOR* actor, GAME* game
         dlftbl->num_actors--;
     } else {
         dlftbl->num_actors--;
-        actor_free_check(dlftbl, actor->npc_id);
+        /* The actor may have just been heap-freed above. */
+        actor_free_check(dlftbl, name_id);
     }
 
     return next_actor;

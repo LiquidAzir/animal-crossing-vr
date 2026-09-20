@@ -115,6 +115,15 @@ static void aBTD_change_season(BOAT_DEMO_ACTOR* boat_demo, GAME_PLAY* play) {
 }
 
 static void aBTD_sendo_birth_wait(BOAT_DEMO_ACTOR* boat_demo, GAME_PLAY* play) {
+    BOAT_ACTOR* boat_actor =
+        (BOAT_ACTOR*)Actor_info_fgName_search(&play->actor_info, BOAT, ACTOR_PART_ITEM);
+
+    /* The boat can be removed during scene teardown or a failed birth.
+     * Do not create an orphan passenger or dereference a missing boat. */
+    if (boat_actor == NULL) {
+        Actor_delete((ACTOR*)boat_demo);
+        return;
+    }
     if (Common_Get(clip).npc_clip != NULL && Common_Get(clip).npc_clip->setupActor_proc != NULL) {
         int sendo_birth = (*Common_Get(clip).npc_clip->setupActor_proc)(play, SP_NPC_SENDO, -1, -1, -1, -1, -1, 0, 0);
 
@@ -123,9 +132,6 @@ static void aBTD_sendo_birth_wait(BOAT_DEMO_ACTOR* boat_demo, GAME_PLAY* play) {
                 (NPC_SENDO_ACTOR*)Actor_info_fgName_search(&play->actor_info, SP_NPC_SENDO, ACTOR_PART_NPC);
 
             if (sendo_actor != NULL) {
-                BOAT_ACTOR* boat_actor =
-                    (BOAT_ACTOR*)Actor_info_fgName_search(&play->actor_info, BOAT, ACTOR_PART_ITEM);
-
                 boat_demo->npc_sendo_actor = sendo_actor;
                 boat_demo->boat_actor = boat_actor;
 

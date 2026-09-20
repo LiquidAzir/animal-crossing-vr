@@ -72,7 +72,7 @@ static void aBC_deleteActor_part(GAME_PLAY* play, int part) {
      * villager pool is a fixed 9 slots (ac_npc.h keep_actors), so holding
      * them resident permanently starves spawning once nine distinct
      * villagers have been seen. Villagers wander anyway. */
-    if (g_pc_town_residency && part != ACTOR_PART_NPC) {
+    if (g_pc_town_residency && (part != ACTOR_PART_NPC || actor->npc_id == SP_NPC_SENDO)) {
       actor = actor->next_actor;
       continue;
     }
@@ -286,6 +286,22 @@ static int aBC_chk_near_boat_block(BIRTH_CONTROL_ACTOR* birth_control, GAME_PLAY
   int res = FALSE;
   int i;
 
+#ifdef TARGET_PC
+  /* The dock is visible before entering its two original approach acres.
+   * Preserve the normal connection check, but start it when loading town.
+   * Do not reinitialize an already live boat (including during a trip). */
+  if (g_pc_town_residency) {
+    if (Actor_info_fgName_search(&play->actor_info, BOAT, ACTOR_PART_ITEM) != NULL ||
+        mFI_CheckBlockKind(play->block_table.block_x, play->block_table.block_z, mRF_BLOCKKIND_ISLAND)) {
+      return FALSE;
+    }
+    if (!birth_control->boat_spawned) {
+      mGcgba_InitVar();
+      birth_control->boat_spawned = TRUE;
+    }
+    return TRUE;
+  }
+#endif
   for (i = 0; i < 2; i++) {
     if (play->block_table.block_x == chk_bx[i] && play->block_table.block_z == chk_bz[i]) {
       if (birth_control->boat_spawned == FALSE) {
@@ -329,7 +345,10 @@ static void aBC_set_boat(BIRTH_CONTROL_ACTOR* birth_control, GAME_PLAY* play) {
   }
   else {
     /* We're not in a boat acre, so allow initial communication again */
-    birth_control->boat_spawned = FALSE;
+#ifdef TARGET_PC
+    if (!g_pc_town_residency)
+#endif
+      birth_control->boat_spawned = FALSE;
   }
 }
 

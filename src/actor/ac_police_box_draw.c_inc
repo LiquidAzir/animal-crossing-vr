@@ -79,8 +79,7 @@ static void aPBOX_actor_draw(ACTOR* actor, GAME* game) {
 
                 Matrix_push();
                 Matrix_translate(shell_c[0], shell_c[1], shell_c[2], MTX_MULT);
-                Matrix_RotateY((s16)0x8000, MTX_MULT);
-                Matrix_scale(s, s, s, MTX_MULT);
+                Matrix_scale(s, s, -s, MTX_MULT);
                 Matrix_translate(-shell_c[0], -shell_c[1], -shell_c[2], MTX_MULT);
                 smtx = _Matrix_to_Mtx_new(graph);
                 Matrix_pull();

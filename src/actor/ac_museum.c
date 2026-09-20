@@ -302,7 +302,7 @@ static void aMsm_actor_draw(ACTOR* actor, GAME* game) {
 #ifdef TARGET_PC
         /* Solid-buildings shell (see c_keyframe.c): the museum draws plain
          * DLs, not a skeleton, so it needs its own copy of the pass — the
-         * OPA body redrawn spun 180 about its measured centre, emitted
+         * OPA body reflected in depth about its measured centre, emitted
          * FIRST so the real pass wins depth ties. XLU window skipped. */
         {
             extern int cKF_shell_wanted(void);
@@ -320,8 +320,7 @@ static void aMsm_actor_draw(ACTOR* actor, GAME* game) {
 
                 Matrix_push();
                 Matrix_translate(shell_c[0], shell_c[1], shell_c[2], MTX_MULT);
-                Matrix_RotateY((s16)0x8000, MTX_MULT);
-                Matrix_scale(s, s, s, MTX_MULT);
+                Matrix_scale(s, s, -s, MTX_MULT);
                 Matrix_translate(-shell_c[0], -shell_c[1], -shell_c[2], MTX_MULT);
                 smtx = _Matrix_to_Mtx_new(graph);
                 Matrix_pull();

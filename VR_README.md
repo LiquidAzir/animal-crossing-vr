@@ -83,6 +83,14 @@ and in VR:
   `fp_eye_height` (game units above the feet, default 52),
   `fp_snap_degrees` (0 = smooth VR turning).
 
+## Outdoor sky
+
+Outdoor views now have a blue gradient, soft rounded clouds, and a hazy distant
+horizon. The sky follows the game's time and weather and stays at infinity as
+you turn or lean, in both first person and diorama. Desktop views use it too.
+To restore the original background, set `skybox = 0` under `[Graphics]` in
+`settings.ini` (default: `1`). See [skybox notes](docs/skybox.md) for validation.
+
 ## Motion tools (VR first person)
 
 With a tool out in first person:
@@ -100,6 +108,17 @@ With a tool out in first person:
   pose, and for the net that includes the catch area — you catch bugs
   where *you* swing. If the grip angle feels off, tune `vr_tool_pitch`
   (degrees) in `settings.ini`.
+- **Look toward your target before using a tool.** In VR first person,
+  axe and shovel targeting and the fishing cast use your horizontal gaze,
+  even when your character last walked in another direction. The axe's
+  collision probe follows that same gaze. The net updates facing when
+  readied and released; its catch area still follows your actual hand.
+  Looking elsewhere after starting a chop, dig, or cast does not redirect it.
+- Motion gestures are ignored in dialogue, pause, inventory, while holding
+  the tool-selection grip, and when tracking or velocity data is unavailable.
+  Let your hand slow between swings to rearm; a single
+  continuous fast movement no longer repeats tool use. Buttons keep working
+  in menus and during normal play.
 - Both features have switches under `[FirstPerson]`-adjacent keys in
   `settings.ini`: `vr_motion_swing` and `vr_tool_on_hand` (1 = on).
 

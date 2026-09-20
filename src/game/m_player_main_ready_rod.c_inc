@@ -1,5 +1,8 @@
 static int Player_actor_request_main_ready_rod(GAME* game, int priority) {
     if (Player_actor_check_request_main_able(game, mPlayer_INDEX_READY_ROD, priority)) {
+#ifdef TARGET_PC
+        Player_actor_face_vr_tool_target(GET_PLAYER_ACTOR_GAME_ACTOR(game));
+#endif
         Player_actor_request_main_index(game, mPlayer_INDEX_READY_ROD, priority);
 
         return TRUE;

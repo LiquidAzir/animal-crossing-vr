@@ -1,0 +1,95 @@
+/* Missing rear faces of the five rock meshes. These triangles join their
+ * actual open boundary edges; no second rotated/scaled rock is needed.
+ * Summer and winter have identical topology but retain their own material.
+ * UVs are projected onto the rear X/Y plane so the old edge UVs do not
+ * stretch a single texture row over the entire new surface. */
+#define PC_STONE_SYMBOLS(season, kind) \
+    extern Vtx obj_##season##_stone##kind##_v[]; \
+    extern Gfx obj_##season##_stone##kind##_gfx_model[];
+PC_STONE_SYMBOLS(s, A) PC_STONE_SYMBOLS(s, B) PC_STONE_SYMBOLS(s, C)
+PC_STONE_SYMBOLS(s, D) PC_STONE_SYMBOLS(s, E)
+PC_STONE_SYMBOLS(w, A) PC_STONE_SYMBOLS(w, B) PC_STONE_SYMBOLS(w, C)
+PC_STONE_SYMBOLS(w, D) PC_STONE_SYMBOLS(w, E)
+#undef PC_STONE_SYMBOLS
+
+static const u8 pc_stone_back_faces[5][15] = {
+    {9,4,0, 0,2,9},
+    {9,11,0, 9,0,2, 2,4,9},
+    {1,9,8, 1,8,11, 11,2,1},
+    {13,12,4, 4,6,14, 13,4,14, 13,14,0, 0,2,13},
+    {7,4,5, 7,5,6, 11,7,6, 11,6,8, 8,12,11},
+};
+static const u8 pc_stone_back_face_count[5] = {2, 3, 3, 5, 5};
+static const u8 pc_stone_vertex_count[5] = {10, 12, 12, 15, 15};
+
+static Gfx* pc_bg_stone_back_dl(Gfx* original) {
+    static Gfx* const models[10] = {
+        obj_s_stoneA_gfx_model, obj_s_stoneB_gfx_model, obj_s_stoneC_gfx_model,
+        obj_s_stoneD_gfx_model, obj_s_stoneE_gfx_model,
+        obj_w_stoneA_gfx_model, obj_w_stoneB_gfx_model, obj_w_stoneC_gfx_model,
+        obj_w_stoneD_gfx_model, obj_w_stoneE_gfx_model,
+    };
+    static Vtx* const vertices[10] = {
+        obj_s_stoneA_v, obj_s_stoneB_v, obj_s_stoneC_v, obj_s_stoneD_v, obj_s_stoneE_v,
+        obj_w_stoneA_v, obj_w_stoneB_v, obj_w_stoneC_v, obj_w_stoneD_v, obj_w_stoneE_v,
+    };
+    static Vtx rear_vertices[10][15];
+    static Gfx rear_lists[10][7]; /* vertex load, at most five triangles, end */
+    static u8 ready[10];
+    int model;
+
+    for (model = 0; model < 10; model++) {
+        if (original == models[model]) {
+            int kind = model % 5;
+            if (!ready[model]) {
+                int i, axis;
+                int count = pc_stone_vertex_count[kind];
+                Vtx* src = vertices[model];
+                Vtx* dst = rear_vertices[model];
+                f32 normals[15][3] = {{0}};
+                f32 min_x = src[0].v.ob[0], max_x = min_x;
+                f32 min_y = src[0].v.ob[1], max_y = min_y;
+                Gfx* out = rear_lists[model];
+                for (i = 0; i < count; i++) {
+                    dst[i] = src[i];
+                    if (src[i].v.ob[0] < min_x) min_x = src[i].v.ob[0];
+                    if (src[i].v.ob[0] > max_x) max_x = src[i].v.ob[0];
+                    if (src[i].v.ob[1] < min_y) min_y = src[i].v.ob[1];
+                    if (src[i].v.ob[1] > max_y) max_y = src[i].v.ob[1];
+                }
+                if (max_x <= min_x || max_y <= min_y) return NULL; /* assets not loaded */
+                gSPVertex(out++, dst, count, 0);
+                for (i = 0; i < pc_stone_back_face_count[kind]; i++) {
+                    const u8* tri = &pc_stone_back_faces[kind][i * 3];
+                    f32 a[3], b[3], n[3];
+                    for (axis = 0; axis < 3; axis++) {
+                        a[axis] = dst[tri[1]].v.ob[axis] - dst[tri[0]].v.ob[axis];
+                        b[axis] = dst[tri[2]].v.ob[axis] - dst[tri[0]].v.ob[axis];
+                    }
+                    n[0] = a[1]*b[2] - a[2]*b[1];
+                    n[1] = a[2]*b[0] - a[0]*b[2];
+                    n[2] = a[0]*b[1] - a[1]*b[0];
+                    for (axis = 0; axis < 3; axis++) {
+                        normals[tri[0]][axis] += n[axis];
+                        normals[tri[1]][axis] += n[axis];
+                        normals[tri[2]][axis] += n[axis];
+                    }
+                    gSP1Triangle(out++, tri[0], tri[1], tri[2], 0);
+                }
+                gSPEndDisplayList(out++);
+                for (i = 0; i < count; i++) {
+                    f32* n = normals[i];
+                    f32 len = sqrtf(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+                    dst[i].v.tc[0] = (s16)(1024.0f * (dst[i].v.ob[0] - min_x) / (max_x - min_x));
+                    dst[i].v.tc[1] = (s16)(1024.0f * (max_y - dst[i].v.ob[1]) / (max_y - min_y));
+                    if (len > 0.0f) {
+                        for (axis = 0; axis < 3; axis++) dst[i].n.n[axis] = (s8)(127.0f*n[axis]/len);
+                    }
+                }
+                ready[model] = TRUE;
+            }
+            return rear_lists[model];
+        }
+    }
+    return NULL; /* Unknown model: leave it alone. */
+}

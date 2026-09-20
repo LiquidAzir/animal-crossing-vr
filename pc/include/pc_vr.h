@@ -61,6 +61,10 @@ int pc_vr_hand_tool_mtx(float out[12]);
  * = left; 0 when inactive). Movement follows the gaze via this. */
 float pc_vr_head_yaw_offset_bang(void);
 
+/* Live first-person gameplay with valid headset tracking. Synthetic tool
+ * input and gaze targeting must not leak into dialogue, pause, or submenus. */
+int pc_vr_tool_input_allowed(void);
+
 /* Flat-scene mode: while the game submenu (inventory/map) is open, ALL
  * rendering — including its 3D item models and world prerender — goes to
  * the UI panel with original matrices. Stamped each frame by m_play. */

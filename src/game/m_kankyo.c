@@ -1,4 +1,7 @@
 #include "m_kankyo.h"
+#ifdef TARGET_PC
+#include "pc_sky.h"
+#endif
 
 #include "m_camera2.h"
 #include "m_room_type.h"
@@ -2246,6 +2249,20 @@ extern void Global_kankyo_set(GAME_PLAY* play, Kankyo* kankyo, Global_light* glo
                            kankyo->add_light_info.ambient_color);
     mEnv_SetDiffuseLight(kankyo);
     mEnv_SetFog(play, kankyo, global_light);
+#ifdef TARGET_PC
+    /* Feed the renderer the game's clock and smoothly transitioning weather.
+     * Submenus use their own scene; room/preview backgrounds remain stock. */
+    {
+        float now = (l_mEnv_electric_light.now_weather == mEnv_WEATHER_RAIN ||
+                     l_mEnv_electric_light.now_weather == mEnv_WEATHER_SNOW) ? 1.0f : 0.0f;
+        float next = (l_mEnv_electric_light.next_weather == mEnv_WEATHER_RAIN ||
+                      l_mEnv_electric_light.next_weather == mEnv_WEATHER_SNOW) ? 1.0f : 0.0f;
+        pc_sky_set_environment(mFI_GET_TYPE(mFI_GetFieldId()) == mFI_FIELD_FG &&
+                               play->submenu.process_status == mSM_PROCESS_WAIT,
+                               (float)Common_Get(time).now_sec,
+                               now + (next-now)*l_mEnv_electric_light.change_weather_env_rate);
+    }
+#endif
     mEnv_PermitCheckDiffuseLight(kankyo);
     mEnv_TaimatuPointLightWaveMoveProc(play);
     mEnv_CheckNpcLight_ToSwitchON(play);

@@ -86,8 +86,8 @@ static void aSHR_actor_draw(ACTOR* actorx, GAME* game) {
 
 #ifdef TARGET_PC
     /* Solid-buildings shell for the wishing-well tree (plain-DL fixture,
-     * same pattern as the museum/police box): the OPA body redrawn spun
-     * 180 about its measured centre, emitted FIRST so the real pass wins
+     * same pattern as the museum/police box): the OPA body reflected
+     * in depth about its measured centre, emitted FIRST so the real pass wins
      * depth ties. Water/sprash/bubble XLU parts are skipped. */
     {
         extern int cKF_shell_wanted(void);
@@ -113,8 +113,7 @@ static void aSHR_actor_draw(ACTOR* actorx, GAME* game) {
 
             Matrix_push();
             Matrix_translate(shell_c[0], shell_c[1], shell_c[2], MTX_MULT);
-            Matrix_RotateY((s16)0x8000, MTX_MULT);
-            Matrix_scale(s, s, s, MTX_MULT);
+            Matrix_scale(s, s, -s, MTX_MULT);
             Matrix_translate(-shell_c[0], -shell_c[1], -shell_c[2], MTX_MULT);
             smtx = _Matrix_to_Mtx_new(graph);
             Matrix_pull();

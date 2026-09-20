@@ -8,6 +8,9 @@
 #include "m_player_lib.h"
 #include "libultra/libultra.h"
 #include "sys_matrix.h"
+#ifdef TARGET_PC
+#include "pc_vr.h"
+#endif
 
 #define aBT_FURROW_MAX_SPEED FRAMERATE_ADJ(0.625f)
 
