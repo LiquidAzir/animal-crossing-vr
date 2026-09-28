@@ -1,4 +1,4 @@
-/* Production Camera2_SetView and mMsg_Draw_Window with render/runtime seams.
+/* Production fishing camera requests, Camera2_SetView and mMsg_Draw_Window.
  * Covers continuity, fallback modes, gesture suppression and temporary layout.
  * This does not claim to render a catch animation or a headset image. */
 #include <stdio.h>
@@ -31,6 +31,8 @@ static float s_yaw, s_pitch;
 static u32 s_active_stamp, pc_frame_counter = 1000;
 static xyz_t rendered_eye, rendered_at;
 static float rendered_near, rendered_far;
+static const xyz_t normal_center = {110, 42, -180};
+static const s_xyz fishing_angle = {-24576, -32768, 0};
 
 PLAYER_ACTOR* get_player_actor_withoutCheck(GAME_PLAY* p) { return player_ptr; }
 int mEv_CheckTitleDemo(void) { return title_demo; }
@@ -38,6 +40,14 @@ int pc_vr_active(void) { return s_vr.active; }
 int pc_vr_flat_scene_active(void) { return flat_scene; }
 /* Indoor stock near/far calculation avoids unrelated field setup. */
 static int Camera2_CheckInDoorNearFar(GAME_PLAY* p) { return 1; }
+/* Field-dependent target calculation is unchanged; request arbitration, data
+ * transfer, player callbacks and the resulting rendered view are production. */
+void Camera2_main_Simple_AngleDistStd(GAME_PLAY* p, s_xyz* angle, f32* dist) {
+    *angle = fishing_angle; *dist = 620;
+}
+static void Camera2_main_Normal_SetEndCenterPos_fromPlayer(GAME_PLAY* p, xyz_t* pos) {
+    *pos = normal_center;
+}
 f32 Math3DLength(const xyz_t* a, const xyz_t* b) {
     float x = a->x-b->x, y = a->y-b->y, z = a->z-b->z;
     return sqrtf(x*x + y*y + z*z);
@@ -198,8 +208,124 @@ static void test_dialogue(void) {
           "unloaded text still restores message and choice centers");
 }
 
+static void test_fishing_camera(void) {
+    void (*const stages[])(ACTOR*, GAME*) = {
+        Player_actor_main_Relax_rod_other_func2, Player_actor_main_Vib_rod_other_func2,
+        Player_actor_main_Collect_rod_other_func2, Player_actor_main_Fly_rod_other_func2
+    };
+    ACTOR bobber = {0};
+    PLAYER_ACTOR before_player;
+    flat_scene = title_demo = g_pc_paused = 0;
+    player_ptr = &player;
+    player.fishing_rod_actor_p = &bobber;
+    player.actor_class.eye.position = (xyz_t){100, 64, -200};
+    before_player = player;
+
+    for (int vr = 0; vr <= 1; vr++) for (int fp = 0; fp <= 1; fp++)
+    for (int high_bank = 0; high_bank <= 1; high_bank++) {
+        s_vr.active = vr; g_pc_fp_mode = fp;
+        s_yaw = (high_bank ? 21000 : -7000); s_pitch = vr ? 0 : 0.15f;
+        bobber.world.position = (xyz_t){160, high_bank ? -60 : 30, -280};
+        camera_frame(CAMERA2_PROCESS_NORMAL);
+        xyz_t eye = rendered_eye, at = rendered_at;
+        int faces = face_calls;
+
+        for (unsigned stage = 0; stage < sizeof(stages)/sizeof(*stages); stage++) {
+            int fishing = stage < 2;
+            float weight = high_bank ? 0.55f : 0.65f;
+            xyz_t expected = normal_center;
+            if (fishing) {
+                xyz_t* p = &player.actor_class.eye.position;
+                xyz_t* b = &bobber.world.position;
+                expected = (xyz_t){p->x*weight+b->x*(1-weight),
+                                  p->y*weight+b->y*(1-weight),
+                                  p->z*weight+b->z*(1-weight)};
+            }
+            stages[stage](&player.actor_class, &play.game);
+            CHECK(play.camera.requested_main_index == CAMERA2_PROCESS_SIMPLE &&
+                  play.camera.requested_main_index_flag &&
+                  play.camera.requested_main_index_priority == 5,
+                  "fishing stage keeps the original camera request and priority");
+            CHECK(CLOSE(play.camera.request_data.simple.distance,
+                        620 * (fishing && high_bank ? 1.15f : 1.0f)) &&
+                  play.camera.request_data.simple.morph_counter == (fishing ? 40 : 30),
+                  "fishing and return preserve stock distance and morph duration");
+            CHECK(CLOSE(play.camera.request_data.simple.center_pos.x, expected.x) &&
+                  CLOSE(play.camera.request_data.simple.center_pos.y, expected.y) &&
+                  CLOSE(play.camera.request_data.simple.center_pos.z, expected.z) &&
+                  memcmp(&play.camera.request_data.simple.angle, &fishing_angle, sizeof(fishing_angle)) == 0,
+                  "fishing and return preserve stock target and direction");
+
+            int previous = play.camera.now_main_index;
+            Camera2_setup_main_Simple(&play);
+            CHECK(play.camera.now_main_index == CAMERA2_PROCESS_SIMPLE &&
+                  play.camera.last_main_index == previous &&
+                  !play.camera.requested_main_index_flag,
+                  "real SIMPLE setup consumes the request normally");
+            for (int frame = 0; frame < 8; frame++) {
+                camera_frame(CAMERA2_PROCESS_SIMPLE);
+                CHECK(pc_fp_view_is_active() == fp && pc_fp_hide_player() == fp,
+                      "waiting, nibbling, retrieval and fish flight keep selected view");
+                CHECK(CLOSE(rendered_eye.x, eye.x) && CLOSE(rendered_eye.y, eye.y) &&
+                      CLOSE(rendered_eye.z, eye.z) && CLOSE(rendered_at.x, at.x) &&
+                      CLOSE(rendered_at.y, at.y) && CLOSE(rendered_at.z, at.z),
+                      "fishing never cuts away from current FP eye and gaze");
+                CHECK(!pc_fp_in_talk() && pc_vr_tool_input_allowed() == (vr && fp),
+                      "fishing remains interactive rather than suppressing tool gestures as dialogue");
+            }
+            g_pc_fp_mode = !fp;
+            camera_frame(CAMERA2_PROCESS_SIMPLE);
+            CHECK(pc_fp_view_is_active() == !fp,
+                  "FP can toggle during a cast without another camera request");
+            g_pc_fp_mode = fp;
+        }
+        CHECK(face_calls == faces, "fishing requests do not snap gaze");
+        CHECK(memcmp(&player, &before_player, sizeof(player)) == 0,
+              "camera changes leave player and fishing gameplay state untouched");
+        camera_frame(CAMERA2_PROCESS_ITEM);
+        CHECK(pc_fp_view_is_active() == fp && pc_fp_in_talk() && !pc_vr_tool_input_allowed(),
+              "catch message preserves existing FP and gesture protection");
+        camera_frame(CAMERA2_PROCESS_NORMAL);
+        CHECK(pc_fp_view_is_active() == fp && !pc_fp_in_talk(), "fishing exits to selected normal view");
+    }
+
+    s_vr.active = g_pc_fp_mode = 1;
+    Camera2_change_priority(&play, 0);
+    CHECK(Camera2_request_main_simple_fishing(&play, &player.actor_class.eye.position,
+          &bobber.world.position, 5), "accept fishing request for gate checks");
+    Camera2_setup_main_Simple(&play);
+    title_demo = 1;
+    camera_frame(CAMERA2_PROCESS_SIMPLE);
+    CHECK(!pc_fp_view_is_active(), "fishing during title demo retains stock camera");
+    title_demo = 0; player_ptr = NULL;
+    camera_frame(CAMERA2_PROCESS_SIMPLE);
+    CHECK(!pc_fp_view_is_active(), "fishing without a player retains stock camera");
+    player_ptr = &player;
+
+    for (int mode = 0; mode <= 1; mode++) {
+        Camera2_change_priority(&play, 0);
+        int accepted = mode ? Camera2_request_main_simple2(&play, &normal_center, &fishing_angle, 620, 20, 1, 6)
+                            : Camera2_request_main_simple(&play, &normal_center, &fishing_angle, 620, 20, 6);
+        CHECK(accepted, "scripted SIMPLE can replace the fishing request");
+        Camera2_setup_main_Simple(&play);
+        camera_frame(CAMERA2_PROCESS_SIMPLE);
+        CHECK(!pc_fp_view_is_active() && CLOSE(rendered_eye.x, 500),
+              "ordinary and Gracie SIMPLE requests still show scripted camera");
+        Camera2_change_priority(&play, 10);
+        Camera2 before_camera = play.camera;
+        CHECK(!Camera2_request_main_simple_fishing(&play, &player.actor_class.eye.position,
+              &bobber.world.position, 5) && memcmp(&play.camera, &before_camera, sizeof(before_camera)) == 0,
+              "rejected fishing request cannot tag or alter an existing script");
+        CHECK(!Camera2_request_main_simple_fishing_return(&play, &player.actor_class.eye.position, 5) &&
+              memcmp(&play.camera, &before_camera, sizeof(before_camera)) == 0,
+              "rejected return request preserves all camera state");
+    }
+    player.fishing_rod_actor_p = NULL;
+}
+
 int main(void) {
     test_camera();
+    test_fishing_camera();
     test_dialogue();
     printf("%d presentation checks, %d failures\n", checks, failures);
     return failures != 0;

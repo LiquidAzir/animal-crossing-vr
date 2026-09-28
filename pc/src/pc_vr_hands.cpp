@@ -24,7 +24,8 @@ void main() {
     vec3 p = position * vec3(mirror_hand, 1.0, 1.0);
     vec3 n = normal * vec3(mirror_hand, 1.0, 1.0);
     vec4 clip = gx_projection * eye_from_grip * vec4(p, 1.0);
-    // GX projects near/far to -1/0; desktop GL expects -1/+1.
+    // Remap GX -1/0 to GL -1/+1 for clipping. The half viewport depth
+    // range below keeps the written depths identical to the GX world.
     clip.z = 2.0 * clip.z + clip.w;
     gl_Position = clip;
     eye_normal = mat3(eye_from_grip) * n;
@@ -242,7 +243,8 @@ extern "C" int pc_vr_hands_draw(const float pose[12], const float projection[16]
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_TRUE);
-    glDepthRange(0.0,1.0);
+    glDepthRange(saved.depth_range[0],
+                 (saved.depth_range[0]+saved.depth_range[1])*0.5);
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
     glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
     glUseProgram(program);

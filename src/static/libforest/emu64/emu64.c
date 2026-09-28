@@ -2453,6 +2453,10 @@ void emu64::cullmode() {
     }
 
 #ifdef TARGET_PC
+    if (this->geometry_mode & G_PC_AUTHORED_CULL) {
+        pc_gx_set_authored_cull_mode(cullmode);
+        return;
+    }
     /* World geometry is single-sided (authored for a camera that could
      * never see the back of anything) — in VR that reads as missing walls.
      * pc_gx.c's GXSetCullMode is the authoritative override (it catches
@@ -5942,6 +5946,16 @@ u32 emu64::emu64_taskstart_r(Gfx* dl_p) {
         EMU64_INFO("\n");
         this->gfx_p++;
     }
+
+#ifdef TARGET_PC
+    /* A cancelled or malformed display list may skip its closing command.
+     * Never carry a mesh-local culling exception into the next task. */
+    if (this->geometry_mode & G_PC_AUTHORED_CULL) {
+        this->geometry_mode &= ~G_PC_AUTHORED_CULL;
+        this->dirty_flags[EMU64_DIRTY_FLAG_GEOMETRYMODE] = true;
+        this->cullmode();
+    }
+#endif
 
 #ifdef PC_GX_VERBOSE
     printf("[PC] emu64: loop done, cmds=%d end_dl=%d\n", this->cmds_processed, this->end_dl);

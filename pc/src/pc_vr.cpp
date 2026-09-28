@@ -171,6 +171,7 @@ static struct {
     int have_anchor;
     M34 view_correction[2];     /* X = V_vr * V^-1, per eye */
     float eye_projection[2][4][4]; /* GX z-convention, row-major */
+    float eye_depth_range[2][2]; /* world viewport range, before UI routing */
 
     /* Settings */
     float world_scale;          /* meters per game unit */
@@ -933,6 +934,8 @@ extern "C" void pc_vr_begin_eye(int eye) {
     s_vr.in_scene_pass = 1;
     s_vr.current_eye = eye;
     s_vr.ui_bound = 0;
+    s_vr.eye_depth_range[eye][0] = 0.0f;
+    s_vr.eye_depth_range[eye][1] = 1.0f;
     glBindFramebuffer(GL_FRAMEBUFFER, s_vr.eye[eye].fbo);
     g_pc_target_w = s_vr.eye[eye].w;
     g_pc_target_h = s_vr.eye[eye].h;
@@ -966,6 +969,17 @@ extern "C" const float* pc_vr_eye_projection(void) {
 
 extern "C" const float* pc_vr_view_correction(void) {
     return &s_vr.view_correction[s_vr.current_eye == 1 ? 1 : 0][0][0];
+}
+
+extern "C" void pc_vr_set_scene_depth_range(float near_depth, float far_depth) {
+    if (!s_vr.active || !s_vr.in_scene_pass || s_vr.ui_bound ||
+        s_vr.current_eye < 0 || s_vr.current_eye > 1 ||
+        !isfinite(near_depth) || !isfinite(far_depth)) return;
+    if (s_vr.eye_depth_range[s_vr.current_eye][0] == near_depth &&
+        s_vr.eye_depth_range[s_vr.current_eye][1] == far_depth) return;
+    /* Match glDepthRange's clamping, including emu64's 1022/1023 far value. */
+    s_vr.eye_depth_range[s_vr.current_eye][0] = fmaxf(0.0f, fminf(1.0f, near_depth));
+    s_vr.eye_depth_range[s_vr.current_eye][1] = fmaxf(0.0f, fminf(1.0f, far_depth));
 }
 
 extern "C" unsigned int pc_vr_bind_ui_target(int ui) {
@@ -1061,12 +1075,15 @@ static void pcvr_draw_empty_hands(void) {
     if (!s_vr.empty_hand_valid[0] && !s_vr.empty_hand_valid[1]) return;
 
     GLint draw_fbo, read_fbo, viewport[4];
+    GLdouble depth_range[2];
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
     glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
     glGetIntegerv(GL_VIEWPORT, viewport);
+    glGetDoublev(GL_DEPTH_RANGE, depth_range);
     for (int eye = 0; eye < 2; ++eye) {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_vr.eye[eye].fbo);
         glViewport(0, 0, s_vr.eye[eye].w, s_vr.eye[eye].h);
+        glDepthRange(s_vr.eye_depth_range[eye][0], s_vr.eye_depth_range[eye][1]);
         for (int hand = 0; hand < 2; ++hand) {
             if (!s_vr.empty_hand_valid[hand]) continue;
             M34 eye_from_grip;
@@ -1088,6 +1105,7 @@ static void pcvr_draw_empty_hands(void) {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)draw_fbo);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)read_fbo);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    glDepthRange(depth_range[0], depth_range[1]);
 }
 
 extern "C" void pc_vr_end_scene_passes(void) {

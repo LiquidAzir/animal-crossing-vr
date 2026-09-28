@@ -24,7 +24,17 @@ def main():
         ('pc/src/pc_fp_camera.c', ['pc_fp_set_in_talk', 'pc_fp_in_talk',
          'pc_fp_set_active', 'pc_fp_view_is_active', 'pc_fp_hide_player', 'pc_fp_view']),
         ('pc/src/pc_vr.cpp', ['pc_vr_tool_input_allowed']),
-        ('src/game/m_camera2.c', ['Camera2_SetView']),
+        ('src/game/m_camera2.c', ['Camera2_SetView', 'Camera2_setup_main_Base',
+         'Camera2_check_request_main_priority', 'Camera2_change_priority',
+         'Camera2_request_main_index', 'Camera2_request_main_simple2',
+         'Camera2_request_main_simple', 'Camera2_request_main_simple_fishing',
+         'Camera2_request_main_simple_fishing_return', 'Camera2_setup_main_Simple']),
+        ('src/game/m_player_common.c_inc', [
+         'Player_actor_request_camera2_main_simple_fishing',
+         'Player_actor_request_camera2_main_simple_return']),
+        ('src/game/m_player_other_func.c_inc', [
+         'Player_actor_main_Relax_rod_other_func2', 'Player_actor_main_Vib_rod_other_func2',
+         'Player_actor_main_Collect_rod_other_func2', 'Player_actor_main_Fly_rod_other_func2']),
         ('src/game/m_msg.c', ['mMsg_Draw_Window']),
     ]:
         if args.revision:
@@ -32,6 +42,11 @@ def main():
                                              cwd=ROOT, text=True)
         else:
             source = (ROOT / path).read_text(encoding='utf-8')
+        if path == 'src/game/m_camera2.c':
+            # Include the production mode tag when present; old revisions still
+            # compile and demonstrate the fishing-view dropout through behavior.
+            chunks.extend(line for line in source.splitlines()
+                          if line.startswith('#define CAMERA2_SIMPLE_FISHING '))
         for name in names:
             body = function(source, name)
             if body is None:

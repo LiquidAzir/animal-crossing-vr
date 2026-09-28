@@ -106,7 +106,10 @@ static void GLAD_API_PTR failed_shader_source(GLuint shader,GLsizei,const GLchar
     const char* invalid="#version 330 core\n#error deliberate initialization failure for renderer regression";
     real_shader_source(shader,1,&invalid,NULL);
 }
-static float gx_depth(float eye_z) { return 1.0f+(projection[10]*eye_z+projection[11])/(-eye_z); }
+static float gx_depth(float eye_z, float near_depth, float far_depth) {
+    return near_depth+(far_depth-near_depth)*0.5f*
+        (1.0f+(projection[10]*eye_z+projection[11])/(-eye_z));
+}
 
 int main(int argc,char** argv) {
     (void)argc; (void)argv;
@@ -172,7 +175,8 @@ int main(int argc,char** argv) {
     CHECK(mirror_difference<=4,"left and right thumbs have mirrored silhouettes");
     CHECK(centroid(left)>W*0.5+5 && centroid(right)<W*0.5-5,"thumbs face inward for left and right hands");
     CHECK(alpha_opaque,"mitten fragments are fully opaque");
-    CHECK(min_depth>gx_depth(-0.35f)&&max_depth<gx_depth(-0.5f),"GX projection conversion writes expected world depth");
+    CHECK(min_depth>gx_depth(-0.35f,0.2f,0.8f)&&max_depth<gx_depth(-0.5f,0.2f,0.8f),
+          "hand depths match the GX world using the caller's viewport range");
 
     clear(); pose[3]=0.1f; pc_vr_hands_draw(pose,projection,0); auto moved=pixels();
     CHECK(centroid(moved)>centroid(left)+100,"row-major grip translation moves the mesh"); pose[3]=0;

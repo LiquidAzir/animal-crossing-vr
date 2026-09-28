@@ -1,5 +1,22 @@
 # VR Playtest Checklist
 
+## September 28 follow-up
+
+- [ ] Cast into a river and the sea in first-person VR. The view stays first
+      person when the lure lands, while waiting for a bite, during reeling,
+      after a cancelled cast, and through the catch announcement.
+      Toggle first person off/on while waiting: each view still works.
+- [ ] With no item equipped, look at both hands against the ground, walls,
+      and outdoor scenery. Both follow the controllers in each eye. Move a
+      hand behind a nearby surface: that surface should cover it. Check
+      entering/exiting a shop, equipping a tool, menus, and lost tracking.
+- [ ] Inspect Nook's displayed rugs from the front, back, and oblique angles
+      while moving the head. Their two sides remain visible without the
+      competing checker/stripe pattern. Other shop items and repaired
+      building backs should look as before.
+
+Implementation and local checks: [Fishing, hands, and rug fixes](docs/vr-fishing-hands-20260928.md).
+
 ## September 27 follow-up
 
 - [ ] With both controllers awake, stow every held item: both default-on hands

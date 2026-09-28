@@ -108,6 +108,10 @@ void pc_platform_shutdown(void);
 void pc_platform_swap_buffers(void);
 int  pc_platform_poll_events(void);
 
+/* Preserve authored face culling for explicitly marked dual-surface meshes.
+ * Stateless: ordinary GXSetCullMode calls retain the VR/first-person override. */
+void pc_gx_set_authored_cull_mode(unsigned int mode);
+
 /* EXE image range for seg2k0 pointer disambiguation (vs N64 segment addresses) */
 extern unsigned int pc_image_base;
 extern unsigned int pc_image_end;
