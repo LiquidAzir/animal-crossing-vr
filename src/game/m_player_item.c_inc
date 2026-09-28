@@ -62,6 +62,35 @@ static int Player_actor_Item_main(ACTOR* actor, GAME* game) {
 
 typedef void (*mPlayer_item_draw_proc)(ACTOR* actor, GAME*);
 
+#ifdef TARGET_PC
+static int Player_actor_empty_hands_free_state(int main_index) {
+    switch (main_index) {
+        case mPlayer_INDEX_WAIT:
+        case mPlayer_INDEX_WALK:
+        case mPlayer_INDEX_RUN:
+        case mPlayer_INDEX_DASH:
+        case mPlayer_INDEX_TURN_DASH:
+        case mPlayer_INDEX_WADE:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+/* NONE is also used while washing a car or displaying a picked-up object.
+ * Restrict floating hands to ordinary movement, including a pending action,
+ * without changing any player/item state or the game's existing draw path. */
+static int Player_actor_empty_hands_available(const PLAYER_ACTOR* player, const GAME_PLAY* play) {
+    return player->now_item_main_index == mPlayer_ITEM_MAIN_NONE &&
+        player->item_kind == mPlayer_ITEM_KIND_NONE &&
+        Player_actor_empty_hands_free_state(player->now_main_index) &&
+        (!player->requested_main_index_changed ||
+         Player_actor_empty_hands_free_state(player->requested_main_index)) &&
+        play->submenu.current_menu_type == mSM_OVL_NONE &&
+        play->submenu.menu_type == mSM_OVL_NONE && !mEv_IsTitleDemo();
+}
+#endif
+
 static void Player_actor_Item_draw(ACTOR* actor, GAME* game) {
     static const mPlayer_item_draw_proc proc[] = {
         NULL,
@@ -95,6 +124,7 @@ static void Player_actor_Item_draw(ACTOR* actor, GAME* game) {
 #ifdef TARGET_PC
     /* VR motion tools read the live item state (swing gesture gate) */
     g_pc_item_main_index_now = now_index;
+    pc_vr_set_empty_hands_available(Player_actor_empty_hands_available(player, (GAME_PLAY*)game));
 #endif
 
     if (mPlayer_ITEM_MAIN_VALID(now_index)) {
@@ -148,14 +178,6 @@ static void Player_actor_Item_draw(ACTOR* actor, GAME* game) {
                         pc_hand_mf.wx = 0.0f; pc_hand_mf.wy = 0.0f;
                         pc_hand_mf.wz = 0.0f; pc_hand_mf.ww = 1.0f;
                         Matrix_put(&pc_hand_mf);
-                        /* The net mesh/catch axis is authored 3000 binary
-                         * angle units left of the hand (+16.5 degrees).
-                         * Cancel that grip bias for every net state; both
-                         * the mesh and its catch points inherit this trim. */
-                        if (now_index >= mPlayer_ITEM_MAIN_NET_NORMAL &&
-                            now_index <= mPlayer_ITEM_MAIN_NET_COMPLETE_COLLECTION) {
-                            Matrix_RotateY(-3000, MTX_MULT);
-                        }
                     } else {
                         Matrix_put(&player->right_hand_mtx);
                     }

@@ -1,0 +1,55 @@
+/* Nook's Cranny (shop1): the original mesh has the +X entrance and -Z window
+ * wall, but no -X wall or +Z gable. Close those exact boundaries instead of
+ * reflecting the facade. The two seasonal meshes share their vertex layout.
+ * Roof underside strips meet the authored eaves and inset wall tops; the
+ * entrance, door, window, sign and roof/snow display lists remain untouched. */
+extern Vtx obj_s_shop1_v[], obj_w_shop1_v[];
+extern u8 obj_s_shop1_front_txt[], obj_w_shop1_front_txt[];
+
+#define PC_SHOP_V(i, dz, u, v) { (i), { 0, 0, (dz) }, { (u), (v) } }
+#define PC_SHOP_AT(i, u, v) PC_SHOP_V(i, 0, u, v)
+#define PC_SHOP_REAR(i, u, v) PC_SHOP_V(i, 10606, u, v)
+#define PC_SHOP_QUAD {0, 1, 2, 0, 2, 3}
+#define PC_SHOP_PAIR {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7}
+
+/* Original wall U runs vertically, V horizontally. Repeat this opaque timber
+ * crop at approximately the original texel density (64 texels per wall),
+ * excluding all entrance/sign lettering and the transparent window cutouts.
+ * The narrow dark trim crop supplies the underside, including in winter. */
+#define PC_SHOP1_PATCHES(s) \
+    { obj_##s##_shop1_front_txt, 128, {25, 1, 55, 18}, 4, 2, \
+      { PC_SHOP_AT(33, 0, 0), PC_SHOP_REAR(33, 0, 117), \
+        PC_SHOP_REAR(31, 66, 117), PC_SHOP_AT(31, 66, 0) }, PC_SHOP_QUAD }, \
+    { obj_##s##_shop1_front_txt, 128, {25, 1, 55, 18}, 5, 3, \
+      { PC_SHOP_REAR(33, 0, 0), PC_SHOP_AT(37, 0, 117), PC_SHOP_AT(34, 66, 117), \
+        PC_SHOP_REAR(29, 98, 59), PC_SHOP_REAR(31, 66, 0) }, {0, 1, 2, 0, 2, 3, 0, 3, 4} }, \
+    { obj_##s##_shop1_front_txt, 128, {60, 1, 63, 30}, 4, 2, \
+      { PC_SHOP_AT(31, 0, 0), PC_SHOP_REAR(31, 0, 62), \
+        PC_SHOP_AT(23, 31, 62), PC_SHOP_AT(24, 31, 0) }, PC_SHOP_QUAD }, \
+    { obj_##s##_shop1_front_txt, 128, {60, 1, 63, 30}, 4, 2, \
+      { PC_SHOP_AT(36, 0, 0), PC_SHOP_AT(15, 31, 0), \
+        PC_SHOP_AT(13, 31, 62), PC_SHOP_AT(34, 0, 62) }, PC_SHOP_QUAD }, \
+    { obj_##s##_shop1_front_txt, 128, {60, 1, 63, 30}, 8, 4, \
+      { PC_SHOP_AT(24, 31, 0), PC_SHOP_AT(14, 31, 31), \
+        PC_SHOP_AT(29, 0, 31), PC_SHOP_AT(31, 0, 0), \
+        PC_SHOP_AT(14, 31, 31), PC_SHOP_AT(15, 31, 62), \
+        PC_SHOP_AT(36, 0, 62), PC_SHOP_AT(29, 0, 31) }, PC_SHOP_PAIR }, \
+    { obj_##s##_shop1_front_txt, 128, {60, 1, 63, 30}, 8, 4, \
+      { PC_SHOP_AT(23, 31, 0), PC_SHOP_REAR(31, 0, 0), \
+        PC_SHOP_REAR(29, 0, 31), PC_SHOP_AT(12, 31, 31), \
+        PC_SHOP_AT(12, 31, 31), PC_SHOP_REAR(29, 0, 31), \
+        PC_SHOP_AT(34, 0, 62), PC_SHOP_AT(13, 31, 62) }, PC_SHOP_PAIR }
+
+static const pc_structure_back_patch pc_shop1_s_patches[] = { PC_SHOP1_PATCHES(s) };
+static const pc_structure_back_patch pc_shop1_w_patches[] = { PC_SHOP1_PATCHES(w) };
+static const pc_structure_back_spec pc_shop_back_specs[] = {
+    { obj_s_shop1_v, ARRAY_COUNT(pc_shop1_s_patches), pc_shop1_s_patches, NULL },
+    { obj_w_shop1_v, ARRAY_COUNT(pc_shop1_w_patches), pc_shop1_w_patches, NULL },
+};
+
+#undef PC_SHOP1_PATCHES
+#undef PC_SHOP_PAIR
+#undef PC_SHOP_QUAD
+#undef PC_SHOP_REAR
+#undef PC_SHOP_AT
+#undef PC_SHOP_V

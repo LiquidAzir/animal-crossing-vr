@@ -314,6 +314,14 @@ extern Gfx grd_s_c4_s_2_model[] = {
         0, 0, 0, // tri2
         0, 0, 0 // tri3
     ),
+#ifdef TARGET_PC
+    /* Fill the ramp-side triangle omitted by the original overhead view.
+     * Its three existing cliff vertices preserve the exact seam and UVs. */
+    gsSPVertex(&grd_s_c4_s_2_v[198], 1, 0),
+    gsSPVertex(&grd_s_c4_s_2_v[200], 1, 1),
+    gsSPVertex(&grd_s_c4_s_2_v[182], 1, 2),
+    gsSP1Triangle(0, 1, 2, 0),
+#endif
     gsDPLoadTLUT_Dolphin(15, 16, 1, bush_pal_dummy),
     gsDPLoadTextureBlock_4b_Dolphin(bush_b_tex_dummy, G_IM_FMT_CI, 64, 32, 15, GX_REPEAT, GX_CLAMP, 0, 0),
     gsSPVertex(&grd_s_c4_s_2_v[213], 21, 0),

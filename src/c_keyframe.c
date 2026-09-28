@@ -768,7 +768,9 @@ extern int cKF_SkeletonInfo_R_play(cKF_SkeletonInfo_R_c* keyframe) {
 #endif
 
 #ifdef TARGET_PC
-/* --- VR/FP "solid buildings" shell pass ---
+/* --- VR/FP building completion ---
+ * Villager houses and player homes use original-edge rear caps below.
+ * The legacy measured shell remains a fallback for other structures:
  * Every town camera in the stock game looks from a fixed direction, so the
  * far side of buildings was never authored — with a free camera you see
  * straight through them. We reflect a structure's depth about its measured
@@ -788,6 +790,14 @@ extern int cKF_SkeletonInfo_R_play(cKF_SkeletonInfo_R_c* keyframe) {
  * skip the shell (and say so once in the log). */
 #include "libforest/gbi_extensions.h"
 #include "pc_platform.h"
+#include "pc_model_viewer.h"
+#include "pc_house_back.c_inc"
+#include "pc_structure_back.c_inc"
+#include "pc_civic_back.c_inc"
+#include "pc_shop_back.c_inc"
+
+static Gfx* g_ckf_house_back;
+static cKF_SkeletonInfo_R_c* g_ckf_house_back_owner;
 
 int   g_ckf_shell_pass  = 0;
 float g_ckf_shell_scale = 0.97f;
@@ -803,7 +813,8 @@ extern int g_pc_solid_shell_pct;
 extern int g_pc_verbose;
 
 int cKF_shell_wanted(void) {
-    return g_pc_solid_buildings && (pc_vr_active() || pc_fp_view_is_active());
+    return g_pc_solid_buildings && (pc_vr_active() || pc_fp_view_is_active() ||
+                                  (g_pc_model_viewer && g_pc_model_viewer_solid));
 }
 
 /* --- skeleton AABB measurement --- */
@@ -1285,15 +1296,22 @@ extern void cKF_Si3_draw_SV_R_child(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
         }
 #endif
         if (mjoint_m != NULL) {
+            Gfx* draw_m = mjoint_m;
+#ifdef TARGET_PC
+            if (g_ckf_house_back != NULL && g_ckf_house_back_owner == keyframe) {
+                draw_m = pc_tailor_light_for_back(draw_m);
+                draw_m = pc_post_office_light_for_back(draw_m);
+            }
+#endif
             _Matrix_to_Mtx(*mtxpp);
             if (joint_f & cKF_JOINT_FLAG_DISP_XLU) {
                 // Joint translated & drawn in XLU display list
                 gSPMatrix(NOW_POLY_XLU_DISP++, *mtxpp, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
-                gSPDisplayList(NOW_POLY_XLU_DISP++, mjoint_m);
+                gSPDisplayList(NOW_POLY_XLU_DISP++, draw_m);
             } else {
                 // Joint translated & drawin OPA display list
                 gSPMatrix(NOW_POLY_OPA_DISP++, *mtxpp, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
-                gSPDisplayList(NOW_POLY_OPA_DISP++, mjoint_m);
+                gSPDisplayList(NOW_POLY_OPA_DISP++, draw_m);
             }
             mtxpp[0]++;
         } else if (joint_m != NULL) {
@@ -1320,6 +1338,22 @@ extern void cKF_Si3_draw_SV_R_child(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
         cKF_Si3_draw_SV_R_child(game, keyframe, joint_num, prerender_callback, postrender_callback, arg, mtxpp);
     }
 
+#ifdef TARGET_PC
+    /* Residence, tailor, post-office and Cranny meshes share joint 1's frame. Draw their missing rear
+     * faces after the original descendants, with a dedicated live matrix.
+     * This respects root animation/orientation without duplicating callbacks,
+     * doors, roof decorations, fences or the original building surfaces. */
+    if (g_ckf_house_back != NULL && g_ckf_house_back_owner == keyframe &&
+        skel_c_joint == keyframe->skeleton->joint_table + 1) {
+        Mtx* rear_mtx = _Matrix_to_Mtx_new(graph);
+        if (rear_mtx != NULL) {
+            OPEN_POLY_OPA_DISP(graph);
+            gSPMatrix(POLY_OPA_DISP++, rear_mtx, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+            gSPDisplayList(POLY_OPA_DISP++, g_ckf_house_back);
+            CLOSE_POLY_OPA_DISP(graph);
+        }
+    }
+#endif
     // Remove the effect of this joint's translation & rotatation
     Matrix_pull();
 }
@@ -1347,7 +1381,7 @@ extern void cKF_Si3_draw_R_SV(GAME* game, cKF_SkeletonInfo_R_c* keyframe, Mtx* m
 }
 
 #ifdef TARGET_PC
-/* Structure draw with the VR solid-shell pass (see cKF_shell_wanted above).
+/* Structure draw with fitted rear caps or the legacy shell fallback.
  * Opt-in: only the building draw procs call this — the base function has
  * ~175 callers (every villager, fish and insect) that must not double. */
 extern void cKF_Si3_draw_R_SV_solid(GAME* game, cKF_SkeletonInfo_R_c* keyframe, Mtx* mtxp,
@@ -1355,6 +1389,22 @@ extern void cKF_Si3_draw_R_SV_solid(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
                                     cKF_draw_callback postrender_callback, void* arg,
                                     cKF_pipeline_reset_proc pipeline_reset) {
     if (mtxp != NULL && keyframe != NULL && keyframe->skeleton != NULL && cKF_shell_wanted()) {
+        Gfx* rear;
+        if (pc_house_back_lookup(keyframe->skeleton, &rear) ||
+            pc_tailor_back_lookup(keyframe->skeleton, &rear) ||
+            pc_post_office_back_lookup(keyframe->skeleton, &rear) ||
+            pc_shop_back_lookup(keyframe->skeleton, &rear)) {
+            Gfx* previous_rear = g_ckf_house_back;
+            cKF_SkeletonInfo_R_c* previous_owner = g_ckf_house_back_owner;
+            /* These buildings use original-edge caps, including while deferred:
+             * never replay a reflected facade if their assets aren't ready. */
+            g_ckf_house_back = rear;
+            g_ckf_house_back_owner = keyframe;
+            cKF_Si3_draw_R_SV(game, keyframe, mtxp, prerender_callback, postrender_callback, arg);
+            g_ckf_house_back = previous_rear;
+            g_ckf_house_back_owner = previous_owner;
+            return;
+        }
         /* Measure (or look up) the building's true centre BEFORE any
          * allocation or state change: a skeleton whose display lists can't
          * be parsed skips the shell entirely with zero side effects. */

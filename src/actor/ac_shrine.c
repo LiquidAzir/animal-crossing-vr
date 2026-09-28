@@ -5,6 +5,10 @@
 #include "sys_matrix.h"
 #include "m_player_lib.h"
 
+#ifdef TARGET_PC
+#include "pc_shrine_back.c_inc"
+#endif
+
 static void aSHR_actor_ct(ACTOR* actorx, GAME* game);
 static void aSHR_actor_dt(ACTOR* actorx, GAME* game);
 static void aSHR_actor_init(ACTOR* actorx, GAME* game);

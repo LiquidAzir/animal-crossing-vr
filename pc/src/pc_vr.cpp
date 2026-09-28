@@ -28,6 +28,7 @@
 #include "pc_vr.h"
 #include "pc_fp_camera.h"
 #include "pc_vr_swing.h"
+#include "pc_vr_hands.h"
 #include "pc_sky.h"
 
 #include "openvr_capi.h"
@@ -189,6 +190,7 @@ static struct {
     VRActionHandle_t act_a, act_b, act_x, act_y, act_l, act_r, act_z, act_start;
     VRActionHandle_t act_recenter;
     VRActionHandle_t act_hand_r;
+    VRActionHandle_t act_empty_hand[2]; /* independent grip poses; tools keep tip pose */
     VRActionHandle_t act_haptic_l, act_haptic_r;
     int input_ready;
     int recenter_latch;
@@ -203,6 +205,14 @@ static struct {
     int hand_missing_logged;    /* one-shot diagnostic for unbound pose */
     Uint32 active_since_ticks;  /* when the session went active */
     u32 flat_scene_stamp;       /* pc_frame_counter when flat-scene last stamped */
+
+    M34 empty_hand_pose[2];     /* grip -> seated tracking, meters */
+    int empty_hand_valid[2];    /* independent, current-frame tracking only */
+    int empty_hand_seen[2];     /* whether each optional action has ever bound */
+    int empty_hands_missing_logged;
+    int empty_hands_available;  /* player draw confirmed no held item/action */
+    u32 empty_hands_stamp;
+    int empty_hands_render_failed;
 
     /* Frame-timing telemetry (vr_log.txt every ~30s) */
     uint32_t t_last_frame_index;
@@ -433,6 +443,8 @@ static void pcvr_input_init(void) {
     s_vr.input->GetActionHandle((char*)"/actions/main/in/start",    &s_vr.act_start);
     s_vr.input->GetActionHandle((char*)"/actions/main/in/recenter", &s_vr.act_recenter);
     s_vr.input->GetActionHandle((char*)"/actions/main/in/hand_right", &s_vr.act_hand_r);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/empty_hand_left", &s_vr.act_empty_hand[0]);
+    s_vr.input->GetActionHandle((char*)"/actions/main/in/empty_hand_right", &s_vr.act_empty_hand[1]);
     s_vr.input->GetActionHandle((char*)"/actions/main/out/haptic_left",  &s_vr.act_haptic_l);
     s_vr.input->GetActionHandle((char*)"/actions/main/out/haptic_right", &s_vr.act_haptic_r);
     s_vr.input_ready = 1;
@@ -679,6 +691,7 @@ extern "C" void pc_vr_init(void) {
 
 extern "C" void pc_vr_shutdown(void) {
     if (s_vr.runtime_up) {
+        pc_vr_hands_shutdown();
         pcvr_destroy_target(&s_vr.eye[0]);
         pcvr_destroy_target(&s_vr.eye[1]);
         pcvr_destroy_target(&s_vr.ui);
@@ -718,6 +731,36 @@ extern "C" int pc_vr_active(void) {
 /* ---------------------------------------------------------------- */
 /* Frame flow */
 
+/* These optional poses never feed buttons, gestures, or the held-tool matrix.
+ * Invalid/unbound/disconnected hands disappear independently, with no fallback
+ * to last frame's pose. In particular, an input update failure must not reuse
+ * an otherwise-valid pose from the previous action snapshot. */
+static void pcvr_poll_empty_hands(int actions_updated) {
+    for (int hand = 0; hand < 2; ++hand) {
+        s_vr.empty_hand_valid[hand] = 0;
+        if (!g_pc_settings.vr_empty_hands || !s_vr.head_pose_valid ||
+            !actions_updated || !s_vr.input_ready ||
+            s_vr.act_empty_hand[hand] == k_ulInvalidActionHandle)
+            continue;
+
+        InputPoseActionData_t pd = {};
+        if (s_vr.input->GetPoseActionDataForNextFrame(
+                s_vr.act_empty_hand[hand], ETrackingUniverseOrigin_TrackingUniverseSeated,
+                &pd, sizeof(pd), k_ulInvalidInputValueHandle) != EVRInputError_VRInputError_None ||
+            !pd.bActive || !pd.pose.bDeviceIsConnected || !pd.pose.bPoseIsValid)
+            continue;
+
+        int finite = 1;
+        for (int row = 0; row < 3; ++row)
+            for (int col = 0; col < 4; ++col)
+                if (!isfinite(pd.pose.mDeviceToAbsoluteTracking.m[row][col])) finite = 0;
+        if (!finite) continue;
+        m34_from_hmd(&pd.pose.mDeviceToAbsoluteTracking, s_vr.empty_hand_pose[hand]);
+        s_vr.empty_hand_valid[hand] = 1;
+        s_vr.empty_hand_seen[hand] = 1;
+    }
+}
+
 extern "C" void pc_vr_frame_begin(void) {
     if (!s_vr.active) return;
 
@@ -743,11 +786,13 @@ extern "C" void pc_vr_frame_begin(void) {
     if (!s_vr.active) return;
 
     /* Input */
+    int actions_updated = 0;
     if (s_vr.input_ready) {
         VRActiveActionSet_t as;
         memset(&as, 0, sizeof(as));
         as.ulActionSet = s_vr.action_set;
-        s_vr.input->UpdateActionState(&as, sizeof(as), 1);
+        actions_updated = s_vr.input->UpdateActionState(&as, sizeof(as), 1) ==
+            EVRInputError_VRInputError_None;
 
         /* X+Y chord (or a user-bound recenter action): recenter seated origin */
         int chord = pcvr_digital(s_vr.act_x) && pcvr_digital(s_vr.act_y);
@@ -821,6 +866,9 @@ extern "C" void pc_vr_frame_begin(void) {
         s_vr.hand_valid && pc_vr_tool_input_allowed() &&
         g_pc_settings.vr_motion_swing && pc_fp_swingable_equipped() &&
         !pcvr_digital(s_vr.act_l));
+
+    pcvr_poll_empty_hands(actions_updated && s_vr.head_pose_valid &&
+                         poses[k_unTrackedDeviceIndex_Hmd].bDeviceIsConnected);
 
     /* One-shot setup diagnostic: motion tools enabled but the pose action
      * never bound (stale vr_actions folder or a custom binding without the
@@ -971,6 +1019,16 @@ extern "C" float pc_vr_head_yaw_offset_bang(void) {
  * never leave it latched (m_play stamps it every play frame). */
 extern u32 pc_frame_counter;
 
+extern "C" void pc_vr_set_empty_hands_available(int available) {
+    s_vr.empty_hands_available = available != 0;
+    s_vr.empty_hands_stamp = pc_frame_counter;
+}
+
+static int pcvr_empty_hands_visible(void) {
+    return g_pc_settings.vr_empty_hands && pc_vr_tool_input_allowed() &&
+        s_vr.empty_hands_available && s_vr.empty_hands_stamp == pc_frame_counter;
+}
+
 extern "C" void pc_vr_set_flat_scene(int on) {
     s_vr.flat_scene_stamp = on ? pc_frame_counter : (u32)(pc_frame_counter - 1000u);
 }
@@ -987,9 +1045,55 @@ extern "C" int pc_vr_flat_scene_active(void) {
     return s_vr.active && s_last;
 }
 
+/* After both world passes, before the UI panel. The hands use the same eye
+ * projection/depth buffers as the world; their grip poses are already in
+ * seated meters, so neither world scale nor the tool alignment applies. */
+static void pcvr_draw_empty_hands(void) {
+    if (!pcvr_empty_hands_visible() || s_vr.empty_hands_render_failed) return;
+    if (!s_vr.empty_hands_missing_logged &&
+        (!s_vr.empty_hand_seen[0] || !s_vr.empty_hand_seen[1]) &&
+        SDL_GetTicks() - s_vr.active_since_ticks > 10000) {
+        s_vr.empty_hands_missing_logged = 1;
+        pcvr_log("empty hands enabled but an optional controller pose has not arrived. "
+                 "If controllers are awake: update vr_actions or bind Left/Right Empty Hand "
+                 "to /pose/handgrip in SteamVR. Existing tool tracking is independent.");
+    }
+    if (!s_vr.empty_hand_valid[0] && !s_vr.empty_hand_valid[1]) return;
+
+    GLint draw_fbo, read_fbo, viewport[4];
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    for (int eye = 0; eye < 2; ++eye) {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_vr.eye[eye].fbo);
+        glViewport(0, 0, s_vr.eye[eye].w, s_vr.eye[eye].h);
+        for (int hand = 0; hand < 2; ++hand) {
+            if (!s_vr.empty_hand_valid[hand]) continue;
+            M34 eye_from_grip;
+            m34_mul(s_vr.inv_eye_pose[eye], s_vr.empty_hand_pose[hand], eye_from_grip);
+            /* A malformed tracking frame is temporary, not a shader failure. */
+            int finite = 1;
+            for (int row = 0; row < 3; ++row)
+                for (int col = 0; col < 4; ++col)
+                    if (!isfinite(eye_from_grip[row][col])) finite = 0;
+            if (!finite) continue;
+            if (!pc_vr_hands_draw(&eye_from_grip[0][0], &s_vr.eye_projection[eye][0][0], hand)) {
+                s_vr.empty_hands_render_failed = 1;
+                pcvr_log("optional empty-hand renderer unavailable; continuing without hands");
+                break;
+            }
+        }
+        if (s_vr.empty_hands_render_failed) break;
+    }
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)draw_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)read_fbo);
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+}
+
 extern "C" void pc_vr_end_scene_passes(void) {
     if (!s_vr.active) return;
     pc_gx_draw_pending();
+    pcvr_draw_empty_hands();
     s_vr.in_scene_pass = 0;
     s_vr.current_eye = -1;
     s_vr.ui_bound = 0;
@@ -1219,6 +1323,31 @@ extern "C" int pc_vr_hand_tool_mtx(float out[12]) {
     if (!pc_fp_view_is_active())
         return 0;
     memcpy(out, s_vr.hand_world, sizeof(float) * 12);
+    return 1;
+}
+
+extern "C" int pc_vr_item_presentation_mtx(float out[12]) {
+    extern int g_pc_paused;
+    if (!out || !s_vr.active || !s_vr.head_pose_valid || !s_vr.have_anchor ||
+        !pc_fp_view_is_active() || pc_vr_flat_scene_active() || g_pc_paused ||
+        !isfinite(s_vr.world_scale) || s_vr.world_scale <= 0.0001f)
+        return 0;
+
+    /* CPU actor drawing uses the most recent tracking sample, like tools.
+     * W^-1 * H places the head in game world; its basis contains 1/scale.
+     * Offset in physical meters, then normalize only the orientation so the
+     * caller retains the original item size and animation. */
+    M34 head_world, result;
+    m34_mul(s_vr.world_from_seated, s_vr.head_pose, head_world);
+    for (int row = 0; row < 3; ++row) {
+        result[row][3] = head_world[row][3] - 0.14f * head_world[row][1]
+                                             - 0.90f * head_world[row][2];
+        for (int col = 0; col < 3; ++col)
+            result[row][col] = head_world[row][col] * s_vr.world_scale;
+        for (int col = 0; col < 4; ++col)
+            if (!isfinite(result[row][col])) return 0;
+    }
+    memcpy(out, result, sizeof(result));
     return 1;
 }
 

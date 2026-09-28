@@ -235,9 +235,8 @@ static void Camera2_SetView(GAME_PLAY* play) {
     }
 
 #ifdef TARGET_PC
-    /* First person replaces the follow cameras and plain conversations;
-     * scripted cameras (demos, doors, item, events, staff roll...) keep
-     * control and FP resumes afterwards. */
+    /* Keep first person through movement, conversations, doors, and item
+     * presentations. Other scripted cameras retain their stock view. */
     {
         static int pc_fp_last_index = -1;
         PLAYER_ACTOR* fp_player = get_player_actor_withoutCheck(play);
@@ -253,10 +252,14 @@ static void Camera2_SetView(GAME_PLAY* play) {
                      (camera->now_main_index == CAMERA2_PROCESS_NORMAL ||
                       camera->now_main_index == CAMERA2_PROCESS_WADE ||
                       camera->now_main_index == CAMERA2_PROCESS_TALK ||
+                      camera->now_main_index == CAMERA2_PROCESS_ITEM ||
                       camera->now_main_index == CAMERA2_PROCESS_DOOR);
 
+        /* Catch/discovery messages also use A. Keeping ITEM first person
+         * must not let a motion-tool gesture dismiss its presentation. */
         pc_fp_set_in_talk(camera->now_main_index == CAMERA2_PROCESS_TALK ||
-                          camera->now_main_index == CAMERA2_PROCESS_CUST_TALK);
+                          camera->now_main_index == CAMERA2_PROCESS_CUST_TALK ||
+                          camera->now_main_index == CAMERA2_PROCESS_ITEM);
 
         if (fp_now) {
             float fp_pos[3];

@@ -32,12 +32,13 @@ typedef struct {
     int fp_snap_degrees;  /* VR turning: 0 = smooth (default); >0 = snap angle in degrees */
     int vr_fp_world_scale;/* mm per game unit in first person (default 25 = life-size-ish) */
     int vr_solid_buildings; /* fill in the un-authored far side of buildings (default 1) */
-    int vr_solid_shell;     /* shell size as a percent of the building, 50..100 (default 97) */
+    int vr_solid_shell;     /* legacy shell size, 50..100 (default 97); fitted structure patches ignore it */
     int vr_draw_radius;   /* VR terrain: 0 = draw the whole town (default), N = acres around the player */
     int vr_town_residency;/* VR: keep the whole town's structures/villagers spawned (default 1) */
     int vr_motion_swing;  /* VR FP: swinging the right controller triggers the tool (default 1) */
     int vr_tool_on_hand;  /* VR FP: render the held tool at the real controller pose (default 1) */
     int vr_tool_pitch;    /* tool-on-hand pitch adjustment, degrees (default 0) */
+    int vr_empty_hands;   /* VR FP: floating hands at empty controllers, live toggle (default 1) */
 } PCSettings;
 
 extern PCSettings g_pc_settings;

@@ -2867,6 +2867,14 @@ static int bg_item_common_culling_check(GAME_PLAY* play, ACTOR* actorx, xyz_t* p
     xyz_t camera_pos;
     f32 camera_w;
 
+#ifdef TARGET_PC
+    /* Full-world culling already accepts every scenery item. Avoid projecting
+     * a position whose result is unused; dialogue masking remains below. */
+    if (g_pc_full_world) {
+        return TRUE;
+    }
+#endif
+
     Skin_Matrix_PrjMulVector(&play->projection_matrix, pos, &camera_pos, &camera_w);
     return Actor_draw_actor_no_culling_check2(actorx, &camera_pos, camera_w);
 }

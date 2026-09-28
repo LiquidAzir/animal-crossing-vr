@@ -289,6 +289,20 @@ extern Gfx grd_s_c4_s_1_model[] = {
         0, 0, 0, // tri2
         0, 0, 0 // tri3
     ),
+#ifdef TARGET_PC
+    /* The fixed overhead camera hid these two triangular ramp-side holes.
+     * Close their original boundary edges with the adjoining cliff material;
+     * reuse its vertices so positions, UVs, lighting and seasonal textures
+     * meet exactly. No extra shell or changed collision surface is needed. */
+    gsSPVertex(&grd_s_c4_s_1_v[146], 1, 0),
+    gsSPVertex(&grd_s_c4_s_1_v[144], 1, 1),
+    gsSPVertex(&grd_s_c4_s_1_v[178], 1, 2),
+    gsSP1Triangle(0, 1, 2, 0),
+    gsSPVertex(&grd_s_c4_s_1_v[140], 1, 0),
+    gsSPVertex(&grd_s_c4_s_1_v[158], 1, 1),
+    gsSPVertex(&grd_s_c4_s_1_v[139], 1, 2),
+    gsSP1Triangle(0, 1, 2, 0),
+#endif
     gsDPLoadTLUT_Dolphin(15, 16, 1, bush_pal_dummy),
     gsDPLoadTextureBlock_4b_Dolphin(bush_b_tex_dummy, G_IM_FMT_CI, 64, 32, 15, GX_REPEAT, GX_CLAMP, 0, 0),
     gsSPVertex(&grd_s_c4_s_1_v[179], 17, 0),

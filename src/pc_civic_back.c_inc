@@ -1,0 +1,57 @@
+/* Civic-building repairs share the fitted-surface builder above. Museum draws
+ * plain display lists; the post office uses joint 1 of its original skeleton. */
+#include "pc_museum_back_data.c_inc"
+#include "pc_post_office_back_data.c_inc"
+
+extern cKF_Skeleton_R_c cKF_bs_r_obj_s_yubinkyoku, cKF_bs_r_obj_w_yubinkyoku;
+extern Gfx obj_s_yubinkyoku_light_model[], obj_w_yubinkyoku_light_model[];
+
+static pc_structure_back_cache pc_museum_back_caches[2];
+static pc_structure_back_cache pc_post_office_back_caches[2];
+
+Gfx* pc_museum_back(int winter) {
+    unsigned season = winter ? 1 : 0;
+    return pc_structure_back_build_spec(&pc_museum_back_specs[season],
+                                        &pc_museum_back_caches[season]);
+}
+
+/* Recognized but not loaded must not fall back to mirroring the whole model. */
+static int pc_post_office_back_lookup(cKF_Skeleton_R_c* skeleton, Gfx** out) {
+    if (skeleton == &cKF_bs_r_obj_s_yubinkyoku || skeleton == &cKF_bs_r_obj_w_yubinkyoku) {
+        unsigned season = skeleton == &cKF_bs_r_obj_w_yubinkyoku;
+        *out = pc_structure_back_build_spec(&pc_post_office_back_specs[season],
+                                            &pc_post_office_back_caches[season]);
+        return 1;
+    }
+    *out = NULL;
+    return 0;
+}
+
+/* One original light corner crosses the absent +Z wall. At y=6300 the new
+ * sloping wall is z=7832; clip that corner to z=7768, 64 units inside. Preserve
+ * the original light plane, all other vertices, UVs, and actor-controlled tint.
+ * The child renderer substitutes this only for an active matching repair. */
+static Gfx* pc_post_office_light_for_back(Gfx* original) {
+    static Gfx* const models[] = { obj_s_yubinkyoku_light_model, obj_w_yubinkyoku_light_model };
+    static Vtx vertices[2][12];
+    static Gfx lists[2][8];
+    static u8 ready[2];
+    int season, i;
+    for (season = 0; season < 2; ++season) {
+        if (original != models[season]) continue;
+        if (!ready[season]) {
+            Vtx* source = season ? obj_w_yubinkyoku_v + 40 : obj_s_yubinkyoku_v + 37;
+            if (source[1].v.ob[1] != 6300 || source[1].v.ob[2] != 8869 ||
+                (original[4].words.w0 >> 24) != G_VTX ||
+                ((original[4].words.w0 >> 12) & 255) != 12 ||
+                (original[7].words.w0 >> 24) != G_ENDDL) return original;
+            for (i = 0; i < 12; ++i) vertices[season][i] = source[i];
+            vertices[season][1].v.ob[2] = 7768;
+            for (i = 0; i < 8; ++i) lists[season][i] = original[i];
+            gSPVertex(lists[season] + 4, vertices[season], 12, 0);
+            ready[season] = 1;
+        }
+        return lists[season];
+    }
+    return original;
+}

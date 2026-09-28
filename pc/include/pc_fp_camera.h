@@ -1,9 +1,10 @@
 /* pc_fp_camera.h - first-person camera mode (flat + VR).
  *
- * When enabled, the play scene's NORMAL/WADE/TALK cameras are replaced with
+ * When enabled, the play scene's NORMAL/WADE/TALK/DOOR/ITEM cameras use
  * a view from the player character's eyes — regular villager conversations
  * stay first person (the view snaps to face the partner as the chat
- * starts). Scripted cameras (doors, demos, events, item, staff roll) keep
+ * starts). Catches and discoveries keep the existing gaze. Other scripted
+ * cameras (demos, events, previews, staff roll) keep
  * control and first person resumes afterwards — the game camera continues
  * to run underneath, so toggling is seamless.
  *
@@ -79,8 +80,8 @@ int pc_fp_hide_player(void);
 extern int g_pc_item_main_index_now;
 int pc_fp_swingable_equipped(void);
 
-/* TALK-camera state (set by the m_camera2 hook): gates the swing gesture
- * so a controller swing can't advance dialogue. */
+/* Dialogue/item-presentation camera state (set by the m_camera2 hook):
+ * gates the swing gesture so a controller swing can't advance dialogue. */
 void pc_fp_set_in_talk(int in_talk);
 int  pc_fp_in_talk(void);
 

@@ -78,6 +78,12 @@ void main() {
         float latitude = asin(h);
         for (int row=0; row<3; ++row) {
             float r = float(row);
+            // Cloud row bounds: no candidate can pass abs(p.y)<1.2 outside
+            // this latitude range; the extra margin protects rounding edges.
+            float low = 0.055+r*0.22;
+            float high = low+0.045+r*0.11;
+            float extent = 1.2*(0.025+r*0.065)+0.00001;
+            if (latitude<low-extent || latitude>high+extent) continue;
             float count = 18.0-r*5.0;
             // One full revolution per game day joins continuously at midnight.
             float x = (azimuth+environment.x/86400.0)*count + r*2.71;

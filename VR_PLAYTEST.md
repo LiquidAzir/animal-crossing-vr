@@ -1,5 +1,18 @@
 # VR Playtest Checklist
 
+## September 27 follow-up
+
+- [ ] With both controllers awake, stow every held item: both default-on hands
+      appear and follow the grips. Equip a tool again: both hands disappear.
+- [ ] Catch a bug, catch a fish, and dig up a fossil while facing different
+      directions. During each announcement, the item appears ahead and slightly
+      below gaze. Turn/tilt the head: it remains visible. Check tiny-catch arrows,
+      putting items away, and the full-pockets inventory/exchange flow.
+- [ ] Circle Nook's Cranny in summer and winter: one original door/sign, fitted
+      timber back walls and closed roof edges. Enter and exit normally.
+
+Implementation and local checks: [VR follow-up notes](docs/vr-followup-20260927.md).
+
 ## September 20 follow-up
 
 - [ ] Hold run and move forward at every compass heading, including head turns
@@ -47,6 +60,23 @@ writes). Start in the **diorama** (third-person) view.
 
 ## 4. Movement & turning (FP)
 
+### Optional floating hands
+
+- [ ] In Settings → Gameplay, verify VR empty hands is On (the default). With no item
+      equipped, both small hands follow controller position and rotation.
+- [ ] Compare On/Off while standing, walking, running, turning, and recentering.
+      Check comfortable size, thumb direction, and alignment at the grip.
+- [ ] Equip/stow the net, rod, shovel, axe, umbrella, and other held items.
+      Both hands hide while equipped; tool angles and controls stay the same.
+- [ ] Dialogue, catching/digging/pickups, inventory, map, pause, entering a
+      building, and title screens show no extra hands over their UI.
+- [ ] Hide/disconnect one controller: only its hand disappears and returns
+      when tracking recovers. No frozen hand remains after headset tracking loss.
+- [ ] Move a hand behind a wall or prop: nearby world geometry occludes it.
+      Toggle first person off: floating hands disappear from the diorama.
+
+### Movement
+
 - [ ] Stick-forward walks exactly where you're looking
 - [ ] **Stick-right snap-turns RIGHT** (this validates the angle math)
 - [ ] Run (hold B/left trigger) — speed feels right, no camera judder
@@ -54,10 +84,10 @@ writes). Start in the **diorama** (third-person) view.
       (borderless): terrain streams, no pop-in directly ahead
 - [ ] Cross a bridge; walk the beach; walk along a cliff edge
 
-## 5. Doors & interiors (scripted-camera fallbacks)
+## 5. Doors & interiors
 
-- [ ] Enter your house: camera falls back for the door transition, FP
-      resumes inside
+- [ ] Enter your house: first person continues through the door transition
+      and into the room
 - [ ] Interior FP: room at life scale, no clipping through walls when
       leaning
 - [ ] Exit door works the same in reverse
@@ -67,7 +97,10 @@ writes). Start in the **diorama** (third-person) view.
 ## 6. Dialogue (FP)
 
 - [ ] Talk to a villager: view snaps to face them, they're at eye level,
-      text panel readable below
+      dialogue sits higher and their face is easier to see
+- [ ] Nameplate, message text, continue arrow, and choices stay aligned
+      throughout dialogue opening/closing. Repeat several conversations:
+      no upward drift. Check shop prompts with many choices too.
 - [ ] Conversation ends: view stays where you left it, pitch eases level
 - [ ] Talk while deliberately facing away first — snap still finds them
 - [ ] Nook's shop: buy something; **sell something** (the camera pans to a
@@ -78,10 +111,19 @@ writes). Start in the **diorama** (third-person) view.
 
 - [ ] Fishing rod: equip (grip-hold + stick for D-pad), cast with A — rod
       visible and bending in front of you, bobber flies and floats
-- [ ] Hook a fish: bite → A → catch animation (falls back to game camera
-      for the trophy pose — expected)
+- [ ] Hook a fish: bite → A → catch animation and message stay first person,
+      with the same gaze and world scale before, during, and after
 - [ ] Net: visible in hand; swing catches a bug on a tree/ground
+- [ ] Hold the net handle upright and point naturally: hoop opening faces
+      forward. Rotate the wrist: it follows without sideways shaft drift.
+      Check both normal and golden nets, readying, swinging and putting away.
 - [ ] Shovel: dig a hole, bury something, dig it back up
+- [ ] Dig up a fossil and catch a bug: remain first person through the
+      announcement and putting the item away. Look around during the message.
+      Try with full pockets as well: choices and inventory still work.
+- [ ] Move the controller quickly during a catch/discovery announcement:
+      no skipped text; deliberate A still advances it. After closing the
+      message, slow the hand then swing again: normal tool use resumes.
 - [ ] Axe: chop a tree three times (collision aligned with view)
 - [ ] Watering can / umbrella in rain if available: visible and animated
 - [ ] Motion swing (if enabled): a firm swing of the right controller
@@ -115,7 +157,7 @@ writes). Start in the **diorama** (third-person) view.
 
 ## 8. Events & edge scenes (fallback correctness)
 
-- [ ] Any demo/cutscene moment (train arrival, event NPC): camera takes
+- [ ] Scripted event/cutscene moment (train arrival, event NPC): camera takes
       over, player model VISIBLE during it, FP resumes after
 - [ ] Pelly/Pete mail moments, Resetti if you can bait him — no stuck
       camera, no invisible player in third-person shots
@@ -124,11 +166,32 @@ writes). Start in the **diorama** (third-person) view.
 ## 9. Panel & 2D (regression)
 
 - [ ] Inventory, map, and pattern screens all render on the panel
+- [ ] Desktop dialogue and diorama VR keep their previous placement.
+      F5-off catches still show the original third-person presentation.
 - [ ] NES game (if you have one) plays on the panel at 60 Hz
 - [ ] Pause menu (Start) shows and navigates; **F5 and grip+Y do nothing
       while paused**
 
-## Outdoor sky regression
+## Outdoor world regression
+
+- [ ] Walk around each house: one roof and porch, no duplicated rear doors
+      or intersecting facades. Rear walls are filled; repeat in winter.
+- [ ] Inspect plaster, timber, and player-home backs in daylight and dusk:
+      rear colors and trim suit the building, with no featureless gray panels
+      or giant stretched bands. Roof paint/palette variations still work.
+- [ ] Circle Able Sisters and the police station: one original entrance/sign,
+      solid rear surfaces, no overlapping roof or reflected signage. Enter/exit
+      both normally; check their window lighting after dark and in winter.
+- [ ] Circle the fountain: one tree and basin, closed bark/stone backs, normal
+      water/splash animation, and no branches crossing the front basin.
+      Bubble scrolling should stay stable while the player and other objects
+      enter/leave view, in both summer and winter.
+- [ ] Circle the museum and post office in summer and winter: siding matches
+      the original stonework/plaster, roof undersides have no gaps, and there
+      are no duplicate facades. Check dusk lighting for panels poking through
+      walls; enter/exit and use the post office normally.
+- [ ] Visit the ramp acre from both elevations and sides: the triangular
+      gaps below the cliff lip are closed, and walking/collisions are normal.
 
 - [ ] Turn through 360 degrees and look overhead: no seams, stretched poles,
       or clouds attached to the headset. Leaning produces no sky parallax.

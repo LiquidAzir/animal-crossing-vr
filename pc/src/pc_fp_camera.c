@@ -34,8 +34,8 @@ int pc_fp_swingable_equipped(void) {
     return (i >= 1 && i <= 7) || (i == 9) || (i >= 11 && i <= 18) || (i == 20);
 }
 
-/* Camera is in TALK mode (set by the m_camera2 hook): the swing gesture
- * must not fire — A would advance dialogue. */
+/* Conversation or item presentation (set by the m_camera2 hook): the
+ * swing gesture must not fire — A would advance dialogue. */
 static int s_in_talk;
 
 void pc_fp_set_in_talk(int in_talk) {

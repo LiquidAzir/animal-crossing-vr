@@ -1,0 +1,61 @@
+/* Post-office closures in joint 1's authored frame (including its -45 degree
+ * rotation). The pyramid roof and both existing facades remain untouched.
+ * Only the absent footprint corner is synthesized; its top follows the same
+ * 250-unit outward wall slope as the original opposite side. */
+extern Vtx obj_s_yubinkyoku_v[], obj_w_yubinkyoku_v[];
+extern u8 obj_s_yubinkyoku_t2_txt[], obj_w_yubinkyoku_t2_txt[];
+
+#define PC_POST_V(i, dx, dy, dz, u, v) { (i), { (dx), (dy), (dz) }, { (u), (v) } }
+#define PC_POST_AT(i, u, v) PC_POST_V(i, 0, 0, 0, u, v)
+#define PC_POST_LOW(i, u, v) PC_POST_V(i, 0, 0, 11313, u, v)
+#define PC_POST_HIGH(i, u, v) PC_POST_V(i, 0, 0, 11813, u, v)
+#define PC_POST_QUAD {0, 1, 2, 0, 2, 3}
+#define PC_POST_EAVES {0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6}
+
+/* Original walls map atlas U vertically. Keep that direction and comparable
+ * texel density, repeating only an opaque plaster/timber portion of the atlas.
+ * Each eave patch pairs disjoint strips with their own four-vertex contours. */
+#define PC_POST_PATCHES(s, low, high, roof_zp_xn, roof_zp_xp, awning_top, awning_front_low, awning_front_high, awning_back_low) \
+    { obj_##s##_yubinkyoku_t2_txt, 128, {40, 4, 111, 14}, 4, 2, \
+      { PC_POST_AT(low, 42, 0), PC_POST_LOW(low, 42, 198), \
+        PC_POST_HIGH(high, 0, 198), PC_POST_AT(high, 0, 0) }, PC_POST_QUAD }, \
+    { obj_##s##_yubinkyoku_t2_txt, 128, {40, 4, 111, 14}, 4, 2, \
+      { PC_POST_LOW(low, 42, 0), PC_POST_AT(4, 42, 198), \
+        PC_POST_AT(7, 0, 198), PC_POST_HIGH(high, 0, 0) }, PC_POST_QUAD }, \
+    { obj_##s##_yubinkyoku_t2_txt, 128, {0, 0, 5, 31}, 8, 4, \
+      { PC_POST_AT(10, 0, 0), PC_POST_AT(roof_zp_xn, 0, 62), \
+        PC_POST_HIGH(high, 31, 62), PC_POST_AT(high, 31, 0), \
+        PC_POST_AT(7, 31, 62), PC_POST_AT(roof_zp_xp, 0, 62), \
+        PC_POST_AT(9, 0, 0), PC_POST_AT(6, 31, 0) }, PC_POST_EAVES }, \
+    { obj_##s##_yubinkyoku_t2_txt, 128, {0, 0, 5, 31}, 8, 4, \
+      { PC_POST_AT(9, 0, 62), PC_POST_AT(10, 0, 0), \
+        PC_POST_AT(high, 31, 0), PC_POST_AT(6, 31, 62), \
+        PC_POST_AT(roof_zp_xn, 0, 0), PC_POST_AT(roof_zp_xp, 0, 62), \
+        PC_POST_AT(7, 31, 62), PC_POST_HIGH(high, 31, 0) }, PC_POST_EAVES }, \
+    { obj_##s##_yubinkyoku_t2_txt, 128, {36, 4, 38, 30}, 4, 2, \
+      { PC_POST_V(awning_back_low, 0, 0, 10000, 0, 31), \
+        PC_POST_AT(awning_front_low, 31, 31), PC_POST_AT(awning_front_high, 31, 0), \
+        PC_POST_AT(awning_top, 0, 0) }, PC_POST_QUAD }, \
+    { obj_##s##_yubinkyoku_t2_txt, 128, {36, 4, 38, 30}, 4, 2, \
+      { PC_POST_AT(awning_back_low, 0, 0), PC_POST_AT(awning_back_low - 1, 31, 0), \
+        PC_POST_AT(awning_front_low, 31, 124), \
+        PC_POST_V(awning_back_low, 0, 0, 10000, 0, 124) }, PC_POST_QUAD }
+
+static const pc_structure_back_patch pc_post_office_s_patches[] = {
+    PC_POST_PATCHES(s, 22, 23, 11, 12, 28, 33, 36, 31),
+};
+static const pc_structure_back_patch pc_post_office_w_patches[] = {
+    PC_POST_PATCHES(w, 25, 26, 12, 13, 31, 36, 39, 34),
+};
+static const pc_structure_back_spec pc_post_office_back_specs[] = {
+    { obj_s_yubinkyoku_v, ARRAY_COUNT(pc_post_office_s_patches), pc_post_office_s_patches, NULL },
+    { obj_w_yubinkyoku_v, ARRAY_COUNT(pc_post_office_w_patches), pc_post_office_w_patches, NULL },
+};
+
+#undef PC_POST_PATCHES
+#undef PC_POST_EAVES
+#undef PC_POST_QUAD
+#undef PC_POST_HIGH
+#undef PC_POST_LOW
+#undef PC_POST_AT
+#undef PC_POST_V

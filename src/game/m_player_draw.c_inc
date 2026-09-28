@@ -1,3 +1,22 @@
+#ifdef TARGET_PC
+/* Adjust only the temporary render position after the find leaves the shovel.
+ * The animated hand, dig target, and drop/exchange positions stay in the world. */
+static int Player_actor_vr_find_position(const PLAYER_ACTOR* player, const GAME_PLAY* play, xyz_t* out) {
+    float pose[12];
+    if ((player->now_main_index != mPlayer_INDEX_GET_SCOOP ||
+         player->keyframe0.frame_control.current_frame <= 42.0f) &&
+        player->now_main_index != mPlayer_INDEX_PUTAWAY_SCOOP) {
+        return FALSE;
+    }
+    if (play->submenu.menu_type != mSM_OVL_NONE || play->submenu.current_menu_type != mSM_OVL_NONE ||
+        !pc_vr_item_presentation_mtx(pose)) {
+        return FALSE;
+    }
+    out->x = pose[3]; out->y = pose[7]; out->z = pose[11];
+    return TRUE;
+}
+#endif
+
 static void Player_actor_draw_Before_head(ACTOR* actorx, GAME* game, cKF_SkeletonInfo_R_c* kf, Gfx** gfx_pp, u8* flag,
                                           s_xyz* rot, xyz_t* pos) {
     PLAYER_ACTOR* player = (PLAYER_ACTOR*)actorx;
@@ -372,6 +391,12 @@ static void Player_actor_draw_Normal(ACTOR* actorx, GAME* game) {
         }
 
         if (item_scale > 0.0f && item != EMPTY_NO && item_pos_p != NULL) {
+#ifdef TARGET_PC
+            xyz_t presentation_pos;
+            if (Player_actor_vr_find_position(player, play, &presentation_pos)) {
+                item_pos_p = &presentation_pos;
+            }
+#endif
             if (mFI_GET_TYPE(mFI_GetFieldId()) == mFI_FIELD_FG) {
                 if (Common_Get(clip).bg_item_clip != NULL && Common_Get(clip).bg_item_clip->single_draw_proc != NULL) {
                     Common_Get(clip).bg_item_clip->single_draw_proc(game, item, item_pos_p, item_scale, NULL, NULL,

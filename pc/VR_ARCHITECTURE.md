@@ -98,11 +98,19 @@ controller haptics.
 hooked into `Camera2_SetView` (src/game/m_camera2.c): when active it replaces
 the game's eye/at/up with a first-person view at the player's head, redirects
 stick movement to the view yaw (`getCamera2AngleY`), and hides the player
-model (src/game/m_player_draw.c_inc) while keeping its shadow. Scripted
-cameras — doors, events, demos — simply fall through to the stock path, and
-first person resumes when they end. Starting a conversation snaps the view to
-face the speaker. In VR, first person switches the world scale to
+model (src/game/m_player_draw.c_inc) while keeping its shadow. NORMAL, WADE,
+TALK, DOOR, and ITEM stay first person. Item presentations (fish, bugs, dug-up
+items) preserve the current gaze instead of cutting to the stock trophy view.
+Other scripted cameras — events, demos, previews — fall through to the stock
+path, and first person resumes when they end. Starting a conversation snaps
+the view to face the speaker. In VR, first person switches the world scale to
 `vr_fp_world_scale` (life size) and back.
+
+`mMsg_Draw_Window` temporarily raises message and choice centers by 32 pixels
+in the original 320x240 UI space while VR first person is active, excluding
+flat menu scenes. Body/nameplate and text use the same shifted center; choices
+use their own shifted center. Both centers are restored after drawing, keeping
+animation state and subsequent draws stable. The overall VR UI panel is unchanged.
 
 Motion tools are two independent pieces:
 
@@ -114,6 +122,7 @@ Motion tools are two independent pieces:
   `pc_vr_tool_input_allowed()` excludes pause, submenus, conversations,
   invalid current headset poses, and non-first-person play. The pad merger
   checks again before injection; physical A is independently preserved.
+  ITEM cameras also set the dialogue guard so motion cannot skip catch text.
   Tool-selection grip also cancels synthetic input, and invalid velocity
   cancels both partial qualification and any remaining virtual A pulse.
 - **Tool on hand** (`pc_vr_hand_tool_mtx`, pc_vr.cpp): exports the controller
@@ -131,13 +140,126 @@ are not updated as the headset moves. Flat and diorama paths retain body yaw.
 If an axe/shovel request is refused after its query, its temporary gaze
 alignment is rolled back to the prior logical and visual facing.
 
+The controller-held net's skeleton places the shaft along tool +Z and the
+hoop opening along +X. A -90 degree Z roll at net draw changes the hoop's
+orientation without yawing the shaft. The stock +3000 Y rotation belongs to
+the catch proxy, not the mesh; it is retained only for animated-hand fallback.
+The prior shared -3000 yaw trim has been removed. Regular/golden meshes and
+all seven net animations are checked against the original disc vertices.
+
+## Residence rear walls and cliff gaps
+
+`src/pc_house_back.c_inc` and its data include add small rear caps for all 18
+seasonal house/home models. Indices follow their actual open rear contours;
+they do not reflect any original surface. `cKF_Si3_draw_R_SV_solid` routes known
+residences through the normal skeleton draw exactly once and appends the cap
+in joint 1's frame after child transforms unwind. Original callbacks, doors,
+decorations, and palettes continue normally. The cap gets its own frame matrix
+and a cached 64x64 CI4 material assembled from opaque original wall samples.
+Source detail repeats in model units; plaster homes use sampled timber trim
+around their actual contour, center, and eaves. Rear normals blend toward
+adjoining original normals except under overhanging eaves. The live segment-8
+palette preserves house colors; clamping prevents bleeding into transparent
+door/window regions.
+
+`src/pc_structure_back.c_inc` closes the police rear and the tailor's missing
+left/rear walls, gable, and eaves. The tailor's absent rear-left corner extends
+its existing diagonal footprint; all other corners reference original vertices.
+Tailor uses the same owner-scoped joint-1 route as residences. The police actor
+appends its patch under the original matrix. Neither path replays a facade or
+changes entrances, callbacks, collisions, or window lighting.
+The original tailor light plane touches the new left wall. Only under the
+active owner-scoped repair, its submitted list uses a cached vertex copy with
+the two hidden edge vertices inset by 32 source units per X/Z component. This
+avoids depth fighting without moving the wall perimeter or original assets;
+callbacks still receive the original display-list pointer and supply its tint.
+
+`src/pc_structure_back_builder.c_inc` shares the bounded patch builder across
+police, tailor, museum, and post-office repairs. Each patch has at most eight
+vertices and six triangles; each model has at most six patches. Material crops
+come from the user's original disc. A NULL spec palette uses live segment 8;
+the museum explicitly binds its original fixed seasonal body palette.
+`src/pc_civic_back.c_inc` adds museum rear stonework, foundation, shaped gable,
+roof underside and narrow column seams, and post-office missing side/rear walls,
+eaves and awning backing. Museum appends under its actor's original matrix;
+post office uses the owner-scoped joint-1 route. Its light panel has one corner
+outside the missing wall: only the submitted copy clips that Z coordinate to
+64 source units inside the fitted wall. Callbacks retain original list identity
+and lighting control. No original asset, entrance, clock or collision changes.
+
+The fountain's `src/actor/pc_shrine_back.c_inc` adds local bark/stone closures
+after their original draws. It replaces the whole-fixture reflection that put
+a second tree through the basin. Water, foliage, and the basin remain original
+single draws. Remaining structure types retain the measured-shell fallback;
+rock caps are unchanged.
+The fountain binds its bubble-scroll list in both OPA and XLU before use;
+binding only in XLU would let the earlier opaque pass inherit another actor's
+segment B. The actor submission regression covers that draw-order dependency.
+
+The two `grd_s_c4_s_[12]` ramp acres omit three cliff-side triangles. Their
+display lists now draw those triangles using existing vertices/materials;
+neither collision nor culling rules change.
+
+The diagnostic model viewer can capture the real renderer without a headset:
+`--model-viewer 8 --model-viewer-solid --model-viewer-angle 225
+--model-viewer-distance 30000 --model-viewer-height 6500
+--model-viewer-shot <absolute BMP path>`. Shot mode uses a hidden flat window,
+waits for six model frames, writes the resolved backbuffer and exits. Normal
+viewer input/defaults are unchanged. Its default window lighting and optional
+decorations differ from actor-driven gameplay, so captures verify geometry
+and texture placement, not the complete in-game lighting/interaction state.
+Appended entries 75/76 preview the police box and 77/78 the fountain (summer/
+winter); entries 79–82 reproduce their previous reflected fill for comparison.
+Museum entries 83/84 preview the repaired seasonal models; 85/86 retain the
+former reflected fill for comparison. Post-office entries remain 32/33. Hidden
+capture mode extends the far plane to accommodate wide models at long camera
+distances; interactive viewer defaults remain unchanged.
+For translations beyond the signed 16.16 matrix range, the viewer scales its
+camera-space units and near/far planes together before packing. This fixes
+stuck/clipped distant previews without changing the game camera or shared
+matrix conversion. In-range matrices are unchanged.
+
 ## Files
+
+Optional empty hands use their own left/right OpenVR grip actions, preserving
+the existing right tool-tip pose and tool-local alignment. CPU player drawing
+reports empty item state plus normal movement with an exact `pc_frame_counter`
+stamp. Both current and pending non-movement actions suppress the report;
+missing player draws expire it. The VR backend additionally checks first-person
+gameplay, pause/dialogue/submenu state, and fresh headset/controller tracking.
+Each hand is hidden independently when its pose is unavailable. These poses
+never produce game input or collision changes.
+Touch and Index bindings use `/pose/handgrip`, validated against the installed
+driver profiles. `/pose/grip` is absent from Touch's profile even though a
+binding JSON using it loads successfully. Once eligible gameplay has run past
+the startup grace period, a never-received hand pose logs once; transient loss
+after both poses have been received does not report a missing binding.
+
+Catch/discovery rendering uses `pc_vr_item_presentation_mtx` in active first-person
+VR. It transforms the most recent head pose through `W^-1`, offsets it by
+`(0, -0.14, -0.90)` meters in head space, and removes world scale from the
+orientation. Fossils and regular caught insects replace only their temporary
+draw position; fish, firefly/spirit sprites, and the tiny-catch pointer also
+use its billboard basis.
+Action timing, caught-actor identity, and submenu guards stay in the draw callers.
+Actor positions, hand/rod matrices, catch probes, collision, and inventory state
+are unchanged. CPU drawing uses the previous tracking sample, matching tools;
+this is not a new replay-time late-latching path. Desktop/diorama or invalid
+tracking falls back to the original draw path.
+
+`pc_vr_hands.cpp` lazily creates a small static mitten mesh. At the end of the
+two world passes it draws into each eye's existing depth buffer, before the UI,
+using `(H*E)^-1 * grip_pose` in meters and the same GX eye projection. Its GL
+state is restored after each draw. Panel-only/NES submission never calls it.
+Initialization failure disables just the optional hands for that VR session.
 
 - `pc/include/pc_vr.h`, `pc/src/pc_vr.cpp` — OpenVR runtime, FBOs, matrices,
   compositor submit, input actions, swing gesture, UI panel composite (C++
   behind a C API).
 - `pc/src/pc_fp_camera.c`, `pc/include/pc_fp_camera.h` — first-person camera
   state machine (hooked from src/game/m_camera2.c).
+- `pc/src/pc_vr_hands.cpp`, `pc/include/pc_vr_hands.h` — optional controller
+  mitten mesh, lazy GL lifecycle, depth-tested rendering and state restoration.
 - `pc/lib/openvr/` — vendored OpenVR SDK header + win32 `openvr_api.dll`
   (BSD-3-Clause).
 - `pc/src/pc_gx.c` — render-target-aware viewport/scissor/copy scaling,
@@ -155,7 +277,8 @@ present, 2 = force), `vr_world_scale` (mm per game unit), `vr_ui_distance` /
 `vr_ui_size` (cm), `vr_height_offset` (cm). First-person and motion-tool keys
 live under `[FirstPerson]`: `fp_mode`, `fp_eye_height`, `fp_snap_degrees`,
 `vr_fp_world_scale`, `vr_solid_buildings`, `vr_solid_shell`, `vr_draw_radius`,
-`vr_town_residency`, `vr_motion_swing`, `vr_tool_on_hand`, `vr_tool_pitch`.
+`vr_town_residency`, `vr_motion_swing`, `vr_tool_on_hand`, `vr_tool_pitch`,
+`vr_empty_hands` (default 1, live Gameplay settings toggle; explicit 0 remains off).
 The generated settings.ini documents each. CLI: `--vr`, `--no-vr`. If OpenVR
 init fails the game logs once and runs flat — the same binary serves both
 modes.

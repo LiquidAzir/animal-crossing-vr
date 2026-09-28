@@ -1,0 +1,53 @@
+/* Keep the museum's existing sidewalls, columns, entrance, and roof intact.
+ * The original model omits its rear wall/foundation/gable and the roof's
+ * underside. Two small seams also separate the sidewalls from the columns.
+ * Every reference below lies on those original boundaries in both seasons.
+ * Wall atlas U follows height, as on the original sidewalls; V repeats across
+ * the width so the rear stonework retains the authored block scale. */
+extern Vtx obj_s_museum_v[], obj_w_museum_v[];
+extern u8 obj_s_museum_t1_tex[], obj_w_museum_t1_tex[];
+extern u16 obj_summer_museum_pal[], obj_winter_museum_pal[];
+
+#define PC_MUSEUM_AT(i, u, v) { (i), { 0, 0, 0 }, { (u), (v) } }
+#define PC_MUSEUM_QUAD { 0, 1, 2, 0, 2, 3 }
+#define PC_MUSEUM_PATCHES(s) \
+    /* Rear wall, below the original roof line. */ \
+    { obj_##s##_museum_t1_tex, 128, {0, 0, 47, 31}, 4, 2, \
+      { PC_MUSEUM_AT(31, 0, 0), PC_MUSEUM_AT(30, 31, 0), \
+        PC_MUSEUM_AT(64, 31, 99), PC_MUSEUM_AT(63, 0, 99) }, PC_MUSEUM_QUAD }, \
+    /* Rear foundation uses the original blue-gray foundation strip. */ \
+    { obj_##s##_museum_t1_tex, 128, {114, 0, 127, 31}, 4, 2, \
+      { PC_MUSEUM_AT(56, 31, 0), PC_MUSEUM_AT(55, 0, 0), \
+        PC_MUSEUM_AT(89, 0, 90), PC_MUSEUM_AT(88, 31, 90) }, PC_MUSEUM_QUAD }, \
+    /* Follow all seven vertices of the sloped rear roof outline. */ \
+    { obj_##s##_museum_t1_tex, 128, {0, 0, 47, 31}, 7, 5, \
+      { PC_MUSEUM_AT(116, 0, 2), PC_MUSEUM_AT(115, 8, 0), \
+        PC_MUSEUM_AT(127, 28, 32), PC_MUSEUM_AT(121, 42, 56), \
+        PC_MUSEUM_AT(135, 28, 80), PC_MUSEUM_AT(114, 8, 112), \
+        PC_MUSEUM_AT(113, 0, 110) }, {0,1,2, 0,2,3, 0,3,4, 0,4,5, 0,5,6} }, \
+    /* Downward ceiling closes the authored overhang along both sides. */ \
+    { obj_##s##_museum_t1_tex, 128, {0, 0, 47, 31}, 4, 2, \
+      { PC_MUSEUM_AT(116, 0, 0), PC_MUSEUM_AT(113, 54, 0), \
+        PC_MUSEUM_AT(112, 54, 74), PC_MUSEUM_AT(117, 0, 74) }, PC_MUSEUM_QUAD }, \
+    /* Narrow, bent seams behind the original left and right columns. */ \
+    { obj_##s##_museum_t1_tex, 128, {0, 0, 47, 31}, 4, 2, \
+      { PC_MUSEUM_AT(28, 0, 0), PC_MUSEUM_AT(46, 0, 3), \
+        PC_MUSEUM_AT(45, 31, 1), PC_MUSEUM_AT(29, 31, 0) }, PC_MUSEUM_QUAD }, \
+    { obj_##s##_museum_t1_tex, 128, {0, 0, 47, 31}, 4, 2, \
+      { PC_MUSEUM_AT(66, 0, 0), PC_MUSEUM_AT(65, 31, 0), \
+        PC_MUSEUM_AT(76, 31, 1), PC_MUSEUM_AT(75, 0, 3) }, PC_MUSEUM_QUAD }
+
+static const pc_structure_back_patch pc_museum_s_patches[] = {
+    PC_MUSEUM_PATCHES(s),
+};
+static const pc_structure_back_patch pc_museum_w_patches[] = {
+    PC_MUSEUM_PATCHES(w),
+};
+static const pc_structure_back_spec pc_museum_back_specs[2] = {
+    { obj_s_museum_v, ARRAY_COUNT(pc_museum_s_patches), pc_museum_s_patches, obj_summer_museum_pal },
+    { obj_w_museum_v, ARRAY_COUNT(pc_museum_w_patches), pc_museum_w_patches, obj_winter_museum_pal },
+};
+
+#undef PC_MUSEUM_PATCHES
+#undef PC_MUSEUM_QUAD
+#undef PC_MUSEUM_AT

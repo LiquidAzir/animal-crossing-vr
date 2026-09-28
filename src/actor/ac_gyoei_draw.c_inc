@@ -79,6 +79,34 @@ static int aGYO_anime_frame(aGYO_CTRL_ACTOR* ctrl) {
     return ret;
 }
 
+#ifdef TARGET_PC
+#include "pc_vr.h"
+#include "ac_uki.h"
+
+/* Only the current rod's caught fish uses this visual billboard. Its world
+ * position still drives the rod, release, collision, and ordinary shadow. */
+static int aGYO_vr_catch_matrix(const aGYO_CTRL_ACTOR* ctrl, GAME_PLAY* play, f32 correction_y, MtxF* out) {
+    PLAYER_ACTOR* player = GET_PLAYER_ACTOR(play);
+    UKI_ACTOR* rod;
+    float pose[12];
+    if (player == NULL ||
+        (player->now_main_index != mPlayer_INDEX_NOTICE_ROD && player->now_main_index != mPlayer_INDEX_PUTAWAY_ROD) ||
+        play->submenu.menu_type != mSM_OVL_NONE || play->submenu.current_menu_type != mSM_OVL_NONE) {
+        return FALSE;
+    }
+    rod = (UKI_ACTOR*)player->fishing_rod_actor_p;
+    if (rod == NULL || ctrl->linked_actor != (ACTOR*)rod || rod->child_actor != (ACTOR*)ctrl ||
+        ctrl->draw_type != aGYO_DRAW_TYPE_FISH || !pc_vr_item_presentation_mtx(pose)) {
+        return FALSE;
+    }
+    out->xx = pose[0]; out->xy = pose[1]; out->xz = pose[2]; out->xw = pose[3];
+    out->yx = pose[4]; out->yy = pose[5]; out->yz = pose[6]; out->yw = pose[7] - correction_y;
+    out->zx = pose[8]; out->zy = pose[9]; out->zz = pose[10]; out->zw = pose[11];
+    out->wx = out->wy = out->wz = 0.0f; out->ww = 1.0f;
+    return TRUE;
+}
+#endif
+
 static int aGYO_draw_ticks(aGYO_CTRL_ACTOR* ctrl, GAME* game) {
     int ticks;
 
@@ -119,6 +147,14 @@ static void aGYO_actor_draw_fish(GRAPH* graph, aGYO_CTRL_ACTOR* ctrl, GAME* game
     Matrix_translate(((ACTOR*)ctrl)->world.position.x, ((ACTOR*)ctrl)->world.position.y - aGYO_hosei_y[ctrl->gyo_type],
                      ((ACTOR*)ctrl)->world.position.z, MTX_LOAD);
     Matrix_mult(&play->billboard_matrix, MTX_MULT);
+#ifdef TARGET_PC
+    {
+        MtxF presentation_matrix;
+        if (aGYO_vr_catch_matrix(ctrl, play, aGYO_hosei_y[ctrl->gyo_type], &presentation_matrix)) {
+            Matrix_put(&presentation_matrix);
+        }
+    }
+#endif
 
     if (ctrl->gyo_type < (aGYO_TYPE_WHALE + 1) && (ctrl->gyo_flags & 0x200) != 0) {
         int cnt;

@@ -1,0 +1,16 @@
+/* Included after the shared fitted-surface builder in c_keyframe.c. */
+#include "pc_shop_back_data.c_inc"
+extern cKF_Skeleton_R_c cKF_bs_r_obj_s_shop1, cKF_bs_r_obj_w_shop1;
+static pc_structure_back_cache pc_shop_back_caches[2];
+
+/* Recognition suppresses facade reflection even before disc assets are ready.
+ * Other upgrades have different topology and retain their existing behavior. */
+static int pc_shop_back_lookup(cKF_Skeleton_R_c* skeleton, Gfx** out) {
+    if (skeleton == &cKF_bs_r_obj_s_shop1 || skeleton == &cKF_bs_r_obj_w_shop1) {
+        unsigned season = skeleton == &cKF_bs_r_obj_w_shop1;
+        *out = pc_structure_back_build_spec(&pc_shop_back_specs[season], &pc_shop_back_caches[season]);
+        return 1;
+    }
+    *out = NULL;
+    return 0;
+}

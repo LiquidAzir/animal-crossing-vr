@@ -77,11 +77,34 @@ and in VR:
   level. Toggling back returns to the diorama.
 - **Talking to villagers stays first person** — the view turns to face them
   as the chat starts, so they're right in front of you (at eye level in
-  VR). Doors, events, and demo cutscenes still use the normal game camera,
-  then first person resumes.
+  VR). Dialogue, its nameplate, and choices sit 32 UI pixels higher in VR
+  first person. Menus and desktop dialogue keep their normal placement.
+- **Catches and discoveries stay first person** — fish, bugs, fossils,
+  and other item presentations keep your current gaze and world scale.
+  Their messages still advance with A; motion swings cannot skip the text.
+  Scripted events and demo cutscenes retain their normal camera.
 - `[FirstPerson]` in `settings.ini`: `fp_mode` (start enabled),
   `fp_eye_height` (game units above the feet, default 52),
   `fp_snap_degrees` (0 = smooth VR turning).
+
+## Floating hands (optional)
+
+First-person VR shows two small mitten-style hands by default, following your
+controllers while you are
+empty-handed. There are no arms, finger tracking, or new controls. Both hands
+hide when an item is equipped and during dialogue, pickups, menus, and scripted
+actions. A controller that loses tracking disappears until tracking returns.
+Hands are depth-tested against the world and do not change tool behavior.
+
+The setting is `vr_empty_hands = 1` under `[FirstPerson]` in `settings.ini`.
+It defaults to on. Use **Settings → Gameplay → VR empty hands → Off → Apply**
+to hide them immediately, without restarting. An existing explicit off preference is preserved.
+The updated `vr_actions` folder must accompany the executable. Custom SteamVR
+bindings can bind **Left Empty Hand** and **Right Empty Hand** to each
+controller's handgrip pose (`/pose/handgrip`); the existing tool pose remains separate.
+The September 27 bindings correct an unsupported pose name on Touch controllers.
+If hands remain absent with awake controllers, check `vr_log.txt` for the
+missing-pose diagnostic and update the `vr_actions` folder with the executable.
 
 ## Outdoor sky
 
@@ -108,6 +131,9 @@ With a tool out in first person:
   pose, and for the net that includes the catch area — you catch bugs
   where *you* swing. If the grip angle feels off, tune `vr_tool_pitch`
   (degrees) in `settings.ini`.
+- The net hoop is rolled around its handle to face forward when held upright.
+  Both regular and golden nets retain the controller's shaft direction;
+  their VR catch probes follow that same direction.
 - **Look toward your target before using a tool.** In VR first person,
   axe and shovel targeting and the fishing cast use your horizontal gaze,
   even when your character last walked in another direction. The axe's
@@ -125,6 +151,30 @@ With a tool out in first person:
 `vr_log.txt` now also records a performance summary every 30 seconds
 (fps, GPU frame time, dropped frames) — see [VR_PLAYTEST.md](VR_PLAYTEST.md)
 for the guided test route that uses it.
+
+## Building and terrain completion
+
+All five villager house styles and four player home sizes have rear walls
+joined to their original mesh edges, in summer and winter. These replace the
+older reflected copies that overlapped roofs, doors, and porches. Rear surfaces
+reuse opaque portions of the existing wall textures and each home's live palette.
+Rear detail repeats at a scale matching the building, with sampled timber trim
+on plaster homes and blended edge lighting instead of a stretched plain swatch.
+Their appearance is reconstructed; the original game has no rear-wall artwork.
+Black window panes are the original unlit windows and still light up normally.
+
+The police station has a fitted rear wall; Able Sisters has fitted left/rear
+walls and rear eaves. Each retains one entrance and sign. The fountain uses
+small bark and stone closures, preserving its single tree, basin, and water.
+The museum and post office also have fitted walls and roof undersides using
+their original seasonal stonework and plaster/timber textures. Their original
+entrances and details draw once, without reflected siding or extra facades.
+
+Three omitted ramp-side cliff triangles are also filled using the original
+terrain vertices and materials. Collision shapes are unchanged. Remaining
+structure types still use the earlier approximate rear fill; `vr_solid_shell`
+adjusts only that fallback. `vr_solid_buildings = 0`
+disables building completion.
 
 ## Tuning (`settings.ini`, `[VR]` section)
 
@@ -144,8 +194,9 @@ for the guided test route that uses it.
   At the default miniature scale this reads as a diorama moving past —
   gentle for most people. If you're sensitive, try a smaller
   `vr_world_scale` (e.g. 6-8).
-- The game runs at your headset's refresh rate (72-120 Hz) — the port's
-  delta-time system keeps game speed correct.
+- SteamVR paces rendering toward the headset's refresh rate. Actual delivery
+  depends on the PC, render resolution, and runtime settings; a smooth view
+  can also include reprojected frames. The port uses delta time for game speed.
 - NES games appear on the floating panel, locked at their native 60 Hz.
 
 ## Troubleshooting
@@ -164,5 +215,31 @@ If something goes wrong, send both files.
   check `vr_mode` isn't 0; try `--vr`; read `vr_log.txt` for the reason.
 - **Black view but game audible** → check `vr_log.txt` for submit errors.
 - **Wrong seated position** → look straight ahead and press X + Y.
-- **Performance** → lower SteamVR's render resolution, or reduce `msaa` in
-  `settings.ini` (applies to the mirror window only).
+- **Performance** → see the headset-specific settings below.
+
+## Performance on slower PCs
+
+Start with the normal defaults. The fitted building repairs are cached and
+should stay enabled; turning them off brings back missing surfaces. Floating
+hands and the sky measured cheaply on the development PC, but that does not
+establish a minimum GPU requirement.
+
+For a GPU bottleneck, lower the game's per-application render resolution in
+SteamVR, then restart the game so it recreates its eye buffers. If the headset
+offers a lower refresh rate, that gives the application a longer frame budget.
+Check motion and text readability after each change. The desktop window's
+resolution, MSAA, and Max FPS settings do not lower the headset's eye resolution;
+normal VR gameplay also bypasses the desktop frame limiter.
+
+`vr_draw_radius = 2` is an optional terrain tradeoff for CPU-limited machines.
+It draws at most 25 terrain acres instead of the full grid, but can expose
+distant gaps/pop-in and does not reduce resident buildings, trees, or actor
+updates. Keep `vr_town_residency = 1` for the intended free-look experience.
+Full-world state remains active until restart, so use separate launches when
+comparing settings. Current defaults are unchanged.
+
+Before reporting performance, record the CPU/GPU, headset, connection method,
+refresh rate, per-eye resolution from `vr_log.txt`, and whether SteamVR is
+reprojecting frames. Compare the same busy outdoor route, rain/night, interiors,
+menus, and catching items. Minimum hardware requirements have not yet been
+validated on a slower PC. Details: [performance review](docs/vr-performance-review-20260927.md).

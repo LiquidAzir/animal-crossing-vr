@@ -240,9 +240,28 @@ static int Player_actor_Item_draw_net_After(GAME* game, cKF_SkeletonInfo_R_c* ke
 static void Player_actor_Item_draw_net(ACTOR* actor, GAME* game) {
     GAME_PLAY* play = (GAME_PLAY*)game;
     PLAYER_ACTOR* player = (PLAYER_ACTOR*)actor;
+    int net_on_hand = FALSE;
+
+#ifdef TARGET_PC
+    {
+        float hand[12];
+        net_on_hand = pc_vr_hand_tool_mtx(hand);
+        if (net_on_hand) {
+            /* Both net skeletons already put the shaft along hand +Z,
+             * but their hoop opens along +X. Roll about the shaft, not
+             * about Y: the opening then faces forward when held upright
+             * and the shaft stays aligned with the controller. */
+            Matrix_RotateZ(-0x4000, MTX_MULT);
+        }
+    }
+#endif
 
     Matrix_push();
-    Matrix_rotateXYZ(0, 3000, 0, MTX_MULT);
+    /* The stock avatar's catch probe has a separate sideways bias. It is
+     * not a rotation in the mesh and must not yaw a controller-held net. */
+    if (!net_on_hand) {
+        Matrix_rotateXYZ(0, 3000, 0, MTX_MULT);
+    }
     Matrix_Position_VecZ(-2400.0f, &player->net_start_pos);
     Matrix_Position_VecZ(5500.0f, &player->net_end_pos);
     Matrix_Position_VecZ(4000.0f, &player->net_pos);

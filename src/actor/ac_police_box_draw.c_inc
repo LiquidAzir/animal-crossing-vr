@@ -3,6 +3,10 @@ extern Gfx obj_w_kouban_model[];
 extern Gfx obj_s_kouban_window_model[];
 extern Gfx obj_w_kouban_window_model[];
 
+#ifdef TARGET_PC
+#include "pc_structure_back.h"
+#endif
+
 static void aPBOX_actor_draw(ACTOR* actor, GAME* game) {
     static Gfx* displayList[] = { obj_s_kouban_model, obj_w_kouban_model };
     static Gfx* mdl[] = { obj_s_kouban_window_model, obj_w_kouban_window_model };
@@ -61,42 +65,6 @@ static void aPBOX_actor_draw(ACTOR* actor, GAME* game) {
     {
         _texture_z_light_fog_prim_npc(graph);
 
-#ifdef TARGET_PC
-        /* Solid-buildings shell: plain-DL fixture, same pattern as the
-         * museum (see ac_museum.c). Emitted first; XLU window skipped. */
-        {
-            extern int cKF_shell_wanted(void);
-            extern int pc_solid_shell_measure_dls(Gfx* const* dls, int count, f32* out_centre);
-            extern int g_pc_solid_shell_pct;
-            Gfx* shell_dls[1];
-            f32 shell_c[3];
-
-            shell_dls[0] = displayList[winter];
-            if (cKF_shell_wanted() && pc_solid_shell_measure_dls(shell_dls, 1, shell_c)) {
-                f32 s = g_pc_solid_shell_pct * 0.01f;
-                Mtx* smtx;
-                Gfx* sp;
-
-                Matrix_push();
-                Matrix_translate(shell_c[0], shell_c[1], shell_c[2], MTX_MULT);
-                Matrix_scale(s, s, -s, MTX_MULT);
-                Matrix_translate(-shell_c[0], -shell_c[1], -shell_c[2], MTX_MULT);
-                smtx = _Matrix_to_Mtx_new(graph);
-                Matrix_pull();
-
-                sp = NOW_POLY_OPA_DISP;
-                gSPMatrix(sp++, smtx, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
-                gSPSegment(sp++, G_MWO_SEGMENT_8, pal);
-                gDPPipeSync(sp++);
-                gDPSetEnvColor(sp++, r1, g1, b1, 0);
-                gSPDisplayList(sp++, displayList[winter]);
-                SET_POLY_OPA_DISP(sp);
-                /* restore the base OPA pipeline the real pass expects */
-                _texture_z_light_fog_prim_npc(graph);
-            }
-        }
-#endif
-
         poly_opa = NOW_POLY_OPA_DISP;
 
         gSPMatrix(poly_opa++, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
@@ -104,6 +72,15 @@ static void aPBOX_actor_draw(ACTOR* actor, GAME* game) {
         gDPPipeSync(poly_opa++);
         gDPSetEnvColor(poly_opa++, r1, g1, b1, 0);
         gSPDisplayList(poly_opa++, displayList[winter]);
+#ifdef TARGET_PC
+        {
+            extern int cKF_shell_wanted(void);
+            Gfx* rear = cKF_shell_wanted() ? pc_police_back(winter) : NULL;
+            /* Keep the original entrance, sign, lamp, and window lighting
+             * exactly once. Only the omitted rear surfaces are added. */
+            if (rear != NULL) gSPDisplayList(poly_opa++, rear);
+        }
+#endif
         SET_POLY_OPA_DISP(poly_opa);
     }
     {

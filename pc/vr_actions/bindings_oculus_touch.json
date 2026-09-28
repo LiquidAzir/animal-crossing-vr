@@ -83,7 +83,9 @@
         { "path": "/user/hand/right/output/haptic", "output": "/actions/main/out/haptic_right" }
       ],
       "poses": [
-        { "output": "/actions/main/in/hand_right", "path": "/user/hand/right/pose/tip" }
+        { "output": "/actions/main/in/hand_right", "path": "/user/hand/right/pose/tip" },
+        { "output": "/actions/main/in/empty_hand_left", "path": "/user/hand/left/pose/handgrip" },
+        { "output": "/actions/main/in/empty_hand_right", "path": "/user/hand/right/pose/handgrip" }
       ]
     }
   }

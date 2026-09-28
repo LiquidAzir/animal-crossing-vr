@@ -57,6 +57,15 @@ void pc_vr_set_fp_scale(int fp_active);
  * normal animated hand matrix should be used. */
 int pc_vr_hand_tool_mtx(float out[12]);
 
+/* Render-only catch/discovery anchor in front of the headset. Row-major 3x4,
+ * game-world position and unit billboard basis. Caller must restrict use to
+ * the presented item; never write this transform into actor/collision state. */
+int pc_vr_item_presentation_mtx(float out[12]);
+
+/* CPU player draw reports empty-handed free movement for this exact frame.
+ * A missing player draw expires the report; it cannot leak into another scene. */
+void pc_vr_set_empty_hands_available(int available);
+
 /* Headset gaze yaw relative to the FP anchor (binary-angle units, positive
  * = left; 0 when inactive). Movement follows the gaze via this. */
 float pc_vr_head_yaw_offset_bang(void);

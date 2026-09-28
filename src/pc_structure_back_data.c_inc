@@ -1,0 +1,60 @@
+/* Original boundary references plus the tailor's one absent footprint corner.
+ * The tailor corner extends its existing 8000-by-8000 diagonal floor plan;
+ * it does not copy a facade, doorway, sign, window, or roof decoration.
+ * All triangle winding is outward, including the downward-facing eaves. */
+#define PC_BACK_V(i, dx, dy, dz, u, v) { (i), { (dx), (dy), (dz) }, { (u), (v) } }
+#define PC_BACK_AT(i, u, v) PC_BACK_V(i, 0, 0, 0, u, v)
+#define PC_BACK_QUAD { 0, 2, 1, 0, 3, 2 }
+
+static const pc_structure_back_patch pc_police_s_patches[] = {
+    { obj_s_kouban_t1_tex_txt, 128, {68, 0, 122, 31}, 4, 2,
+      { PC_BACK_AT(16, 0, 31), PC_BACK_AT(15, 0, 0),
+        PC_BACK_AT(29, 31, 0), PC_BACK_AT(28, 31, 31) },
+      {0, 1, 2, 0, 2, 3} },
+};
+static const pc_structure_back_patch pc_police_w_patches[] = {
+    { obj_w_kouban_t1_tex_txt, 128, {68, 0, 122, 31}, 4, 2,
+      { PC_BACK_AT(12, 0, 31), PC_BACK_AT(11, 0, 0),
+        PC_BACK_AT(25, 31, 0), PC_BACK_AT(24, 31, 31) },
+      {0, 1, 2, 0, 2, 3} },
+};
+
+/* The opaque eight-texel wall strip repeats eight times across each wall,
+ * retaining the original plank scale instead of stretching one narrow strip.
+ * 248 = 8 * 31 in the resampled 32x32 patch's texel coordinates. */
+#define PC_TAILOR_PATCHES(season, fl, flt, rr, rrt, rb, rm, apex, lm, lb, lf) \
+    { obj_##season##_tailor_2_tex_txt, 64, {18, 0, 25, 63}, 4, 2, \
+      { PC_BACK_AT(fl, 0, 31), PC_BACK_V(rr, -8000, 0, 8000, 248, 31), \
+        PC_BACK_V(rrt, -8000, 0, 8000, 248, 0), PC_BACK_AT(flt, 0, 0) }, PC_BACK_QUAD }, \
+    { obj_##season##_tailor_2_tex_txt, 64, {18, 0, 25, 63}, 4, 2, \
+      { PC_BACK_V(rr, -8000, 0, 8000, 0, 31), PC_BACK_AT(rr, 248, 31), \
+        PC_BACK_AT(rrt, 248, 0), PC_BACK_V(rrt, -8000, 0, 8000, 0, 0) }, PC_BACK_QUAD }, \
+    { obj_##season##_tailor_2_tex_txt, 64, {18, 0, 25, 63}, 5, 3, \
+      { PC_BACK_AT(rb, 248, 22), PC_BACK_AT(rm, 186, 11), PC_BACK_AT(apex, 124, 0), \
+        PC_BACK_AT(lm, 62, 11), PC_BACK_AT(lb, 0, 22) }, {0, 4, 1, 1, 3, 2, 1, 4, 3} }, \
+    { obj_##season##_tailor_2_tex_txt, 64, {18, 0, 25, 63}, 4, 2, \
+      { PC_BACK_AT(rrt, 248, 4), PC_BACK_AT(rb, 248, 0), PC_BACK_AT(lb, 0, 0), \
+        PC_BACK_V(rrt, -8000, 0, 8000, 0, 4) }, PC_BACK_QUAD }, \
+    { obj_##season##_tailor_2_tex_txt, 64, {18, 0, 25, 63}, 4, 2, \
+      { PC_BACK_AT(flt, 0, 4), PC_BACK_V(rrt, -8000, 0, 8000, 248, 4), \
+        PC_BACK_AT(lb, 248, 0), PC_BACK_AT(lf, 0, 0) }, PC_BACK_QUAD }
+
+static const pc_structure_back_patch pc_tailor_s_patches[] = {
+    PC_TAILOR_PATCHES(s, 64, 63, 69, 70, 7, 9, 15, 16, 21, 20),
+};
+static const pc_structure_back_patch pc_tailor_w_patches[] = {
+    PC_TAILOR_PATCHES(w, 25, 24, 30, 31, 36, 38, 44, 45, 50, 49),
+};
+
+/* Lookup order is shared with pc_police_back() and pc_tailor_back_lookup(). */
+static const pc_structure_back_spec pc_structure_back_specs[] = {
+    { obj_s_kouban_v, ARRAY_COUNT(pc_police_s_patches), pc_police_s_patches, NULL },
+    { obj_w_kouban_v, ARRAY_COUNT(pc_police_w_patches), pc_police_w_patches, NULL },
+    { obj_s_tailor_v, ARRAY_COUNT(pc_tailor_s_patches), pc_tailor_s_patches, NULL },
+    { obj_w_tailor_v, ARRAY_COUNT(pc_tailor_w_patches), pc_tailor_w_patches, NULL },
+};
+
+#undef PC_TAILOR_PATCHES
+#undef PC_BACK_QUAD
+#undef PC_BACK_AT
+#undef PC_BACK_V

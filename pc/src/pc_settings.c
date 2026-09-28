@@ -38,6 +38,7 @@ PCSettings g_pc_settings = {
     .vr_motion_swing = 1,
     .vr_tool_on_hand = 1,
     .vr_tool_pitch = 0,
+    .vr_empty_hands = 1,
 };
 
 static const char* SETTINGS_FILE = "settings.ini";
@@ -123,8 +124,8 @@ static const char* DEFAULT_SETTINGS =
     "# (you could not walk behind them). 0 = off, 1 = on. VR and first person.\n"
     "vr_solid_buildings = 1\n"
     "\n"
-    "# Size of that fill-in shell as a percent of the building (50-100). Lower it\n"
-    "# if a shell edge ever pokes through a wall or roof.\n"
+    "# Legacy fill-in size for remaining structures (50-100). Fitted house,\n"
+    "# tailor, police, fountain, museum and post-office repairs ignore it.\n"
     "vr_solid_shell = 97\n"
     "\n"
     "# VR / first person terrain draw distance: 0 = whole town at once (default),\n"
@@ -142,7 +143,10 @@ static const char* DEFAULT_SETTINGS =
     "vr_tool_on_hand = 1\n"
     "\n"
     "# Tool-on-hand pitch adjustment in degrees (-90..90, restart to apply)\n"
-    "vr_tool_pitch = 0\n";
+    "vr_tool_pitch = 0\n"
+    "\n"
+    "# VR first person: show floating hands at empty controllers (0/1, no restart)\n"
+    "vr_empty_hands = 1\n";
 
 static const char* skip_ws(const char* s) {
     while (*s == ' ' || *s == '\t') s++;
@@ -227,6 +231,8 @@ static void apply_setting(const char* key, const char* value) {
         if (val == 0 || val == 1) g_pc_settings.vr_tool_on_hand = val;
     } else if (strcmp(key, "vr_tool_pitch") == 0) {
         if (val >= -90 && val <= 90) g_pc_settings.vr_tool_pitch = val;
+    } else if (strcmp(key, "vr_empty_hands") == 0) {
+        if (val == 0 || val == 1) g_pc_settings.vr_empty_hands = val;
     }
 }
 
@@ -350,8 +356,8 @@ void pc_settings_save(void) {
     fprintf(f, "# (you could not walk behind them). 0 = off, 1 = on. VR and first person.\n");
     fprintf(f, "vr_solid_buildings = %d\n", g_pc_settings.vr_solid_buildings);
     fprintf(f, "\n");
-    fprintf(f, "# Size of that fill-in shell as a percent of the building (50-100). Lower it\n");
-    fprintf(f, "# if a shell edge ever pokes through a wall or roof.\n");
+    fprintf(f, "# Legacy fill-in size for remaining structures (50-100). Fitted house,\n");
+    fprintf(f, "# tailor, police, fountain, museum and post-office repairs ignore it.\n");
     fprintf(f, "vr_solid_shell = %d\n", g_pc_settings.vr_solid_shell);
     fprintf(f, "\n");
     fprintf(f, "# VR / first person terrain draw distance: 0 = whole town at once (default),\n");
@@ -370,6 +376,9 @@ void pc_settings_save(void) {
     fprintf(f, "\n");
     fprintf(f, "# Tool-on-hand pitch adjustment in degrees (-90..90, restart to apply)\n");
     fprintf(f, "vr_tool_pitch = %d\n", g_pc_settings.vr_tool_pitch);
+    fprintf(f, "\n");
+    fprintf(f, "# VR first person: show floating hands at empty controllers (0/1, no restart)\n");
+    fprintf(f, "vr_empty_hands = %d\n", g_pc_settings.vr_empty_hands);
     fclose(f);
     printf("[Settings] Saved %s\n", SETTINGS_FILE);
 }

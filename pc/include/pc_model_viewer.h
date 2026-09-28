@@ -20,6 +20,15 @@ enum {
 
 extern int g_pc_model_viewer;
 extern int g_pc_model_viewer_no_cull;
+extern int g_pc_model_viewer_solid;
+extern float g_pc_model_viewer_angle;
+extern float g_pc_model_viewer_distance;
+extern float g_pc_model_viewer_height;
+extern const char* g_pc_model_viewer_shot_path;
+
+/* Debug capture runs after the renderer drains its final batch, before swap. */
+extern void pc_model_viewer_before_swap(void);
+extern int pc_model_viewer_shot_exit_code(void);
 
 extern void pc_model_viewer_init(GAME* game);
 extern void pc_model_viewer_cleanup(GAME* game);

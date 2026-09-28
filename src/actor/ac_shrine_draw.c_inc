@@ -66,7 +66,6 @@ static void aSHR_actor_draw(ACTOR* actorx, GAME* game) {
   SHRINE_ACTOR* shrine = (SHRINE_ACTOR*)actorx;
   GRAPH* graph = game->graph;
   int texture_frame = (int)shrine->texture_frame;
-  u16* pal = (*Common_Get(clip).structure_clip->get_pal_segment_proc)(aSTR_PAL_SHRINE);
   Gfx* two_tile0 = aSHR_GetTwoTileGfx(-(texture_frame * 50), 0, 0, -(texture_frame * 13), game);
   Gfx* two_tile1 = aSHR_GetTwoTileGfx(0, -(texture_frame * -5), 0, -(texture_frame * -3), game);
   Gfx* two_tile2 = aSHR_GetTwoTileGfx2(0, -(texture_frame * 12), game);
@@ -84,52 +83,6 @@ static void aSHR_actor_draw(ACTOR* actorx, GAME* game) {
     graph2 = game->graph;
     OPEN_DISP(graph2);
 
-#ifdef TARGET_PC
-    /* Solid-buildings shell for the wishing-well tree (plain-DL fixture,
-     * same pattern as the museum/police box): the OPA body reflected
-     * in depth about its measured centre, emitted FIRST so the real pass wins
-     * depth ties. Water/sprash/bubble XLU parts are skipped. */
-    {
-        extern int cKF_shell_wanted(void);
-        extern int pc_solid_shell_measure_dls(Gfx* const* dls, int count, f32* out_centre);
-        extern int g_pc_solid_shell_pct;
-        Gfx* shell_dls[5];
-        f32 shell_c[3];
-        int shell_winter = shrine->structure_class.season == mTM_SEASON_WINTER;
-
-        /* bubble_model deliberately excluded: it references a live texture
-         * segment (unmeasurable, and it's a translucent effect anyway).
-         * trunk first — it's season-distinct, so it keys the cache. */
-        shell_dls[0] = shell_winter ? obj_w_shrine_trunk_model : obj_s_shrine_trunk_model;
-        shell_dls[1] = shell_winter ? obj_w_shrine_leaf_model : obj_s_shrine_leaf_model;
-        shell_dls[2] = shell_winter ? obj_w_shrine_figure_model : obj_s_shrine_figure_model;
-        shell_dls[3] = shell_winter ? obj_w_shrine_base_model : obj_s_shrine_base_model;
-        shell_dls[4] = shell_winter ? obj_w_shrine_statue_model : obj_s_shrine_statue_model;
-
-        if (cKF_shell_wanted() && pc_solid_shell_measure_dls(shell_dls, 5, shell_c)) {
-            f32 s = g_pc_solid_shell_pct * 0.01f;
-            Mtx* smtx;
-            int di;
-
-            Matrix_push();
-            Matrix_translate(shell_c[0], shell_c[1], shell_c[2], MTX_MULT);
-            Matrix_scale(s, s, -s, MTX_MULT);
-            Matrix_translate(-shell_c[0], -shell_c[1], -shell_c[2], MTX_MULT);
-            smtx = _Matrix_to_Mtx_new(graph);
-            Matrix_pull();
-
-            gSPMatrix(NOW_POLY_OPA_DISP++, smtx, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
-            gSPSegment(NOW_POLY_OPA_DISP++, G_MWO_SEGMENT_9, dol_pal);
-            gSPSegment(NOW_POLY_OPA_DISP++, G_MWO_SEGMENT_A, tex);
-            for (di = 0; di < 5; di++) {
-                gSPDisplayList(NOW_POLY_OPA_DISP++, shell_dls[di]);
-            }
-            /* restore the base OPA pipeline the real pass expects */
-            _texture_z_light_fog_prim_npc(graph);
-        }
-    }
-#endif
-
     gSPMatrix(NOW_POLY_OPA_DISP++, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
     gSPMatrix(NOW_POLY_XLU_DISP++, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
     gSPMatrix(NOW_SHADOW_DISP++, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
@@ -138,6 +91,11 @@ static void aSHR_actor_draw(ACTOR* actorx, GAME* game) {
     gSPSegment(NOW_POLY_XLU_DISP++, G_MWO_SEGMENT_D, two_tile1);
     gSPSegment(NOW_POLY_XLU_DISP++, G_MWO_SEGMENT_B, two_tile2);
 
+#ifdef TARGET_PC
+    /* The bubble is also submitted in OPA, which executes before XLU. Bind
+     * its scroll here so it cannot inherit another actor's segment B. */
+    gSPSegment(NOW_POLY_OPA_DISP++, G_MWO_SEGMENT_B, two_tile2);
+#endif
     gSPSegment(NOW_POLY_OPA_DISP++, G_MWO_SEGMENT_9, dol_pal);
     gSPSegment(NOW_POLY_OPA_DISP++, G_MWO_SEGMENT_A, tex);
 
@@ -145,8 +103,22 @@ static void aSHR_actor_draw(ACTOR* actorx, GAME* game) {
       /* Opaque */
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_w_shrine_bubble_model);
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_w_shrine_trunk_model);
+#ifdef TARGET_PC
+      {
+        extern int cKF_shell_wanted(void);
+        Gfx* rear = cKF_shell_wanted() ? pc_shrine_back_dl(obj_w_shrine_trunk_model) : NULL;
+        if (rear) gSPDisplayList(NOW_POLY_OPA_DISP++, rear);
+      }
+#endif
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_w_shrine_leaf_model);
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_w_shrine_figure_model);
+#ifdef TARGET_PC
+      {
+        extern int cKF_shell_wanted(void);
+        Gfx* rear = cKF_shell_wanted() ? pc_shrine_back_dl(obj_w_shrine_figure_model) : NULL;
+        if (rear) gSPDisplayList(NOW_POLY_OPA_DISP++, rear);
+      }
+#endif
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_w_shrine_base_model);
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_w_shrine_statue_model);
 
@@ -159,8 +131,22 @@ static void aSHR_actor_draw(ACTOR* actorx, GAME* game) {
       /* Opaque */
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_s_shrine_bubble_model);
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_s_shrine_trunk_model);
+#ifdef TARGET_PC
+      {
+        extern int cKF_shell_wanted(void);
+        Gfx* rear = cKF_shell_wanted() ? pc_shrine_back_dl(obj_s_shrine_trunk_model) : NULL;
+        if (rear) gSPDisplayList(NOW_POLY_OPA_DISP++, rear);
+      }
+#endif
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_s_shrine_leaf_model);
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_s_shrine_figure_model);
+#ifdef TARGET_PC
+      {
+        extern int cKF_shell_wanted(void);
+        Gfx* rear = cKF_shell_wanted() ? pc_shrine_back_dl(obj_s_shrine_figure_model) : NULL;
+        if (rear) gSPDisplayList(NOW_POLY_OPA_DISP++, rear);
+      }
+#endif
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_s_shrine_base_model);
       gSPDisplayList(NOW_POLY_OPA_DISP++, obj_s_shrine_statue_model);
 

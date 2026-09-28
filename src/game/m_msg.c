@@ -11,6 +11,8 @@
 #include "sys_matrix.h"
 #ifdef TARGET_PC
 #include "pc_bswap.h"
+#include "pc_fp_camera.h"
+#include "pc_vr.h"
 #endif
 
 static u32 Msg_table_rom_start = 0;
@@ -81,6 +83,18 @@ static void mMsg_Main_Window(mMsg_Window_c* msg_p, GAME* game) {
 
 static void mMsg_Draw_Window(mMsg_Window_c* msg_p, GAME* game) {
     if (msg_p->draw_flag && msg_p->data_loaded) {
+#ifdef TARGET_PC
+        /* Raise only world dialogue in VR first person, in the original
+         * 320x240 UI coordinates. Both window and font draws use center_y;
+         * choices have their own center. Restore the animated layout after
+         * drawing so the offset cannot accumulate or affect menu placement. */
+        f32 message_y = msg_p->center_y;
+        f32 choice_y = msg_p->choice_window.center_y;
+        if (pc_vr_active() && pc_fp_view_is_active() && !pc_vr_flat_scene_active()) {
+            msg_p->center_y -= 32.0f;
+            msg_p->choice_window.center_y -= 32.0f;
+        }
+#endif
         mFont_SetMatrix(game->graph, mFont_MODE_FONT);
         mMsg_SetMatrix(msg_p, game, mFont_MODE_FONT);
         mMsg_DrawWindowBody(msg_p, game, mFont_MODE_FONT);
@@ -92,6 +106,10 @@ static void mMsg_Draw_Window(mMsg_Window_c* msg_p, GAME* game) {
         }
 
         mChoice_Draw(&msg_p->choice_window, game, mFont_MODE_FONT);
+#ifdef TARGET_PC
+        msg_p->center_y = message_y;
+        msg_p->choice_window.center_y = choice_y;
+#endif
     }
 }
 

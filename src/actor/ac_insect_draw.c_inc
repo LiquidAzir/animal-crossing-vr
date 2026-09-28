@@ -1,8 +1,37 @@
+#ifdef TARGET_PC
+#include "pc_vr.h"
+
+static int aINS_vr_catch_matrix(const aINS_INSECT_ACTOR* insect, GAME_PLAY* play, MtxF* out) {
+    PLAYER_ACTOR* player = GET_PLAYER_ACTOR(play);
+    float pose[12];
+    if (player == NULL || player->item_net_catch_type != mPlayer_NET_CATCH_TYPE_INSECT ||
+        player->item_net_catch_label != (u32)insect ||
+        play->submenu.menu_type != mSM_OVL_NONE || play->submenu.current_menu_type != mSM_OVL_NONE) {
+        return FALSE;
+    }
+    if (player->now_main_index != mPlayer_INDEX_NOTICE_NET &&
+        player->now_main_index != mPlayer_INDEX_PUTAWAY_NET &&
+        (player->now_main_index != mPlayer_INDEX_PULL_NET ||
+         player->keyframe0.frame_control.current_frame <= 15.0f)) {
+        return FALSE;
+    }
+    if (!pc_vr_item_presentation_mtx(pose)) return FALSE;
+    out->xx = pose[0]; out->xy = pose[1]; out->xz = pose[2]; out->xw = pose[3];
+    out->yx = pose[4]; out->yy = pose[5]; out->yz = pose[6]; out->yw = pose[7];
+    out->zx = pose[8]; out->zy = pose[9]; out->zz = pose[10]; out->zw = pose[11];
+    out->wx = out->wy = out->wz = 0.0f; out->ww = 1.0f;
+    return TRUE;
+}
+#endif
+
 static void aINS_actor_draw_sub(GRAPH* graph, aINS_INSECT_ACTOR* insect, GAME* game, int draw_type, int alpha) {
     GAME_PLAY* play = (GAME_PLAY*)game;
     s16 angleX = insect->tools_actor.actor_class.shape_info.rotation.x;
     s16 angleY = insect->tools_actor.actor_class.shape_info.rotation.y;
     Gfx* gfx;
+#ifdef TARGET_PC
+    int presentation_billboard = FALSE;
+#endif
 
     if (insect->tools_actor.init_matrix == TRUE) {
         Matrix_put(&insect->tools_actor.matrix_work);
@@ -65,6 +94,28 @@ static void aINS_actor_draw_sub(GRAPH* graph, aINS_INSECT_ACTOR* insect, GAME* g
         }
     }
 
+#ifdef TARGET_PC
+    {
+        MtxF presentation_matrix;
+        if (aINS_vr_catch_matrix(insect, play, &presentation_matrix)) {
+            presentation_billboard = insect->type == aINS_INSECT_TYPE_FIREFLY ||
+                                     insect->type == aINS_INSECT_TYPE_SPIRIT;
+            if (presentation_billboard) {
+                /* These sprites must face the headset too, rather than the
+                 * original camera's billboard direction after a head turn. */
+                Matrix_put(&presentation_matrix);
+            } else {
+                MtxF draw_matrix;
+                Matrix_get(&draw_matrix);
+                draw_matrix.xw = presentation_matrix.xw;
+                draw_matrix.yw = presentation_matrix.yw;
+                draw_matrix.zw = presentation_matrix.zw;
+                Matrix_put(&draw_matrix);
+            }
+        }
+    }
+#endif
+
     Matrix_scale(insect->tools_actor.actor_class.scale.x, insect->tools_actor.actor_class.scale.y,
                  insect->tools_actor.actor_class.scale.z, MTX_MULT);
 
@@ -77,10 +128,16 @@ static void aINS_actor_draw_sub(GRAPH* graph, aINS_INSECT_ACTOR* insect, GAME* g
     /* initialize settings for env and billboard mtx */
     switch (insect->type) {
         case aINS_INSECT_TYPE_FIREFLY:
+#ifdef TARGET_PC
+            if (!presentation_billboard)
+#endif
             gSPMatrix(gfx++, play->billboard_mtx_p, G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
             gDPSetEnvColor(gfx++, 0, 255, 155, alpha);
             break;
         case aINS_INSECT_TYPE_SPIRIT:
+#ifdef TARGET_PC
+            if (!presentation_billboard)
+#endif
             gSPMatrix(gfx++, play->billboard_mtx_p, G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
             gDPSetEnvColor(gfx++, 255, 255, 255, alpha);
             break;

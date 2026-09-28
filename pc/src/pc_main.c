@@ -12,6 +12,7 @@
 #include "pc_profiler.h"
 #include "pc_vr.h"
 #include "pc_fp_camera.h"
+#include "pc_model_viewer.h"
 #include "m_kankyo.h"
 
 /* prefer discrete GPU on laptops */
@@ -95,7 +96,9 @@ void pc_platform_init(void) {
         Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
         int win_w = g_pc_settings.window_width;
         int win_h = g_pc_settings.window_height;
-        if (g_pc_settings.fullscreen == 1) {
+        if (g_pc_model_viewer_shot_path) {
+            flags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN;
+        } else if (g_pc_settings.fullscreen == 1) {
             flags |= SDL_WINDOW_FULLSCREEN;
         } else if (g_pc_settings.fullscreen == 2) {
             flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -192,6 +195,7 @@ void pc_platform_update_window_size(void) {
 
 void pc_platform_swap_buffers(void) {
     pc_gx_draw_pending();
+    pc_model_viewer_before_swap();
     SDL_GL_SwapWindow(g_pc_window);
 }
 
@@ -324,6 +328,11 @@ int main(int argc, char* argv[]) {
             printf("  --framelimit N      Set the target frame rate (default 60, 0 = uncapped)\n");
             printf("  --profile [N]       Print frame profiler summary every N frames (default 120)\n");
             printf("  --model-viewer [N]  Launch model viewer (optional start index)\n");
+            printf("  --model-viewer-solid  Include the production building fill in the viewer\n");
+            printf("  --model-viewer-angle DEG  Set viewer orbit angle (default 270)\n");
+            printf("  --model-viewer-distance N  Set viewer distance (1..100000 model units)\n");
+            printf("  --model-viewer-height N  Set viewer look-at height (-50000..50000 model units)\n");
+            printf("  --model-viewer-shot PATH  Save a fixed hidden-window BMP render and exit (no VR)\n");
             printf("  --time H[:M[:S]]    Override in-game time (e.g. 5, 17:30, 5:55:00)\n");
             printf("  --date M/D[/Y]      Override in-game date (e.g. 7/4, 12/24/2026)\n");
             printf("  --rain [intensity]  Force rainy weather; intensity is light, normal, or heavy\n");
@@ -362,6 +371,49 @@ int main(int argc, char* argv[]) {
                 g_pc_model_viewer_start = atoi(argv[i + 1]);
                 i++;
             }
+        } else if (strcmp(argv[i], "--model-viewer-solid") == 0) {
+            g_pc_model_viewer = 1;
+            g_pc_model_viewer_solid = 1;
+        } else if (strcmp(argv[i], "--model-viewer-angle") == 0) {
+            char* end;
+            float angle;
+            if (i + 1 >= argc) {
+                fprintf(stderr, "--model-viewer-angle requires a finite angle in degrees\n");
+                return 2;
+            }
+            angle = strtof(argv[++i], &end);
+            if (end == argv[i] || *end != '\0' || !isfinite(angle)) {
+                fprintf(stderr, "Invalid model-viewer angle: %s\n", argv[i]);
+                return 2;
+            }
+            g_pc_model_viewer = 1;
+            g_pc_model_viewer_angle = fmodf(angle, 360.0f);
+        } else if (strcmp(argv[i], "--model-viewer-distance") == 0 ||
+                   strcmp(argv[i], "--model-viewer-height") == 0) {
+            const char* option = argv[i];
+            int distance = strcmp(option, "--model-viewer-distance") == 0;
+            char* end;
+            float value;
+            if (i + 1 >= argc) {
+                fprintf(stderr, "%s requires a finite value in model units\n", option);
+                return 2;
+            }
+            value = strtof(argv[++i], &end);
+            if (end == argv[i] || *end != '\0' || !isfinite(value) ||
+                value < (distance ? 1.0f : -50000.0f) || value > (distance ? 100000.0f : 50000.0f)) {
+                fprintf(stderr, "Invalid %s: %s\n", option, argv[i]);
+                return 2;
+            }
+            g_pc_model_viewer = 1;
+            if (distance) g_pc_model_viewer_distance = value;
+            else g_pc_model_viewer_height = value;
+        } else if (strcmp(argv[i], "--model-viewer-shot") == 0) {
+            if (i + 1 >= argc || argv[i + 1][0] == '\0' || argv[i + 1][0] == '-') {
+                fprintf(stderr, "--model-viewer-shot requires an output BMP path\n");
+                return 2;
+            }
+            g_pc_model_viewer = 1;
+            g_pc_model_viewer_shot_path = argv[++i];
         } else if (strcmp(argv[i], "--time") == 0 && i + 1 < argc) {
             int h = -1, m = -1, s = -1;
             sscanf(argv[i + 1], "%d:%d:%d", &h, &m, &s);
@@ -397,7 +449,7 @@ int main(int argc, char* argv[]) {
 
     /* Redirect stdout/stderr to NUL unless verbose — unbuffered terminal writes
      * are extremely slow on Windows and tank FPS. */
-    if (!g_pc_verbose && !g_pc_profile_enabled) {
+    if (!g_pc_verbose && !g_pc_profile_enabled && !g_pc_model_viewer_shot_path) {
 #ifdef _WIN32
         freopen("NUL", "w", stdout);
         freopen("NUL", "w", stderr);
@@ -445,6 +497,7 @@ int main(int argc, char* argv[]) {
 
     SDL_SetMainReady();
     pc_settings_load();
+    if (g_pc_model_viewer_shot_path) g_pc_vr_override = 0;
     if (g_pc_vr_override >= 0) {
         g_pc_settings.vr_mode = g_pc_vr_override;
     }
@@ -471,5 +524,5 @@ int main(int argc, char* argv[]) {
     pc_vr_shutdown();
     pc_disc_shutdown();
     pc_platform_shutdown();
-    return 0;
+    return pc_model_viewer_shot_exit_code();
 }

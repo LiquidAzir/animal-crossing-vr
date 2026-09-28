@@ -1,0 +1,76 @@
+/* Model-specific missing surfaces for the police box and tailor. The original
+ * display lists are drawn once; these patches do not copy doors or signs.
+ * References stay in the authored model frame, including the tailor's diagonal
+ * footprint. A missing corner is constructed relative to an original vertex.
+ * Only geometry metadata is compiled in; artwork comes from the user's disc. */
+#include "pc_structure_back.h"
+
+extern Vtx obj_s_kouban_v[], obj_w_kouban_v[];
+extern Vtx obj_s_tailor_v[], obj_w_tailor_v[];
+extern u8 obj_s_kouban_t1_tex_txt[], obj_w_kouban_t1_tex_txt[];
+extern u8 obj_s_tailor_3_tex_txt[], obj_w_tailor_3_tex_txt[];
+extern u8 obj_s_tailor_2_tex_txt[], obj_w_tailor_2_tex_txt[];
+extern cKF_Skeleton_R_c cKF_bs_r_obj_s_tailor, cKF_bs_r_obj_w_tailor;
+extern Gfx obj_s_tailor_light_model[], obj_w_tailor_light_model[];
+
+#include "pc_structure_back_builder.c_inc"
+#include "pc_structure_back_data.c_inc"
+
+static pc_structure_back_cache pc_structure_back_caches[4];
+
+static Gfx* pc_structure_back_build(unsigned model) {
+    return pc_structure_back_build_spec(&pc_structure_back_specs[model],
+                                        &pc_structure_back_caches[model]);
+}
+
+Gfx* pc_police_back(int winter) {
+    return pc_structure_back_build(winter ? 1 : 0);
+}
+
+/* Recognized but deferred must still suppress the old whole-model reflection. */
+static int pc_tailor_back_lookup(cKF_Skeleton_R_c* skeleton, Gfx** out) {
+    if (skeleton == &cKF_bs_r_obj_s_tailor || skeleton == &cKF_bs_r_obj_w_tailor) {
+        *out = pc_structure_back_build(skeleton == &cKF_bs_r_obj_w_tailor ? 3 : 2);
+        return 1;
+    }
+    *out = NULL;
+    return 0;
+}
+
+/* The original light plane ends exactly on the missing left wall. With a rear
+ * wall present its vertical edge can shimmer through that wall. Move only the
+ * two touching light vertices 32 source units inward on X/Z (0.32 game units
+ * each, 0.4% of wall width). The resulting 45-unit normal separation survives
+ * depth quantization in distant views; a two-unit inset still shimmered.
+ * Preserve its original commands, tint, triangles, and other vertices.
+ * Called only while drawing a recognized structure's active rear repair. */
+static Gfx* pc_tailor_light_for_back(Gfx* original) {
+    static Gfx* const models[] = { obj_s_tailor_light_model, obj_w_tailor_light_model };
+    static Vtx vertices[2][11];
+    static Gfx lists[2][10];
+    static u8 ready[2];
+    int season, i;
+    for (season = 0; season < 2; ++season) {
+        if (original != models[season]) continue;
+        if (!ready[season]) {
+            Vtx* source = season ? obj_w_tailor_v + 4 : obj_s_tailor_v + 80;
+            /* Both light lists have exactly ten commands, with one 11-vertex
+             * load at slot 6. Check the layout before replacing that command;
+             * never scan packed triangle data as if it were opcodes. */
+            if (source[0].v.ob[1] == source[3].v.ob[1] ||
+                (original[6].words.w0 >> 24) != G_VTX ||
+                ((original[6].words.w0 >> 12) & 255) != 11 ||
+                (original[9].words.w0 >> 24) != G_ENDDL) return original;
+            for (i = 0; i < 11; ++i) vertices[season][i] = source[i];
+            for (i = 0; i <= 3; i += 3) {
+                vertices[season][i].v.ob[0] += 32;
+                vertices[season][i].v.ob[2] -= 32;
+            }
+            for (i = 0; i < 10; ++i) lists[season][i] = original[i];
+            gSPVertex(lists[season] + 6, vertices[season], 11, 0);
+            ready[season] = 1;
+        }
+        return lists[season];
+    }
+    return original;
+}
