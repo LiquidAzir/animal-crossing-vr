@@ -8,11 +8,16 @@ panel in front of you, and your VR controllers act as the GameCube pad
 
 ## What you need
 
-1. **This software** — the release zip has everything: `AnimalCrossing.exe`
-   with `openvr_api.dll` and `vr_actions/` next to it. (Building from
-   source produces all of it in `pc/build32/bin/`.)
-2. **Your Animal Crossing (USA) disc image** (`.iso`, `.gcm`, or `.ciso`)
-   in the `rom/` folder next to the exe.
+1. **A working recompiled PC installation first:** use
+   [ACGC-PC-Port v0.9.3](https://github.com/flyngmt/ACGC-PC-Port/releases/tag/v0.9.3-playtest),
+   launch it successfully, close it, and back up its folder. Then apply the
+   [latest VR update](https://github.com/LiquidAzir/animal-crossing-vr/releases/latest)
+   to that folder using the [step-by-step installation walkthrough](README.md#installation).
+   Copy all supplied files, including `SDL2.dll`, `openvr_api.dll`, `shaders/`,
+   and `vr_actions/`, alongside the replacement `AnimalCrossing.exe`.
+   Preserve your existing saves and settings; the update contains neither.
+2. **Your Animal Crossing (USA, Rev 0 / GAFE01_00) disc image**
+   (`.iso`, `.gcm`, or `.ciso`) in `rom/` next to the exe. No assets are bundled.
 3. **SteamVR** installed on the PC (free, on Steam). You do NOT need to own
    any Steam game.
 4. **A SteamVR-compatible headset.** Native PCVR headsets (Index, Vive, and
@@ -25,8 +30,17 @@ panel in front of you, and your VR controllers act as the GameCube pad
 
 ## Running
 
-1. Put on the headset, get SteamVR running (see above).
-2. Launch `AnimalCrossing.exe`.
+1. Finish the PC-port setup and VR file update above.
+2. Put on the headset, get SteamVR running, and wake both controllers.
+3. Launch `AnimalCrossing.exe` from the updated game folder.
+4. Press **F5** or **left grip + Y** for first person; **X + Y** recenters.
+   Set `fp_mode = 1` under `[FirstPerson]` in `settings.ini` while the game is
+   closed if you want first person enabled on future launches.
+
+The X/Y button names in this guide refer to Touch controllers. On Index,
+left A provides X and left B provides Y: use **left grip + left B** to toggle
+first person and **left A + left B** to recenter. Launch from the game folder;
+a shortcut's **Start in** field must point there too.
 
 That's it. With `vr_mode = 1` (the default) the game detects the headset and
 starts in VR; without a headset it runs flat as before. Force with `--vr` /
@@ -124,9 +138,9 @@ With a tool out in first person:
 - **Swing and button are fully interchangeable, always.** The swing simply
   presses A for you — the A button (right trigger) works at all times, and
   you can mix them freely (cast with a flick, hook the bite with the
-  trigger, or vice versa). With `vr_tool_on_hand` on, the tool acts where
-  your hand is for both input styles — point the net at the bug whether
-  you swing or press.
+  trigger, or vice versa). With `vr_tool_on_hand` on, the tool is displayed
+  at your controller. The net's catch area follows your hand for both input
+  styles; axe, shovel, and fishing-cast targets follow your horizontal gaze.
 - **The tool rides your real hand**: it's rendered at your controller's
   pose, and for the net that includes the catch area — you catch bugs
   where *you* swing. If the grip angle feels off, tune `vr_tool_pitch`
@@ -169,6 +183,9 @@ small bark and stone closures, preserving its single tree, basin, and water.
 The museum and post office also have fitted walls and roof undersides using
 their original seasonal stonework and plaster/timber textures. Their original
 entrances and details draw once, without reflected siding or extra facades.
+Nook's Cranny (`shop1`) has fitted summer/winter timber backs and roof underside
+strips, keeping one entrance and sign. Later Nook shop upgrades retain their
+older model-specific rear fill.
 
 Three omitted ramp-side cliff triangles are also filled using the original
 terrain vertices and materials. Collision shapes are unchanged. Remaining
