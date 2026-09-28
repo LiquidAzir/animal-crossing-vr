@@ -1,4 +1,7 @@
 #include "libc64/sleep.h"
+#ifdef __ANDROID__
+#include "libultra/osMesg.h"
+#endif
 #include "libultra/os_timer.h"
 #include "dolphin/os/OSAlarm.h"
 #include "dolphin/os/OSTimer.h"

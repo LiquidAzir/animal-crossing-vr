@@ -55,6 +55,11 @@ typedef struct quest_base_s {
     /* 0x01 */ u32 give_reward : 1;        /* player cannot take the item, and will skip quest completion checks */
     /* 0x01 */ u32 unused : 2;
 
+#if defined(__ANDROID__) && defined(__arm__)
+    /* Preserve the PC save's full u32 bitfield slot before its timestamp. */
+    u32 : 0;
+#endif
+
     /* 0x02 */ lbRTC_time_c time_limit;
 } mQst_base_c;
 

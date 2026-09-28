@@ -2,6 +2,8 @@
  * Channel 0 (Slot A) → save/card_a/
  * Channel 1 (Slot B) → save/card_b/ */
 #include "pc_platform.h"
+#include <errno.h>
+#include <limits.h>
 #include <sys/stat.h>   /* mkdir (Linux), stat */
 #ifdef _WIN32
 #include <direct.h>  /* _mkdir */
@@ -146,23 +148,33 @@ s32 CARDOpen(s32 chan, const char* fileName, CARDFileInfo_PC* fileInfo) {
     slot->filename[sizeof(slot->filename) - 1] = '\0';
     slot->fp = fopen(path, "r+b");
     if (!slot->fp) {
+        int result = errno == ENOENT ? CARD_RESULT_NOFILE : CARD_RESULT_IOERROR;
         card_slot_free(fileInfo);
-        return CARD_RESULT_NOFILE;
+        return result;
     }
-    fseek(slot->fp, 0, SEEK_END);
-    fileInfo->length = (s32)ftell(slot->fp);
-    fseek(slot->fp, 0, SEEK_SET);
+    {
+        long size;
+        if (fseek(slot->fp, 0, SEEK_END) != 0 ||
+            (size = ftell(slot->fp)) < 0 || size > INT_MAX ||
+            fseek(slot->fp, 0, SEEK_SET) != 0) {
+            fclose(slot->fp);
+            card_slot_free(fileInfo);
+            return CARD_RESULT_IOERROR;
+        }
+        fileInfo->length = (s32)size;
+    }
     return CARD_RESULT_READY;
 }
 
 s32 CARDClose(CARDFileInfo_PC* fileInfo) {
     CARDOpenSlot* slot = card_slot_find(fileInfo);
+    s32 result = CARD_RESULT_READY;
     if (slot && slot->fp) {
-        fclose(slot->fp);
+        if (fclose(slot->fp) != 0) result = CARD_RESULT_IOERROR;
         slot->fp = NULL;
     }
     card_slot_free(fileInfo);
-    return CARD_RESULT_READY;
+    return result;
 }
 
 s32 CARDCreate(s32 chan, const char* fileName, u32 size, CARDFileInfo_PC* fileInfo) {
@@ -189,8 +201,10 @@ s32 CARDCreate(s32 chan, const char* fileName, u32 size, CARDFileInfo_PC* fileIn
         if (!zeros) { fclose(slot->fp); slot->fp = NULL; card_slot_free(fileInfo); return CARD_RESULT_IOERROR; }
         size_t written = fwrite(zeros, 1, size, slot->fp);
         free(zeros);
-        if (written != size) { fclose(slot->fp); slot->fp = NULL; card_slot_free(fileInfo); return CARD_RESULT_IOERROR; }
-        fseek(slot->fp, 0, SEEK_SET);
+        if (written != size || fflush(slot->fp) != 0 || fseek(slot->fp, 0, SEEK_SET) != 0) {
+            fclose(slot->fp); slot->fp = NULL; card_slot_free(fileInfo);
+            return CARD_RESULT_IOERROR;
+        }
     }
 
     return CARD_RESULT_READY;
@@ -205,8 +219,9 @@ s32 CARDCreateAsync(s32 chan, const char* fileName, u32 size, void* fileInfo, vo
 s32 CARDRead(CARDFileInfo_PC* fileInfo, void* buf, s32 length, s32 offset) {
     CARDOpenSlot* slot = card_slot_find(fileInfo);
     if (!slot || !slot->fp) return CARD_RESULT_NOFILE;
-    fseek(slot->fp, offset, SEEK_SET);
-    if ((s32)fread(buf, 1, length, slot->fp) != length) return CARD_RESULT_IOERROR;
+    if (length < 0 || offset < 0 || (length && !buf) ||
+        fseek(slot->fp, offset, SEEK_SET) != 0) return CARD_RESULT_IOERROR;
+    if (fread(buf, 1, (size_t)length, slot->fp) != (size_t)length) return CARD_RESULT_IOERROR;
     return CARD_RESULT_READY;
 }
 
@@ -219,9 +234,10 @@ s32 CARDReadAsync(void* fileInfo, void* buf, s32 length, s32 offset, void* callb
 s32 CARDWrite(CARDFileInfo_PC* fileInfo, const void* buf, s32 length, s32 offset) {
     CARDOpenSlot* slot = card_slot_find(fileInfo);
     if (!slot || !slot->fp) return CARD_RESULT_NOFILE;
-    fseek(slot->fp, offset, SEEK_SET);
-    if ((s32)fwrite(buf, 1, length, slot->fp) != length) return CARD_RESULT_IOERROR;
-    fflush(slot->fp);
+    if (length < 0 || offset < 0 || (length && !buf) ||
+        fseek(slot->fp, offset, SEEK_SET) != 0) return CARD_RESULT_IOERROR;
+    if (fwrite(buf, 1, (size_t)length, slot->fp) != (size_t)length) return CARD_RESULT_IOERROR;
+    if (fflush(slot->fp) != 0) return CARD_RESULT_IOERROR;
     return CARD_RESULT_READY;
 }
 
@@ -235,7 +251,7 @@ s32 CARDDelete(s32 chan, const char* fileName) {
     char path[512];
     if (!card_filename_safe(fileName)) return CARD_RESULT_NAMETOOLONG;
     snprintf(path, sizeof(path), "%s/%s", get_card_dir(chan), fileName);
-    remove(path);
+    if (remove(path) != 0) return errno == ENOENT ? CARD_RESULT_NOFILE : CARD_RESULT_IOERROR;
     return CARD_RESULT_READY;
 }
 
@@ -308,7 +324,7 @@ s32 CARDRename(s32 chan, const char* oldName, const char* newName) {
     if (!card_filename_safe(oldName) || !card_filename_safe(newName)) return CARD_RESULT_NAMETOOLONG;
     snprintf(oldPath, sizeof(oldPath), "%s/%s", get_card_dir(chan), oldName);
     snprintf(newPath, sizeof(newPath), "%s/%s", get_card_dir(chan), newName);
-    rename(oldPath, newPath);
+    if (rename(oldPath, newPath) != 0) return errno == ENOENT ? CARD_RESULT_NOFILE : CARD_RESULT_IOERROR;
     return CARD_RESULT_READY;
 }
 

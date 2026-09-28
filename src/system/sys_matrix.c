@@ -1,4 +1,7 @@
 #include "sys_matrix.h"
+#ifdef __ANDROID__
+#include "libultra/gu.h"
+#endif
 #include "TwoHeadArena.h"
 #include "m_skin_matrix.h"
 #include "graph.h"

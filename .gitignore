@@ -52,6 +52,13 @@ compile_commands.json
 # For saving work files into (like IDB)
 temp/
 
+# Standalone Quest build output and local signing material
+quest/.local/
+quest/out/
+*.apk
+*.keystore
+*.jks
+
 # Ignore the N64 SDK headers since we download them
 # NOTE: include/PR/gbi.h and include/PR/ultratypes.h are force-tracked
 # (git add -f) because they have TARGET_PC modifications for LE bitfields.

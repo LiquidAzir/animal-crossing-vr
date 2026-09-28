@@ -10,7 +10,7 @@
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
-#include <glad/gl.h>
+#include "pc_gl.h"
 
 #include <stdio.h>
 #include <stdlib.h>

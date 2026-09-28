@@ -6,6 +6,12 @@
 #include <math.h>
 #include <string.h>
 #include <malloc.h>  /* for alloca() */
+#ifdef __ANDROID__
+#include <alloca.h>
+#include <stdlib.h>
+#include <strings.h>
+#define __abs abs
+#endif
 /* Metrowerks __alloca is a compiler built-in; map to standard alloca on PC */
 #define __alloca alloca
 /* Metrowerks __declspec(section "...") is not supported by GCC.

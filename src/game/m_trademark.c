@@ -1,4 +1,7 @@
 #include "m_trademark.h"
+#ifdef __ANDROID__
+#include "dolphin/os.h"
+#endif
 
 #include "m_scene_table.h"
 #include "m_name_table.h"

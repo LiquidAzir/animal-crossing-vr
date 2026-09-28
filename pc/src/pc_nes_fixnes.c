@@ -32,8 +32,8 @@
 #undef BUTTON_RIGHT
 
 /* Now include GL via SDL2 (avoid pc_platform.h which pulls in game types.h) */
-#include <SDL2/SDL.h>
-#include <glad/gl.h>
+#include <SDL.h>
+#include "pc_gl.h"
 #include "fm2play.h"
 #include "audio.h"
 #include "pc_vr.h"
@@ -118,17 +118,24 @@ static GLuint fixnes_compile_shader(GLenum type, const char *src) {
 
 static void fixnes_init_gl(void) {
     const char *vs =
-        "#version 330 core\n"
+        PC_GLSL_HEADER
         "layout(location=0) in vec2 pos;\n"
         "layout(location=1) in vec2 uv;\n"
         "out vec2 v_uv;\n"
         "void main() { gl_Position = vec4(pos, 0, 1); v_uv = uv; }\n";
     const char *fs =
-        "#version 330 core\n"
+        PC_GLSL_HEADER
         "in vec2 v_uv;\n"
         "out vec4 fragColor;\n"
         "uniform sampler2D tex;\n"
+#ifdef __ANDROID__
+        /* GLES lacks UNSIGNED_SHORT_5_6_5_REV. Upload the same 16-bit pixels
+         * as ordinary 565 and reverse red/blue in the sampler, without a
+         * per-frame CPU conversion or changing fixNES's framebuffer. */
+        "void main() { fragColor = texture(tex, v_uv).bgra; }\n";
+#else
         "void main() { fragColor = texture(tex, v_uv); }\n";
+#endif
 
     GLuint v = fixnes_compile_shader(GL_VERTEX_SHADER, vs);
     GLuint f = fixnes_compile_shader(GL_FRAGMENT_SHADER, fs);
@@ -401,7 +408,11 @@ void pc_fixnes_render_frame(uint16_t *fb) {
     glBindTexture(GL_TEXTURE_2D, fixnes_texture);
     if (g_pc_profile_enabled) pc_profiler_add_count_texture_bind_slow();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 224, 0,
+#ifdef __ANDROID__
+                 GL_RGB, GL_UNSIGNED_SHORT_5_6_5, fb + 256 * 8);
+#else
                  GL_RGB, GL_UNSIGNED_SHORT_5_6_5_REV, fb + 256 * 8);
+#endif
 
     /* 0 = stretch to window, 1 = centered 4:3 with pillar/letterbox. */
     int win_w = g_pc_target_w;

@@ -14,6 +14,10 @@
 #include "pc_fp_camera.h"
 #include "pc_model_viewer.h"
 #include "m_kankyo.h"
+#ifdef __ANDROID__
+#include "quest_platform.h"
+#include "quest_vr_android.h"
+#endif
 
 /* prefer discrete GPU on laptops */
 #ifdef _WIN32
@@ -81,8 +85,13 @@ void pc_platform_init(void) {
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+#ifdef __ANDROID__
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 #ifdef PC_ENHANCEMENTS
@@ -123,6 +132,7 @@ void pc_platform_init(void) {
         exit(1);
     }
 
+#ifndef __ANDROID__
     if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
         fprintf(stderr, "gladLoadGL failed\n");
         SDL_GL_DeleteContext(g_pc_gl_context);
@@ -130,12 +140,15 @@ void pc_platform_init(void) {
         SDL_Quit();
         exit(1);
     }
+#else
+    quest_platform_bind_vr();
+#endif
 
     SDL_GL_SetSwapInterval(g_pc_settings.vsync);
 
     pc_platform_update_window_size();
 
-#ifdef PC_ENHANCEMENTS
+#if defined(PC_ENHANCEMENTS) && !defined(__ANDROID__)
     if (g_pc_settings.msaa > 0) {
         glEnable(GL_MULTISAMPLE);
     }
@@ -196,6 +209,11 @@ void pc_platform_update_window_size(void) {
 void pc_platform_swap_buffers(void) {
     pc_gx_draw_pending();
     pc_model_viewer_before_swap();
+#ifdef __ANDROID__
+    /* The OpenXR compositor owns immersive presentation; avoid also pacing
+     * against the Android window's EGL surface. */
+    if (pc_vr_active()) return;
+#endif
     SDL_GL_SwapWindow(g_pc_window);
 }
 
@@ -205,6 +223,9 @@ int pc_platform_poll_events(void) {
     pc_typing_update();
 
     while (SDL_PollEvent(&event)) {
+#ifdef __ANDROID__
+        quest_platform_lifecycle(event.type);
+#endif
         switch (event.type) {
             case SDL_QUIT:
                 g_pc_running = 0;
@@ -316,7 +337,15 @@ static int pc_parse_rain_intensity(const char* text) {
     return -1;
 }
 
-int main(int argc, char* argv[]) {
+#ifdef __ANDROID__
+#define PC_HOST_ENTRY SDL_main
+#else
+#define PC_HOST_ENTRY main
+#endif
+int PC_HOST_ENTRY(int argc, char* argv[]) {
+#ifdef __ANDROID__
+    if (!quest_platform_prepare()) return 1;
+#endif
 #ifdef _WIN32
     SetUnhandledExceptionFilter(pc_crash_handler);
 #endif
@@ -474,7 +503,7 @@ int main(int argc, char* argv[]) {
 #else
     {
         Dl_info dl;
-        if (dladdr((void*)main, &dl) && dl.dli_fbase) {
+        if (dladdr((void*)PC_HOST_ENTRY, &dl) && dl.dli_fbase) {
             pc_image_base = (unsigned int)(uintptr_t)dl.dli_fbase;
             Elf32_Ehdr* ehdr = (Elf32_Ehdr*)dl.dli_fbase;
             Elf32_Phdr* phdr = (Elf32_Phdr*)((char*)dl.dli_fbase + ehdr->e_phoff);
@@ -505,6 +534,13 @@ int main(int argc, char* argv[]) {
     pc_fp_init();
     pc_platform_init();
     pc_vr_init();   /* needs the GL context; no-op when vr_mode=0 or no HMD */
+#ifdef __ANDROID__
+    if (!g_pc_running || !pc_vr_active()) {
+        pc_vr_shutdown();
+        pc_platform_shutdown();
+        return 1;
+    }
+#endif
     pc_disc_init();
     if (!pc_assets_init()) {
         const char* msg =
@@ -514,6 +550,10 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "[PC] %s\n", msg);
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
                                  "Animal Crossing - Missing ROM", msg, g_pc_window);
+        /* XR owns GL objects and an Android Activity reference. Release it
+         * while the EGL context is still current, including failed startup. */
+        pc_vr_shutdown();
+        pc_disc_shutdown();
         pc_platform_shutdown();
         return 1;
     }

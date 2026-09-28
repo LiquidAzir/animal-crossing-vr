@@ -402,8 +402,8 @@ static u8* nextSrcData(u8* nowData) {
         if (DVDReadPrio(srcFile->getFileInfo(), (dst + size), n_size, srcOffset, 2) >= 0) {
             break;
         }
-        // Oopsies, forgot to call the function
-#ifndef FIXES
+        // The retry setting is a function result, not its address.
+#if !defined(FIXES) && !defined(__ANDROID__)
         if (JKRDvdRipper::isErrorRetry == false) {
             return nullptr;
         }

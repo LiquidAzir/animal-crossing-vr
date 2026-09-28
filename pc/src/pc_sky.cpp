@@ -3,7 +3,7 @@
  * Embedded shaders keep the executable self-contained and rollback simple. */
 #include "pc_sky.h"
 #include "pc_settings.h"
-#include <glad/gl.h>
+#include "pc_gl.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -17,7 +17,7 @@ static uint32_t environment_frame;
 static float seconds, overcast, view[12];
 static GLint u_projection, u_rotation, u_environment;
 
-static const char* vertex_source = R"GLSL(#version 330 core
+static const char* vertex_source = PC_GLSL_HEADER R"GLSL(
 out vec2 screen;
 void main() {
     screen = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2) * 2.0 - 1.0;
@@ -25,7 +25,7 @@ void main() {
 }
 )GLSL";
 
-static const char* fragment_source = R"GLSL(#version 330 core
+static const char* fragment_source = PC_GLSL_HEADER R"GLSL(
 in vec2 screen;
 out vec4 color;
 uniform vec4 projection; // P00, P11, P02, P12 (asymmetric per-eye frusta)
@@ -199,21 +199,26 @@ extern "C" int pc_sky_draw(const float* projection, const float* correction) {
     }
     if (!init()) return 0;
     GLint previous_program, previous_vao, depth_func;
-    GLdouble depth_range[2];
+    pc_gl_depth_value depth_range[2];
     GLboolean depth_mask, color_mask[4];
     GLboolean depth = glIsEnabled(GL_DEPTH_TEST), blend = glIsEnabled(GL_BLEND);
     GLboolean cull = glIsEnabled(GL_CULL_FACE), scissor = glIsEnabled(GL_SCISSOR_TEST);
+#ifndef __ANDROID__
     GLboolean logic = glIsEnabled(GL_COLOR_LOGIC_OP);
+#endif
     glGetIntegerv(GL_CURRENT_PROGRAM,&previous_program);
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING,&previous_vao);
     glGetIntegerv(GL_DEPTH_FUNC,&depth_func);
-    glGetDoublev(GL_DEPTH_RANGE,depth_range);
+    pc_gl_get_depth_range(depth_range);
     glGetBooleanv(GL_DEPTH_WRITEMASK,&depth_mask);
     glGetBooleanv(GL_COLOR_WRITEMASK,color_mask);
     glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LEQUAL); glDepthMask(GL_FALSE);
-    glDepthRange(0.0,1.0);
+    pc_gl_depth_range(0.0,1.0);
     glDisable(GL_BLEND); glDisable(GL_CULL_FACE); glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_COLOR_LOGIC_OP); glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+#ifndef __ANDROID__
+    glDisable(GL_COLOR_LOGIC_OP);
+#endif
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
     glUseProgram(program); glBindVertexArray(vao);
     glUniform4f(u_projection,projection[0],projection[5],projection[2],projection[6]);
     glUniformMatrix3fv(u_rotation,1,GL_TRUE,rotation);
@@ -222,13 +227,15 @@ extern "C" int pc_sky_draw(const float* projection, const float* correction) {
     // Exact restoration also preserves the GX renderer's cached state.
     glUseProgram(previous_program); glBindVertexArray(previous_vao);
     glDepthFunc(depth_func); glDepthMask(depth_mask);
-    glDepthRange(depth_range[0],depth_range[1]);
+    pc_gl_depth_range(depth_range[0],depth_range[1]);
     glColorMask(color_mask[0],color_mask[1],color_mask[2],color_mask[3]);
     if (!depth) glDisable(GL_DEPTH_TEST);
     if (blend) glEnable(GL_BLEND);
     if (cull) glEnable(GL_CULL_FACE);
     if (scissor) glEnable(GL_SCISSOR_TEST);
+#ifndef __ANDROID__
     if (logic) glEnable(GL_COLOR_LOGIC_OP);
+#endif
     drawn = 1;
     return 1;
 }

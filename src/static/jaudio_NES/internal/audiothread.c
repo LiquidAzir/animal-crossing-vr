@@ -1,4 +1,7 @@
 #include "jaudio_NES/audiothread.h"
+#ifdef __ANDROID__
+#include "dolphin/ai.h"
+#endif
 
 #include "dolphin/os.h"
 #include "dolphin/os/OSFastCast.h"

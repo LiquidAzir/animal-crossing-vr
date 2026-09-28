@@ -125,7 +125,7 @@ static void padmgr_HandleDoneReadPadMsg(void) {
     for (i = 0; i < this->num_controllers; i++) {
         pad->last = pad->now;
         if (this->device_type[i] == PADMGR_TYPE_CONTROLLER) {
-            switch (cur_pad->errno) {
+            switch (cur_pad->controller_error) {
                 case CONT_NO_ERROR:
                     pad->now = *cur_pad;
                     if (this->device_type[i] == PADMGR_TYPE_NONE) {
@@ -139,7 +139,7 @@ static void padmgr_HandleDoneReadPadMsg(void) {
                     pad->now.button = 0;
                     pad->now.stick_x = 0;
                     pad->now.stick_y = 0;
-                    pad->now.errno = cur_pad->errno;
+                    pad->now.controller_error = cur_pad->controller_error;
                     if (this->device_type[i] != PADMGR_TYPE_NONE) {
                         this->device_type[i] = PADMGR_TYPE_NONE;
                         this->pak_type[i] = PADMGR_PAK_NONE;
@@ -150,7 +150,7 @@ static void padmgr_HandleDoneReadPadMsg(void) {
             pad->now.button = 0;
             pad->now.stick_x = 0;
             pad->now.stick_y = 0;
-            pad->now.errno = cur_pad->errno;
+            pad->now.controller_error = cur_pad->controller_error;
         }
 
         /* Update buttons */
@@ -174,7 +174,7 @@ static void padmgr_ConnectCheck(void) {
     int i;
 
     for (i = 0; i < this->num_controllers; i++) {
-        if (this->pad_status[i].errno == CONT_NO_ERROR) {
+        if (this->pad_status[i].controller_error == CONT_NO_ERROR) {
             int masked_type = this->pad_status[i].type & CONT_TYPE_MASK;
 
             switch (masked_type) {
@@ -352,7 +352,7 @@ static void padmgr_UpdatePC(void) {
         this->cur_pads[i].button = n64;
         this->cur_pads[i].stick_x = pad_status[i].stickX;
         this->cur_pads[i].stick_y = pad_status[i].stickY;
-        this->cur_pads[i].errno = 0; /* CONT_NO_ERROR */
+        this->cur_pads[i].controller_error = 0; /* CONT_NO_ERROR */
     }
 
     {

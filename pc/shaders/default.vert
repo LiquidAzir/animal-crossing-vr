@@ -10,6 +10,9 @@ uniform vec4 u_texmtx_row0[2];
 uniform vec4 u_texmtx_row1[2];
 uniform int u_texmtx_enable[2];
 uniform int u_texgen_src[2];  /* 1=GX_TG_NRM, 4=GX_TG_TEX0, etc. */
+#ifdef GL_ES
+uniform float u_point_size;
+#endif
 out vec4 v_color;
 out vec2 v_texcoord0;
 out vec2 v_texcoord1;
@@ -18,6 +21,9 @@ out float v_fog_z;
 void main() {
     vec4 eyePos = u_modelview * vec4(a_position, 1.0);
     gl_Position = u_projection * eyePos;
+#ifdef GL_ES
+    gl_PointSize = u_point_size;
+#endif
     v_fog_z = -eyePos.z;
     v_color = a_color0;
     v_normal = normalize(u_normal_mtx * a_normal);

@@ -1,5 +1,10 @@
 # Animal Crossing VR
 
+> This isolated checkout is the **standalone Quest development branch**. See
+> [Quest build, installation, and test status](quest/README.md) for its APK and
+> Android instructions. The Windows documentation below describes the PC
+> baseline; the Quest port has its own build, installation, settings, and saves.
+
 **A native VR fork of [ACGC-PC-Port](https://github.com/flyngmt/ACGC-PC-Port)** —
 the Animal Crossing (GameCube) PC port built on the
 [ac-decomp](https://github.com/ACreTeam/ac-decomp) decompilation.

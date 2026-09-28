@@ -5,6 +5,12 @@
 static GLushort quad_index_buf[(PC_GX_MAX_VERTS / 4) * 6];
 #include <math.h>
 #include <dolphin/gx/GXEnum.h>
+#ifndef PC_GX_ANDROID_BATCH_CLIP
+#define PC_GX_ANDROID_BATCH_CLIP 1
+#endif
+#if defined(__ANDROID__) && PC_GX_ANDROID_BATCH_CLIP
+#include "quest_batch_clip.h"
+#endif
 
 /* Can't include GXTev.h — it uses enum types while we use u32 */
 void GXSetTevColorIn(u32 stage, u32 a, u32 b, u32 c, u32 d);
@@ -31,25 +37,28 @@ typedef struct { u8 r, g, b, a; } GXColor;
 #undef glUniformMatrix3fv
 #undef glUniformMatrix4fv
 
-#define glUniform1i(...)        (pc_profiler_add_count_uniform(), glad_glUniform1i(__VA_ARGS__))
-#define glUniform2i(...)        (pc_profiler_add_count_uniform(), glad_glUniform2i(__VA_ARGS__))
-#define glUniform3i(...)        (pc_profiler_add_count_uniform(), glad_glUniform3i(__VA_ARGS__))
-#define glUniform4i(...)        (pc_profiler_add_count_uniform(), glad_glUniform4i(__VA_ARGS__))
-#define glUniform1f(...)        (pc_profiler_add_count_uniform(), glad_glUniform1f(__VA_ARGS__))
-#define glUniform2f(...)        (pc_profiler_add_count_uniform(), glad_glUniform2f(__VA_ARGS__))
-#define glUniform3f(...)        (pc_profiler_add_count_uniform(), glad_glUniform3f(__VA_ARGS__))
-#define glUniform4f(...)        (pc_profiler_add_count_uniform(), glad_glUniform4f(__VA_ARGS__))
-#define glUniform1iv(...)       (pc_profiler_add_count_uniform(), glad_glUniform1iv(__VA_ARGS__))
-#define glUniform2iv(...)       (pc_profiler_add_count_uniform(), glad_glUniform2iv(__VA_ARGS__))
-#define glUniform3iv(...)       (pc_profiler_add_count_uniform(), glad_glUniform3iv(__VA_ARGS__))
-#define glUniform4iv(...)       (pc_profiler_add_count_uniform(), glad_glUniform4iv(__VA_ARGS__))
-#define glUniform4fv(...)       (pc_profiler_add_count_uniform(), glad_glUniform4fv(__VA_ARGS__))
-#define glUniform3fv(...)       (pc_profiler_add_count_uniform(), glad_glUniform3fv(__VA_ARGS__))
-#define glUniformMatrix3fv(...) (pc_profiler_add_count_uniform(), glad_glUniformMatrix3fv(__VA_ARGS__))
-#define glUniformMatrix4fv(...) (pc_profiler_add_count_uniform(), glad_glUniformMatrix4fv(__VA_ARGS__))
+#define glUniform1i(...)        (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform1i)(__VA_ARGS__))
+#define glUniform2i(...)        (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform2i)(__VA_ARGS__))
+#define glUniform3i(...)        (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform3i)(__VA_ARGS__))
+#define glUniform4i(...)        (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform4i)(__VA_ARGS__))
+#define glUniform1f(...)        (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform1f)(__VA_ARGS__))
+#define glUniform2f(...)        (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform2f)(__VA_ARGS__))
+#define glUniform3f(...)        (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform3f)(__VA_ARGS__))
+#define glUniform4f(...)        (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform4f)(__VA_ARGS__))
+#define glUniform1iv(...)       (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform1iv)(__VA_ARGS__))
+#define glUniform2iv(...)       (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform2iv)(__VA_ARGS__))
+#define glUniform3iv(...)       (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform3iv)(__VA_ARGS__))
+#define glUniform4iv(...)       (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform4iv)(__VA_ARGS__))
+#define glUniform4fv(...)       (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform4fv)(__VA_ARGS__))
+#define glUniform3fv(...)       (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniform3fv)(__VA_ARGS__))
+#define glUniformMatrix3fv(...) (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniformMatrix3fv)(__VA_ARGS__))
+#define glUniformMatrix4fv(...) (pc_profiler_add_count_uniform(), PC_GL_UNIFORM(glUniformMatrix4fv)(__VA_ARGS__))
 
 /* --- Global GX State --- */
 PCGXState g_gx;
+#ifdef __ANDROID__
+static float s_pc_gles_point_size = 1.0f;
+#endif
 
 #include "pc_vr.h"
 #include "pc_fp_camera.h"
@@ -280,12 +289,74 @@ static void pc_gx_bind_texture_profiled(GLenum target, GLuint texture) {
 #endif
 }
 
+/* BEGIN_ANDROID_VERTEX_STREAM: also exercised unchanged by the device test. */
+#ifndef PC_GX_ANDROID_VERTEX_STREAM
+#define PC_GX_ANDROID_VERTEX_STREAM 1
+#endif
+#if defined(__ANDROID__) && PC_GX_ANDROID_VERTEX_STREAM
+#define PC_GX_VERTEX_STREAM_BYTES (16u * 1024u * 1024u)
+_Static_assert(PC_GX_MAX_VERTS * sizeof(PCGXVertex) <= PC_GX_VERTEX_STREAM_BYTES,
+               "A complete GX vertex batch must fit in the Android stream");
+static size_t s_pc_vertex_stream_cursor;
+static int s_pc_vertex_stream_orphan = 1;
+
+static void pc_gx_vertex_stream_new_frame(void) {
+    /* Called only after pending old-frame draws have been submitted. The GL
+     * orphan is deferred until upload, when the GX VBO is already bound. */
+    s_pc_vertex_stream_orphan = 1;
+}
+
+static void pc_gx_vertex_stream_base(size_t base) {
+    /* GLES3 has no core DrawElementsBaseVertex. Rebase the VAO instead, so
+     * quad EBO indices and all existing primitive draw calls stay unchanged. */
+    GLsizei stride = sizeof(PCGXVertex);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride,
+                          (const void*)(base + offsetof(PCGXVertex, position)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
+                          (const void*)(base + offsetof(PCGXVertex, normal)));
+    glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, stride,
+                          (const void*)(base + offsetof(PCGXVertex, color0)));
+    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride,
+                          (const void*)(base + offsetof(PCGXVertex, texcoord)));
+}
+#endif
+
 static void pc_gx_buffer_data_profiled(GLenum target, GLsizeiptr size, const void* data, GLenum usage) {
     Uint64 t = pc_profiler_begin_timer();
+#if defined(__ANDROID__) && PC_GX_ANDROID_VERTEX_STREAM
+    /* Each draw owns a disjoint region until a whole-store orphan. This avoids
+     * allocating a new store for each of thousands of small GX batches. */
+    if (s_pc_vertex_stream_orphan || (size_t)size > PC_GX_VERTEX_STREAM_BYTES - s_pc_vertex_stream_cursor) {
+        glBufferData(target, PC_GX_VERTEX_STREAM_BYTES, NULL, usage);
+        s_pc_vertex_stream_cursor = 0;
+        s_pc_vertex_stream_orphan = 0;
+    }
+    /* SubData on this in-use VBO still serializes each draw on Adreno. Mapping
+     * a fresh range explicitly unsynchronized avoids that whole-object wait.
+     * The first map must invalidate the complete store too: an unsynchronized
+     * map alone after BufferData(NULL) can expose queued old data on Adreno.
+     * INVALIDATE_RANGE on every map was much slower in device measurements.
+     * Never revisit a range without the orphan + whole-store invalidation. */
+    void* mapped = glMapBufferRange(target, (GLintptr)s_pc_vertex_stream_cursor, size,
+                                   GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT |
+                                   (s_pc_vertex_stream_cursor == 0 ? GL_MAP_INVALIDATE_BUFFER_BIT : 0));
+    if (mapped) {
+        memcpy(mapped, data, (size_t)size);
+        if (!glUnmapBuffer(target))
+            glBufferSubData(target, (GLintptr)s_pc_vertex_stream_cursor, size, data);
+    } else {
+        /* Preserve the draw on a driver that cannot map this allocation. */
+        glBufferSubData(target, (GLintptr)s_pc_vertex_stream_cursor, size, data);
+    }
+    pc_gx_vertex_stream_base(s_pc_vertex_stream_cursor);
+    s_pc_vertex_stream_cursor += (size_t)size;
+#else
     glBufferData(target, size, data, usage);
+#endif
     pc_profiler_add_time(PC_PROF_TIMER_BUFFER_UPLOAD, t);
     pc_profiler_add_count_buffer_upload((size_t)size);
 }
+/* END_ANDROID_VERTEX_STREAM */
 
 /* Commit pending vertex + flush batch to GL. Used by GXBegin/GXEnd/GXCopyDisp/etc. */
 static void pc_gx_commit_pending_and_flush(void) {
@@ -321,6 +392,9 @@ int pc_emu64_frame_cull_rejected = 0;
 
 void pc_gx_init(void) {
     memset(&g_gx, 0, sizeof(g_gx));
+#if defined(__ANDROID__) && PC_GX_ANDROID_VERTEX_STREAM
+    pc_gx_vertex_stream_new_frame();
+#endif
 
     g_gx.projection_type = GX_PERSPECTIVE;
     g_gx.num_tev_stages = 1;
@@ -380,7 +454,7 @@ void pc_gx_init(void) {
     glGenBuffers(1, &g_gx.vbo);
     glGenBuffers(1, &g_gx.ebo);
 
-    /* VAO setup: attrib pointers persist since PCGXVertex layout and VBO ID never change */
+    /* PC pointers remain fixed; Android rebases them to each appended batch. */
     glBindVertexArray(g_gx.vao);
     glBindBuffer(GL_ARRAY_BUFFER, g_gx.vbo);
     glBufferData(GL_ARRAY_BUFFER, PC_GX_MAX_VERTS * sizeof(PCGXVertex), NULL, GL_STREAM_DRAW);
@@ -429,6 +503,9 @@ void pc_gx_begin_frame(void) {
     pc_gx_draw_call_count = 0;
     g_pc_widescreen_stretch = 0;
     pc_gx_draw_pending();
+#if defined(__ANDROID__) && PC_GX_ANDROID_VERTEX_STREAM
+    pc_gx_vertex_stream_new_frame();
+#endif
     pc_sky_begin_pass();
     /* glClear respects write masks — must enable all before clearing */
     glDepthMask(GL_TRUE);
@@ -456,7 +533,7 @@ void pc_gx_begin_frame(void) {
     glViewport(0, 0, g_pc_window_w, g_pc_window_h);
     pc_gx_viewport_state_invalidate();
 #endif
-    glClearDepth(g_gx.clear_depth);
+    pc_gl_clear_depth(g_gx.clear_depth);
     glClearColor(g_gx.clear_color[0], g_gx.clear_color[1], g_gx.clear_color[2], g_gx.clear_color[3]);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     pc_profiler_add_time(PC_PROF_TIMER_GX_BEGIN, prof_start);
@@ -806,6 +883,45 @@ static void pc_gx_reapply_viewport_scissor(void) {
                  (u32)g_gx.scissor[2], (u32)g_gx.scissor[3]);
 }
 
+/* Share the exact upload transform with conservative Quest batch rejection. */
+static void pc_gx_current_modelview(float mv44[16]) {
+    const float* src = (const float*)g_gx.pos_mtx[g_gx.current_mtx];
+    if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE &&
+        !pc_vr_flat_scene_active()) {
+        /* posmtx' = X * (V*M): re-anchor the combined game view/model into
+         * head-tracked eye space. Preserve the uniform upload arithmetic. */
+        const float* X = pc_vr_view_correction();
+        for (int r = 0; r < 3; r++) {
+            const float* xr = X + r * 4;
+            for (int c = 0; c < 4; c++) {
+                mv44[r * 4 + c] = xr[0] * src[0 * 4 + c]
+                                + xr[1] * src[1 * 4 + c]
+                                + xr[2] * src[2 * 4 + c]
+                                + (c == 3 ? xr[3] : 0.0f);
+            }
+        }
+    } else {
+        mv44[ 0] = src[0]; mv44[ 1] = src[1]; mv44[ 2] = src[2]; mv44[ 3] = src[3];
+        mv44[ 4] = src[4]; mv44[ 5] = src[5]; mv44[ 6] = src[6]; mv44[ 7] = src[7];
+        mv44[ 8] = src[8]; mv44[ 9] = src[9]; mv44[10] = src[10]; mv44[11] = src[11];
+    }
+    mv44[12] = 0.0f; mv44[13] = 0.0f; mv44[14] = 0.0f; mv44[15] = 1.0f;
+}
+
+#if defined(__ANDROID__) && PC_GX_ANDROID_BATCH_CLIP
+static int pc_gx_reject_offscreen_batch(int prim, GLuint shader) {
+    float mv44[16];
+    if (!shader || !pc_vr_in_scene_pass() || pc_vr_flat_scene_active() ||
+        g_gx.projection_type != GX_PERSPECTIVE ||
+        (prim != GX_TRIANGLES && prim != GX_QUADS) || g_gx.pending_verts != 0)
+        return 0;
+    pc_gx_current_modelview(mv44);
+    return quest_batch_clip_outside(pc_vr_eye_projection(), mv44,
+                                   g_gx.vertex_buffer, sizeof(PCGXVertex),
+                                   (size_t)g_gx.current_vertex_idx);
+}
+#endif
+
 void pc_gx_flush_vertices(void) {
     int count = g_gx.current_vertex_idx - g_gx.pending_verts;
     if (count <= 0) return;
@@ -865,6 +981,17 @@ void pc_gx_flush_vertices(void) {
                     vr ? pc_vr_view_correction() : NULL);
     }
 
+#if defined(__ANDROID__) && PC_GX_ANDROID_BATCH_CLIP
+    /* The previous run has already drawn with its own GL state. Reject only
+     * fresh, fully clipped geometry; all display-list state still executes.
+     * Keep dirty groups pending for the next visible batch. */
+    if (pc_gx_reject_offscreen_batch(prim, shader)) {
+        g_gx.current_vertex_idx = 0;
+        pc_profiler_add_time(PC_PROF_TIMER_GX_FLUSH, flush_start);
+        return;
+    }
+#endif
+
     if (shader && shader != g_gx.current_shader) {
         pc_gx_use_program_profiled(shader);
         PC_GL_CHECK("glUseProgram");
@@ -901,27 +1028,7 @@ void pc_gx_flush_vertices(void) {
             loc = UL(modelview);
             if (loc >= 0) {
                 float mv44[16];
-                const float* src = (const float*)g_gx.pos_mtx[g_gx.current_mtx];
-                if (pc_vr_in_scene_pass() && g_gx.projection_type == GX_PERSPECTIVE &&
-                    !pc_vr_flat_scene_active()) {
-                    /* posmtx' = X * (V*M): re-anchor the game's combined
-                     * view*model into head-tracked VR eye space (meters) */
-                    const float* X = pc_vr_view_correction();
-                    for (int r = 0; r < 3; r++) {
-                        const float* xr = X + r * 4;
-                        for (int c = 0; c < 4; c++) {
-                            mv44[r * 4 + c] = xr[0] * src[0 * 4 + c]
-                                            + xr[1] * src[1 * 4 + c]
-                                            + xr[2] * src[2 * 4 + c]
-                                            + (c == 3 ? xr[3] : 0.0f);
-                        }
-                    }
-                } else {
-                    mv44[ 0] = src[0]; mv44[ 1] = src[1]; mv44[ 2] = src[2]; mv44[ 3] = src[3];
-                    mv44[ 4] = src[4]; mv44[ 5] = src[5]; mv44[ 6] = src[6]; mv44[ 7] = src[7];
-                    mv44[ 8] = src[8]; mv44[ 9] = src[9]; mv44[10] = src[10]; mv44[11] = src[11];
-                }
-                mv44[12] = 0.0f;   mv44[13] = 0.0f;   mv44[14] = 0.0f;    mv44[15] = 1.0f;
+                pc_gx_current_modelview(mv44);
                 glUniformMatrix4fv(loc, 1, GL_TRUE, mv44);
             }
             loc = UL(normal_mtx);
@@ -1178,6 +1285,14 @@ void pc_gx_flush_vertices(void) {
         default:               gl_prim = GL_TRIANGLES; break;
     }
 
+#ifdef __ANDROID__
+    /* GLES point size comes from the vertex shader. Only point batches need
+     * this uniform; triangle/quad submission keeps its existing cached path. */
+    if (gl_prim == GL_POINTS && shader) {
+        GLint point_size = glGetUniformLocation(shader, "u_point_size");
+        if (point_size >= 0) glUniform1f(point_size, s_pc_gles_point_size);
+    }
+#endif
     Uint64 state_start = pc_profiler_begin_timer();
 
     if (g_gx.dirty & PC_GX_DIRTY_DEPTH) {
@@ -1518,7 +1633,7 @@ void GXSetViewport(f32 left, f32 top, f32 wd, f32 ht, f32 nearz, f32 farz) {
 
     pc_gx_draw_pending(); /* glViewport is not dirty-tracked */
     glViewport(gl_x, gl_y, gl_w, gl_h);
-    glDepthRange((double)nearz, (double)farz);
+    pc_gl_depth_range((double)nearz, (double)farz);
     s_gl_viewport.valid = 1;
     s_gl_viewport.x = gl_x;
     s_gl_viewport.y = gl_y;
@@ -2162,7 +2277,14 @@ void GXSetTexCoordGen2(u32 dst, u32 func, u32 src, u32 mtx, GXBool normalize, u3
     }
 }
 void GXSetLineWidth(u8 width, u32 texOffsets) { glLineWidth(width / 16.0f); }
-void GXSetPointSize(u8 size, u32 texOffsets) { glPointSize(size / 16.0f); }
+void GXSetPointSize(u8 size, u32 texOffsets) {
+#ifdef __ANDROID__
+    pc_gx_flush_if_begin_complete();
+    s_pc_gles_point_size = size / 16.0f;
+#else
+    glPointSize(size / 16.0f);
+#endif
+}
 void GXEnableTexOffsets(u32 coord, GXBool line, GXBool point) {
     (void)coord; (void)line; (void)point;
 }

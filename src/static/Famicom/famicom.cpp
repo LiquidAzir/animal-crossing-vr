@@ -685,7 +685,7 @@ static int SetupResBanner(const ResTIMG*, u8*, size_t, size_t*, u8*);
 static int SetupResIcon(const ResTIMG*, u8*, size_t, size_t*, u16*, u16*);
 
 static void SetupExternCommentImage(u8* embedded_save_comment_img, u8* dst, u8* rom_file_comment_img) {
-    u32 size;
+    size_t size;
 
     switch (famicomCommon.memcard_game_header.flags0.comment_type) {
         case MEMCARD_COMMENT_TYPE_NONE:
@@ -909,7 +909,7 @@ static s32 memcard_data_save(
                 goto exit;
             }
 
-            bool save_updated = bcmp(save_data, buf, save_data_size_block_aligned) == 0;
+            bool save_updated = memcmp(save_data, buf, save_data_size_block_aligned) == 0;
             if (save_updated) {
                 // No need to save, so the process has completed successfully.
                 OSReport("セーブする必要が無いので正常終了\n");
@@ -998,7 +998,7 @@ static s32 memcard_data_save(
             OSReport("ファイル全体のベリファイ\n");
             result = CARDRead(&fileInfo, buf, save_data_size_block_aligned, 0);
             if (result == CARD_RESULT_READY) {
-                if (bcmp(save_data, buf, save_data_size_block_aligned) == 0) {
+                if (memcmp(save_data, buf, save_data_size_block_aligned) == 0) {
                     // Verification successful.
                     OSReport("ベリファイ成功\n");
                 }

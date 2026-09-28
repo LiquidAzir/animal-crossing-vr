@@ -1,0 +1,403 @@
+/* OpenXR-specific half of quest_vr.cpp. All calls occur on the SDL/render
+ * thread. Action snapshots, head/views and velocity share predictedDisplayTime.
+ * Swapchain ownership remains entirely in QuestXrRuntime. */
+
+static bool pcvr_from_pose(const XrPosef& pose, M34 out) {
+    const auto& q = pose.orientation;
+    float length = q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w;
+    if (!isfinite(length) || length < 1e-8f || !isfinite(pose.position.x) ||
+        !isfinite(pose.position.y) || !isfinite(pose.position.z)) return false;
+    float k = 2.0f / length;
+    out[0][0] = 1 - k*(q.y*q.y + q.z*q.z);
+    out[0][1] = k*(q.x*q.y - q.z*q.w);
+    out[0][2] = k*(q.x*q.z + q.y*q.w);
+    out[1][0] = k*(q.x*q.y + q.z*q.w);
+    out[1][1] = 1 - k*(q.x*q.x + q.z*q.z);
+    out[1][2] = k*(q.y*q.z - q.x*q.w);
+    out[2][0] = k*(q.x*q.z - q.y*q.w);
+    out[2][1] = k*(q.y*q.z + q.x*q.w);
+    out[2][2] = 1 - k*(q.x*q.x + q.y*q.y);
+    out[0][3] = pose.position.x;
+    out[1][3] = pose.position.y;
+    out[2][3] = pose.position.z;
+    return true;
+}
+
+static void pcvr_recenter(const M34 head_local) {
+    // App-local origin, preserving real pitch/roll and subsequent leaning.
+    // Does not change the runtime's LOCAL space or system boundary settings.
+    float yaw = atan2f(head_local[0][2], head_local[2][2]);
+    float c = cosf(yaw), s = sinf(yaw);
+    M34 local_from_seated = {{c, 0, s, head_local[0][3]},
+                            {0, 1, 0, head_local[1][3]},
+                            {-s, 0, c, head_local[2][3]}};
+    m34_invert_rigid(local_from_seated, s_seated_from_local);
+    s_have_seated_origin = 1;
+    pcvr_log("Recentered app origin");
+}
+
+static void pcvr_update_eye_projection(int eye) {
+    const XrFovf& fov = s_xr.views[eye].fov;
+    float l = tanf(fov.angleLeft), r = tanf(fov.angleRight);
+    float b = tanf(fov.angleDown), t = tanf(fov.angleUp);
+    if (r-l < 1e-4f || t-b < 1e-4f) { l = b = -1; r = t = 1; }
+    float (*out)[4] = s_vr.eye_projection[eye];
+    memset(out, 0, sizeof(s_vr.eye_projection[eye]));
+    out[0][0] = 2/(r-l); out[0][2] = (r+l)/(r-l);
+    out[1][1] = 2/(t-b); out[1][2] = (t+b)/(t-b);
+    const float n = PC_VR_NEAR_M, f = pcvr_far_m();
+    // Keep the GX convention expected by the translated game shaders.
+    out[2][2] = n/(n-f); out[2][3] = n*f/(n-f); out[3][2] = -1;
+}
+
+static bool pcvr_create_action(XrAction* action, XrActionType type,
+                               const char* name, const char* label) {
+    XrActionCreateInfo info = {XR_TYPE_ACTION_CREATE_INFO};
+    info.actionType = type;
+    snprintf(info.actionName, sizeof(info.actionName), "%s", name);
+    snprintf(info.localizedActionName, sizeof(info.localizedActionName), "%s", label);
+    return s_xr.check(xrCreateAction(s_vr.action_set, &info, action), name);
+}
+
+static bool pcvr_create_action_space(XrAction action, XrSpace* space) {
+    XrActionSpaceCreateInfo info = {XR_TYPE_ACTION_SPACE_CREATE_INFO};
+    info.action = action;
+    info.poseInActionSpace.orientation.w = 1;
+    return s_xr.check(xrCreateActionSpace(s_xr.session, &info, space), "create action space");
+}
+
+static bool pcvr_input_init(void) {
+    XrActionSetCreateInfo set = {XR_TYPE_ACTION_SET_CREATE_INFO};
+    strcpy(set.actionSetName, "gameplay");
+    strcpy(set.localizedActionSetName, "Animal Crossing");
+    if (!s_xr.check(xrCreateActionSet(s_xr.instance, &set, &s_vr.action_set), "create gameplay actions")) return false;
+    struct Action { XrAction* handle; XrActionType type; const char* name; const char* label; } actions[] = {
+        {&s_vr.act_move, XR_ACTION_TYPE_VECTOR2F_INPUT, "move", "Move"},
+        {&s_vr.act_camera, XR_ACTION_TYPE_VECTOR2F_INPUT, "camera", "Turn camera"},
+        {&s_vr.act_a, XR_ACTION_TYPE_BOOLEAN_INPUT, "a", "Confirm / use tool"},
+        {&s_vr.act_b, XR_ACTION_TYPE_BOOLEAN_INPUT, "b", "Cancel / run"},
+        {&s_vr.act_x, XR_ACTION_TYPE_BOOLEAN_INPUT, "x", "X"},
+        {&s_vr.act_y, XR_ACTION_TYPE_BOOLEAN_INPUT, "y", "Y"},
+        {&s_vr.act_l, XR_ACTION_TYPE_FLOAT_INPUT, "left_grip", "Tool selection modifier"},
+        {&s_vr.act_r, XR_ACTION_TYPE_FLOAT_INPUT, "right_grip", "R"},
+        {&s_vr.act_trigger_l, XR_ACTION_TYPE_FLOAT_INPUT, "left_trigger", "Cancel / run trigger"},
+        {&s_vr.act_trigger_r, XR_ACTION_TYPE_FLOAT_INPUT, "right_trigger", "Confirm / tool trigger"},
+        {&s_vr.act_z, XR_ACTION_TYPE_BOOLEAN_INPUT, "z", "Z"},
+        {&s_vr.act_start, XR_ACTION_TYPE_BOOLEAN_INPUT, "start", "Start menu"},
+        {&s_vr.act_hand_r, XR_ACTION_TYPE_POSE_INPUT, "tool_aim", "Right tool aim"},
+        {&s_vr.act_empty_hand[0], XR_ACTION_TYPE_POSE_INPUT, "left_hand", "Left empty hand"},
+        {&s_vr.act_empty_hand[1], XR_ACTION_TYPE_POSE_INPUT, "right_hand", "Right empty hand"},
+        {&s_vr.act_haptic_l, XR_ACTION_TYPE_VIBRATION_OUTPUT, "left_haptic", "Left haptic"},
+        {&s_vr.act_haptic_r, XR_ACTION_TYPE_VIBRATION_OUTPUT, "right_haptic", "Right haptic"}
+    };
+    for (auto& action : actions)
+        if (!pcvr_create_action(action.handle, action.type, action.name, action.label)) return false;
+    struct Binding { XrAction action; const char* path; } paths[] = {
+        {s_vr.act_move, "/user/hand/left/input/thumbstick"},
+        {s_vr.act_camera, "/user/hand/right/input/thumbstick"},
+        {s_vr.act_a, "/user/hand/right/input/a/click"},
+        {s_vr.act_b, "/user/hand/right/input/b/click"},
+        {s_vr.act_x, "/user/hand/left/input/x/click"},
+        {s_vr.act_y, "/user/hand/left/input/y/click"},
+        {s_vr.act_l, "/user/hand/left/input/squeeze/value"},
+        {s_vr.act_r, "/user/hand/right/input/squeeze/value"},
+        {s_vr.act_trigger_l, "/user/hand/left/input/trigger/value"},
+        {s_vr.act_trigger_r, "/user/hand/right/input/trigger/value"},
+        {s_vr.act_z, "/user/hand/right/input/thumbstick/click"},
+        {s_vr.act_start, "/user/hand/left/input/thumbstick/click"},
+        {s_vr.act_hand_r, "/user/hand/right/input/aim/pose"},
+        {s_vr.act_empty_hand[0], "/user/hand/left/input/grip/pose"},
+        {s_vr.act_empty_hand[1], "/user/hand/right/input/grip/pose"},
+        {s_vr.act_haptic_l, "/user/hand/left/output/haptic"},
+        {s_vr.act_haptic_r, "/user/hand/right/output/haptic"}
+    };
+    QuestHostVector<XrActionSuggestedBinding> bindings;
+    for (const auto& binding : paths) {
+        XrPath path;
+        if (!s_xr.check(xrStringToPath(s_xr.instance, binding.path, &path), "controller binding path")) return false;
+        bindings.push_back({binding.action, path});
+    }
+    XrInteractionProfileSuggestedBinding suggested = {XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
+    if (!s_xr.check(xrStringToPath(s_xr.instance, "/interaction_profiles/oculus/touch_controller",
+                                  &suggested.interactionProfile), "Touch profile")) return false;
+    suggested.countSuggestedBindings = bindings.size();
+    suggested.suggestedBindings = bindings.data();
+    if (!s_xr.check(xrSuggestInteractionProfileBindings(s_xr.instance, &suggested), "suggest Touch bindings")) return false;
+    if (!pcvr_create_action_space(s_vr.act_hand_r, &s_vr.aim_space) ||
+        !pcvr_create_action_space(s_vr.act_empty_hand[0], &s_vr.grip_space[0]) ||
+        !pcvr_create_action_space(s_vr.act_empty_hand[1], &s_vr.grip_space[1])) return false;
+    XrSessionActionSetsAttachInfo attach = {XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO};
+    attach.countActionSets = 1; attach.actionSets = &s_vr.action_set;
+    if (!s_xr.check(xrAttachSessionActionSets(s_xr.session, &attach), "attach gameplay actions")) return false;
+    s_vr.input_ready = 1;
+    return true;
+}
+
+static float pcvr_float_action(XrAction action) {
+    if (!s_vr.input_synced || !s_xr.focused || !s_xr.resumed || !action) return 0;
+    XrActionStateGetInfo info = {XR_TYPE_ACTION_STATE_GET_INFO}; info.action = action;
+    XrActionStateFloat state = {XR_TYPE_ACTION_STATE_FLOAT};
+    return xrGetActionStateFloat(s_xr.session, &info, &state) == XR_SUCCESS && state.isActive
+        && isfinite(state.currentState) ? state.currentState : 0;
+}
+
+static int pcvr_digital(XrAction action) {
+    if (!s_vr.input_synced || !s_xr.focused || !s_xr.resumed || !action) return 0;
+    if (action == s_vr.act_l || action == s_vr.act_r) return pcvr_float_action(action) > 0.55f;
+    XrActionStateGetInfo info = {XR_TYPE_ACTION_STATE_GET_INFO}; info.action = action;
+    XrActionStateBoolean state = {XR_TYPE_ACTION_STATE_BOOLEAN};
+    bool pressed = xrGetActionStateBoolean(s_xr.session, &info, &state) == XR_SUCCESS
+                    && state.isActive && state.currentState;
+    if (action == s_vr.act_a) pressed |= pcvr_float_action(s_vr.act_trigger_r) > 0.55f;
+    if (action == s_vr.act_b) pressed |= pcvr_float_action(s_vr.act_trigger_l) > 0.55f;
+    return pressed;
+}
+
+static void pcvr_analog(XrAction action, float* x, float* y) {
+    *x = *y = 0;
+    if (!s_vr.input_synced || !s_xr.focused || !s_xr.resumed || !action) return;
+    XrActionStateGetInfo info = {XR_TYPE_ACTION_STATE_GET_INFO}; info.action = action;
+    XrActionStateVector2f state = {XR_TYPE_ACTION_STATE_VECTOR2F};
+    if (xrGetActionStateVector2f(s_xr.session, &info, &state) == XR_SUCCESS && state.isActive &&
+        isfinite(state.currentState.x) && isfinite(state.currentState.y)) {
+        *x = state.currentState.x; *y = state.currentState.y;
+    }
+}
+
+static bool pcvr_locate_action(XrAction action, XrSpace space, M34 seated,
+                               XrSpaceVelocity* velocity = nullptr) {
+    if (!s_vr.input_synced || !s_vr.head_pose_valid || !s_xr.focused || !s_xr.resumed) return false;
+    XrActionStateGetInfo info = {XR_TYPE_ACTION_STATE_GET_INFO}; info.action = action;
+    XrActionStatePose active = {XR_TYPE_ACTION_STATE_POSE};
+    if (xrGetActionStatePose(s_xr.session, &info, &active) != XR_SUCCESS || !active.isActive) return false;
+    XrSpaceLocation location = {XR_TYPE_SPACE_LOCATION}; location.next = velocity;
+    if (xrLocateSpace(space, s_xr.local_space, s_xr.frame.predictedDisplayTime, &location) != XR_SUCCESS) return false;
+    const XrSpaceLocationFlags valid = XR_SPACE_LOCATION_ORIENTATION_VALID_BIT | XR_SPACE_LOCATION_POSITION_VALID_BIT;
+    M34 local;
+    if ((location.locationFlags & valid) != valid || !pcvr_from_pose(location.pose, local)) return false;
+    m34_mul(s_seated_from_local, local, seated);
+    return true;
+}
+
+extern "C" void quest_vr_set_android(void* vm, void* activity) {
+    JNIEnv* env = nullptr;
+    auto* incoming_vm = static_cast<JavaVM*>(vm);
+    if (!incoming_vm || incoming_vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) return;
+    if (s_activity) env->DeleteGlobalRef(s_activity);
+    s_vm = incoming_vm;
+    s_activity = env->NewGlobalRef(static_cast<jobject>(activity));
+}
+
+extern "C" void quest_vr_set_resumed(int resumed) {
+    s_xr.resumed = resumed != 0;
+    if (!resumed) {
+        // SDL delivers WILLENTERBACKGROUND before unbinding its EGL context.
+        // NES/panel frames may still be open here because VI polls lifecycle
+        // events before ensure_submitted. Return their images before blocking.
+        if (s_xr.frame_begun) {
+            pc_gx_draw_pending();
+            s_xr.end_frame(false);
+            s_vr.submitted_this_frame = 1;
+            for (int eye = 0; eye < 2; ++eye) s_vr.eye[eye] = s_vr.sink;
+        }
+        s_vr.input_synced = s_vr.hand_valid = s_vr.head_pose_valid = 0;
+        s_vr.empty_hand_valid[0] = s_vr.empty_hand_valid[1] = 0;
+        pc_vr_swing_cancel(&s_vr.swing);
+    }
+}
+
+extern "C" void pc_vr_init(void) {
+    memset(&s_vr, 0, sizeof(s_vr));
+    s_vr.current_eye = -1;
+    s_vr.world_scale = g_pc_settings.vr_world_scale / 1000.0f;
+    if (s_vr.world_scale <= 0.0001f) s_vr.world_scale = 0.01f;
+    s_vr.ui_distance = fmaxf(0.5f, g_pc_settings.vr_ui_distance / 100.0f);
+    s_vr.ui_size = fmaxf(0.5f, g_pc_settings.vr_ui_size / 100.0f);
+    s_vr.height_offset = g_pc_settings.vr_height_offset / 100.0f;
+    s_vr.ui_dist_k = 1;
+    s_vr.flat_scene_stamp = (u32)-1000;
+    s_frame_stamp = (u32)-1;
+    s_have_seated_origin = 0;
+    m34_identity(s_seated_from_local);
+    m34_identity(s_vr.game_view); m34_identity(s_vr.head_pose);
+    m34_identity(s_vr.world_from_seated);
+    for (int eye = 0; eye < 2; ++eye) {
+        m34_identity(s_vr.inv_eye_pose[eye]); m34_identity(s_vr.view_correction[eye]);
+    }
+    // Standalone builds always enter OpenXR; imported PC vr_mode=0 must not
+    // silently leave the native app rendering an invisible desktop window.
+    if (!s_xr.init(s_vm, s_activity) || !pcvr_input_init() ||
+        !pcvr_create_target(&s_vr.ui, 1280, 960) ||
+        !pcvr_create_target(&s_vr.sink, 32, 32) || !pcvr_create_panel_gl()) {
+        pcvr_log("Native XR initialization failed; exiting without game startup");
+        pc_vr_shutdown(); g_pc_running = 0; return;
+    }
+    for (int eye = 0; eye < 2; ++eye) s_vr.eye[eye] = s_vr.sink;
+    m34_identity(s_vr.tool_local);
+    // OpenXR aim is -Z forward; game tools are authored along +Z.
+    // Grip poses remain separate and never receive this tool correction.
+    M34 flip, pitch;
+    m34_identity(flip); m34_identity(pitch);
+    flip[0][0] = flip[2][2] = -1;
+    float p = -g_pc_settings.vr_tool_pitch * (float)(PC_PI / 180.0);
+    pitch[1][1] = pitch[2][2] = cosf(p);
+    pitch[1][2] = -sinf(p); pitch[2][1] = sinf(p);
+    m34_mul(flip, pitch, s_vr.tool_local);
+    SDL_GL_SetSwapInterval(0); g_frame_limiter = 0;
+    g_pc_vr_cull_expand = 24; g_pc_vr_cull_znear_slack = 8;
+    pc_full_world_enable();
+    s_vr.active_since_ticks = SDL_GetTicks();
+    s_vr.active = 1;
+    pcvr_update_eye_projection(0); pcvr_update_eye_projection(1);
+    pc_vr_set_fp_scale(g_pc_fp_mode != 0);
+    pcvr_log("Quest backend initialized: separate aim/grip actions, stereo GLES");
+}
+
+extern "C" void pc_vr_shutdown(void) {
+    s_vr.active = 0;
+    if (s_xr.frame_begun) s_xr.end_frame(false);
+    pc_vr_hands_shutdown();
+    pcvr_destroy_target(&s_vr.ui); pcvr_destroy_target(&s_vr.sink);
+    if (s_vr.panel_prog) glDeleteProgram(s_vr.panel_prog);
+    if (s_vr.panel_vao) glDeleteVertexArrays(1, &s_vr.panel_vao);
+    if (s_vr.panel_vbo) glDeleteBuffers(1, &s_vr.panel_vbo);
+    if (s_vr.aim_space) xrDestroySpace(s_vr.aim_space);
+    for (auto space : s_vr.grip_space) if (space) xrDestroySpace(space);
+    if (s_vr.action_set) xrDestroyActionSet(s_vr.action_set);
+    s_xr.shutdown();
+    memset(&s_vr, 0, sizeof(s_vr));
+    if (s_vm && s_activity) {
+        JNIEnv* env = nullptr;
+        if (s_vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) == JNI_OK)
+            env->DeleteGlobalRef(s_activity);
+    }
+    s_activity = nullptr; s_vm = nullptr;
+}
+
+extern "C" int pc_vr_active(void) { return s_vr.active; }
+
+extern "C" void pc_vr_frame_begin(void) {
+    if (!s_vr.active || s_frame_stamp == pc_frame_counter) return;
+    s_frame_stamp = pc_frame_counter;
+    s_vr.submitted_this_frame = 0;
+    s_vr.input_synced = s_vr.head_pose_valid = s_vr.hand_valid = 0;
+    s_vr.empty_hand_valid[0] = s_vr.empty_hand_valid[1] = 0;
+    for (int eye = 0; eye < 2; ++eye) s_vr.eye[eye] = s_vr.sink;
+    s_xr.timing_enabled = g_pc_profile_enabled != 0;
+    bool began = s_xr.begin_frame();
+    if (s_xr.exit_requested) { g_pc_running = 0; return; }
+    if (!began) SDL_Delay(20);
+    double actions_start = s_xr.timing_tick();
+    if (began && s_vr.input_ready && s_xr.focused && s_xr.resumed) {
+        XrActiveActionSet active = {s_vr.action_set, XR_NULL_PATH};
+        XrActionsSyncInfo sync = {XR_TYPE_ACTIONS_SYNC_INFO};
+        sync.countActiveActionSets = 1; sync.activeActionSets = &active;
+        s_vr.input_synced = xrSyncActions(s_xr.session, &sync) == XR_SUCCESS;
+    }
+    XrSpaceLocation head = {XR_TYPE_SPACE_LOCATION};
+    M34 head_local;
+    if (began && s_xr.locate_head(&head) && pcvr_from_pose(head.pose, head_local)) {
+        bool chord = pcvr_digital(s_vr.act_x) && pcvr_digital(s_vr.act_y);
+        if (s_xr.recenter_change_time && s_xr.frame.predictedDisplayTime >= s_xr.recenter_change_time) {
+            s_have_seated_origin = 0; s_xr.recenter_change_time = 0;
+        }
+        if (!s_have_seated_origin || (chord && !s_vr.recenter_latch)) pcvr_recenter(head_local);
+        s_vr.recenter_latch = chord;
+        m34_mul(s_seated_from_local, head_local, s_vr.head_pose);
+        s_vr.head_pose_valid = s_vr.have_pose = 1;
+        for (int eye = 0; eye < 2; ++eye) {
+            M34 local_eye, seated_eye;
+            if (pcvr_from_pose(s_xr.views[eye].pose, local_eye)) {
+                m34_mul(s_seated_from_local, local_eye, seated_eye);
+                m34_invert_rigid(seated_eye, s_vr.inv_eye_pose[eye]);
+            }
+            pcvr_update_eye_projection(eye);
+        }
+        pcvr_update_view_correction();
+    }
+    XrSpaceVelocity velocity = {XR_TYPE_SPACE_VELOCITY};
+    M34 aim, tool_world;
+    float speed = NAN;
+    if (pcvr_locate_action(s_vr.act_hand_r, s_vr.aim_space, aim, &velocity)) {
+        m34_mul(s_vr.world_from_seated, aim, tool_world);
+        m34_mul(tool_world, s_vr.tool_local, s_vr.hand_world);
+        for (int r = 0; r < 3; ++r) for (int c = 0; c < 3; ++c)
+            s_vr.hand_world[r][c] *= 0.01f * s_vr.world_scale;
+        s_vr.hand_valid = 1;
+        if (velocity.velocityFlags & XR_SPACE_VELOCITY_LINEAR_VALID_BIT) {
+            const auto& v = velocity.linearVelocity;
+            speed = sqrtf(v.x*v.x + v.y*v.y + v.z*v.z);
+        }
+    }
+    pc_vr_swing_update(&s_vr.swing, SDL_GetTicks(), speed,
+        s_vr.hand_valid && pc_vr_tool_input_allowed() && g_pc_settings.vr_motion_swing &&
+        pc_fp_swingable_equipped() && !pcvr_digital(s_vr.act_l));
+    if (g_pc_settings.vr_empty_hands) for (int hand_index = 0; hand_index < 2; ++hand_index) {
+        s_vr.empty_hand_valid[hand_index] = pcvr_locate_action(s_vr.act_empty_hand[hand_index],
+            s_vr.grip_space[hand_index], s_vr.empty_hand_pose[hand_index]);
+        s_vr.empty_hand_seen[hand_index] |= s_vr.empty_hand_valid[hand_index];
+    }
+    s_xr.timing_record(QUEST_XR_ACTIONS, actions_start);
+    if (s_xr.should_render) {
+        bool acquired = s_xr.acquire_eye(0) && s_xr.acquire_eye(1);
+        if (acquired) for (int eye = 0; eye < 2; ++eye) {
+            const auto& target = s_xr.eyes[eye];
+            s_vr.eye[eye] = {target.fbos[target.index], target.images[target.index].image,
+                            target.depths[target.index], target.width, target.height};
+        }
+        else s_xr.should_render = false;
+    }
+    pc_gx_draw_pending();
+    glBindFramebuffer(GL_FRAMEBUFFER, s_vr.ui.fbo);
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); glDepthMask(GL_TRUE);
+    glClearColor(0, 0, 0, 0); glClearDepthf(1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+extern "C" void pc_vr_compose_and_submit(void) {
+    if (!s_vr.active || s_vr.submitted_this_frame) return;
+    pc_gx_draw_pending();
+    float target = pc_fp_view_is_active() ? 0.6f : 1.0f;
+    s_vr.ui_dist_k += (target - s_vr.ui_dist_k) * 0.2f;
+    if (fabsf(target - s_vr.ui_dist_k) < 0.01f) s_vr.ui_dist_k = target;
+    bool render = s_xr.frame_begun && s_xr.should_render;
+    if (render) { pcvr_draw_panel(0); pcvr_draw_panel(1); }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (s_xr.frame_begun) s_xr.end_frame(render);
+    s_vr.submitted_this_frame = 1;
+    pc_gx_restore_after_nes(); glEnable(GL_DEPTH_TEST);
+}
+
+extern "C" void pc_vr_mirror_to_window(void) {
+    // No desktop mirror in a standalone headset. In particular, do not access
+    // eye textures after xrReleaseSwapchainImage transferred their ownership.
+}
+
+extern "C" void pc_vr_rumble(int on) {
+    if (!on || !s_vr.input_synced || !s_xr.focused || !s_xr.resumed) return;
+    XrHapticVibration pulse = {XR_TYPE_HAPTIC_VIBRATION};
+    pulse.duration = 150000000; pulse.frequency = 160; pulse.amplitude = 0.8f;
+    for (XrAction action : {s_vr.act_haptic_l, s_vr.act_haptic_r}) {
+        XrHapticActionInfo info = {XR_TYPE_HAPTIC_ACTION_INFO}; info.action = action;
+        xrApplyHapticFeedback(s_xr.session, &info, reinterpret_cast<const XrHapticBaseHeader*>(&pulse));
+    }
+}
+
+static GLint s_nes_saved_viewport[4];
+extern "C" void pc_vr_nes_begin_draw(void) {
+    if (!s_vr.active) return;
+    if (s_frame_stamp != pc_frame_counter) pc_vr_frame_begin();
+    glGetIntegerv(GL_VIEWPORT, s_nes_saved_viewport);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_vr.ui.fbo);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    g_pc_target_w = s_vr.ui.w; g_pc_target_h = s_vr.ui.h;
+}
+extern "C" void pc_vr_nes_end_draw(void) {
+    if (!s_vr.active) return;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(s_nes_saved_viewport[0], s_nes_saved_viewport[1], s_nes_saved_viewport[2], s_nes_saved_viewport[3]);
+    g_pc_target_w = g_pc_window_w; g_pc_target_h = g_pc_window_h;
+    pc_gx_dirty_colormask();
+}

@@ -2,7 +2,7 @@
  * The only persistent resources are one program, one VAO and one static VBO.
  * Mesh creation happens once; drawing neither allocates nor touches game state. */
 #include "pc_vr_hands.h"
-#include <glad/gl.h>
+#include "pc_gl.h"
 #include <cmath>
 #include <cstdio>
 #include <cstddef>
@@ -13,7 +13,7 @@ GLint u_pose, u_projection, u_mirror;
 GLsizei vertex_count;
 bool failed;
 
-const char* vertex_source = R"GLSL(#version 330 core
+const char* vertex_source = PC_GLSL_HEADER R"GLSL(
 layout(location=0) in vec3 position;
 layout(location=1) in vec3 normal;
 uniform mat4 eye_from_grip;
@@ -32,7 +32,7 @@ void main() {
 }
 )GLSL";
 
-const char* fragment_source = R"GLSL(#version 330 core
+const char* fragment_source = PC_GLSL_HEADER R"GLSL(
 in vec3 eye_normal;
 out vec4 color;
 void main() {
@@ -46,14 +46,16 @@ void main() {
 // lazy initialization too: creating the VAO/VBO changes buffer bindings.
 const GLenum capabilities[] = {
     GL_DEPTH_TEST, GL_BLEND, GL_CULL_FACE, GL_SCISSOR_TEST,
-    GL_COLOR_LOGIC_OP, GL_STENCIL_TEST, GL_RASTERIZER_DISCARD,
+    GL_STENCIL_TEST, GL_RASTERIZER_DISCARD,
     GL_POLYGON_OFFSET_FILL, GL_SAMPLE_ALPHA_TO_COVERAGE, GL_SAMPLE_COVERAGE,
-    GL_SAMPLE_MASK, GL_DEPTH_CLAMP
+#ifndef __ANDROID__
+    GL_COLOR_LOGIC_OP, GL_SAMPLE_MASK, GL_DEPTH_CLAMP
+#endif
 };
 struct SavedState {
     GLint old_program, old_vao, array_buffer, depth_func, polygon_mode[2];
     GLboolean depth_mask, color_mask[4];
-    GLdouble depth_range[2];
+    pc_gl_depth_value depth_range[2];
     GLboolean enabled[sizeof(capabilities)/sizeof(capabilities[0])];
     SavedState() {
         glGetIntegerv(GL_CURRENT_PROGRAM, &old_program);
@@ -62,12 +64,14 @@ struct SavedState {
         glGetIntegerv(GL_DEPTH_FUNC, &depth_func);
         // Core contexts have one mode; compatibility contexts can return a
         // separate back-face mode. Some core drivers write only the first.
+#ifndef __ANDROID__
         polygon_mode[0]=polygon_mode[1]=-1;
         glGetIntegerv(GL_POLYGON_MODE, polygon_mode);
         if (polygon_mode[1]==-1) polygon_mode[1]=polygon_mode[0];
+#endif
         glGetBooleanv(GL_DEPTH_WRITEMASK, &depth_mask);
         glGetBooleanv(GL_COLOR_WRITEMASK, color_mask);
-        glGetDoublev(GL_DEPTH_RANGE, depth_range);
+        pc_gl_get_depth_range(depth_range);
         for (size_t i=0; i<sizeof(capabilities)/sizeof(capabilities[0]); ++i)
             enabled[i] = glIsEnabled(capabilities[i]);
     }
@@ -77,8 +81,9 @@ struct SavedState {
         glBindBuffer(GL_ARRAY_BUFFER, (GLuint)array_buffer);
         glDepthFunc((GLenum)depth_func);
         glDepthMask(depth_mask);
-        glDepthRange(depth_range[0], depth_range[1]);
+        pc_gl_depth_range(depth_range[0], depth_range[1]);
         glColorMask(color_mask[0], color_mask[1], color_mask[2], color_mask[3]);
+#ifndef __ANDROID__
         if (polygon_mode[0] == polygon_mode[1]) {
             glPolygonMode(GL_FRONT_AND_BACK, (GLenum)polygon_mode[0]);
         } else {
@@ -86,6 +91,7 @@ struct SavedState {
             glPolygonMode(GL_FRONT, (GLenum)polygon_mode[0]);
             glPolygonMode(GL_BACK, (GLenum)polygon_mode[1]);
         }
+#endif
         for (size_t i=0; i<sizeof(capabilities)/sizeof(capabilities[0]); ++i) {
             if (enabled[i]) glEnable(capabilities[i]);
             else glDisable(capabilities[i]);
@@ -243,10 +249,12 @@ extern "C" int pc_vr_hands_draw(const float pose[12], const float projection[16]
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_TRUE);
-    glDepthRange(saved.depth_range[0],
+    pc_gl_depth_range(saved.depth_range[0],
                  (saved.depth_range[0]+saved.depth_range[1])*0.5);
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+#ifndef __ANDROID__
     glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+#endif
     glUseProgram(program);
     glBindVertexArray(vao);
     glUniformMatrix4fv(u_pose,1,GL_TRUE,matrix);

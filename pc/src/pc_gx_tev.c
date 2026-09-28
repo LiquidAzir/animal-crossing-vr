@@ -48,7 +48,7 @@ static char*  s_frag_base = NULL;    /* kept for variant generation */
 
 static GLuint compile_shader(GLenum type, const char* source) {
     GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
+    pc_gl_shader_source(shader, source);
     glCompileShader(shader);
 
     GLint success;
@@ -358,11 +358,12 @@ static char* build_specialized_source(const PCGXShaderKey* k) {
     if (clen < 0) return NULL;
 
     size_t base_len = strlen(s_frag_base);
-    char* out = (char*)malloc(base_len + (size_t)clen + 64);
+    static const char header[] = PC_GLSL_HEADER;
+    char* out = (char*)malloc(base_len + (size_t)clen + sizeof(header) + 1);
     if (!out) return NULL;
 
     size_t pos = 0;
-    memcpy(out + pos, "#version 330 core\n", 18); pos += 18;
+    memcpy(out + pos, header, sizeof(header)-1); pos += sizeof(header)-1;
     memcpy(out + pos, consts, (size_t)clen); pos += (size_t)clen;
 
     const char* p = s_frag_base;

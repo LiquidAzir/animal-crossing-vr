@@ -423,9 +423,16 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
         return FALSE;
     }
 
-    fflush(fp);
-    fclose(fp);
+    /* Buffered writes can fail at flush or close. Do not rotate a known-good
+     * village or its backups until the complete temporary file succeeds. */
+    int flush_result = fflush(fp);
+    int close_result = fclose(fp);
     free(file_data);
+    if (flush_result != 0 || close_result != 0) {
+        OSReport("[PC] GCI save: flush/close failed; previous save preserved\n");
+        remove(tmp_path);
+        return FALSE;
+    }
 
     pc_save_rotate_backups(gci_path);
     if (rename(tmp_path, gci_path) != 0) {
