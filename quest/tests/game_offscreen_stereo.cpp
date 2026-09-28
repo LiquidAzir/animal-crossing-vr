@@ -89,6 +89,14 @@ extern "C" void offscreen_stereo_init(void* library,int enabled,int eye_size) {
     s_vr.ui_dist_k=1;
     m34_identity(s_vr.game_view);m34_identity(s_vr.head_pose);
     m34_identity(s_vr.world_from_seated);
+    const char* yaw_text=getenv("ACQUEST_TEST_YAW");
+    const int yaw_degrees=yaw_text?atoi(yaw_text):0;
+    if(yaw_degrees < -180 || yaw_degrees > 180)_Exit(3);
+    const float yaw=yaw_degrees*(float)PC_PI/180.0f;
+    M34 yaw_rotation;
+    m34_identity(yaw_rotation);
+    yaw_rotation[0][0]=yaw_rotation[2][2]=cosf(yaw);
+    yaw_rotation[0][2]=sinf(yaw);yaw_rotation[2][0]=-sinf(yaw);
     for(int eye=0;eye<2;++eye){
         if(!pcvr_create_target(&s_vr.eye[eye],eye_size,eye_size))_Exit(4);
         s_xr.views[eye].fov={-0.785398163f,0.785398163f,0.785398163f,-0.785398163f};
@@ -99,7 +107,9 @@ extern "C" void offscreen_stereo_init(void* library,int enabled,int eye_size) {
         seated_eye[1][1]=seated_eye[2][2]=cosf(pitch);
         seated_eye[1][2]=-sinf(pitch);seated_eye[2][1]=sinf(pitch);
         seated_eye[0][3]=eye?0.032f:-0.032f;
-        m34_invert_rigid(seated_eye,s_vr.inv_eye_pose[eye]);
+        M34 rotated_eye;
+        m34_mul(yaw_rotation,seated_eye,rotated_eye);
+        m34_invert_rigid(rotated_eye,s_vr.inv_eye_pose[eye]);
         pcvr_update_eye_projection(eye);
     }
     if(!pcvr_create_target(&s_vr.ui,1280,960)||!pcvr_create_panel_gl())_Exit(4);
@@ -108,7 +118,7 @@ extern "C" void offscreen_stereo_init(void* library,int enabled,int eye_size) {
     *(float*)symbol("g_pc_vr_cull_znear_slack")=8;
     pcvr_update_view_correction();
     glBindFramebuffer(GL_FRAMEBUFFER,0);
-    printf("OFFSCREEN_STEREO fixed poses; %dx%d per eye,90deg FOV,IPD64mm,pitch-20deg; production matrix/UI helpers; no XR\n",eye_size,eye_size);
+    printf("OFFSCREEN_STEREO fixed poses; %dx%d per eye,90deg FOV,IPD64mm,pitch-20deg,yaw%ddeg; production matrix/UI helpers; no XR\n",eye_size,eye_size,yaw_degrees);
 }
 
 extern "C" void pc_vr_frame_begin(void) {

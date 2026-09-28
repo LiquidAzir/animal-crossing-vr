@@ -1,4 +1,4 @@
-/* Small controller-grip mittens, drawn after world geometry and before UI.
+/* Small white controller-grip markers, drawn after world geometry and before UI.
  * The only persistent resources are one program, one VAO and one static VBO.
  * Mesh creation happens once; drawing neither allocates nor touches game state. */
 #include "pc_vr_hands.h"
@@ -37,8 +37,8 @@ in vec3 eye_normal;
 out vec4 color;
 void main() {
     vec3 light = normalize(vec3(-0.35, 0.75, 0.60));
-    float shade = 0.68 + 0.32 * max(dot(normalize(eye_normal), light), 0.0);
-    color = vec4(vec3(0.98, 0.96, 0.88) * shade, 1.0);
+    float shade = 0.82 + 0.18 * max(dot(normalize(eye_normal), light), 0.0);
+    color = vec4(vec3(shade), 1.0);
 }
 )GLSL";
 
@@ -101,7 +101,7 @@ struct SavedState {
 
 struct Vertex { float position[3], normal[3]; };
 const int latitudes=8, longitudes=16;
-const int max_vertices=2 * (latitudes-1) * longitudes * 6;
+const int max_vertices=(latitudes-1) * longitudes * 6;
 
 Vertex ellipsoid_vertex(int latitude, int longitude, const float center[3], const float radius[3]) {
     const float pi=3.14159265358979323846f;
@@ -202,12 +202,10 @@ bool initialize() {
     }
     Vertex vertices[max_vertices];
     int count=0;
-    const float palm_center[3]={0.0f,0.0f,-0.024f};
-    const float palm_radius[3]={0.043f,0.032f,0.067f};
-    const float thumb_center[3]={0.043f,0.004f,-0.018f};
-    const float thumb_radius[3]={0.022f,0.026f,0.031f};
-    append_ellipsoid(vertices,count,palm_center,palm_radius);
-    append_ellipsoid(vertices,count,thumb_center,thumb_radius);
+    // One smooth oval keeps the tracked grip easy to see without a thumb bump.
+    const float marker_center[3]={0.0f,0.0f,-0.024f};
+    const float marker_radius[3]={0.043f,0.040f,0.050f};
+    append_ellipsoid(vertices,count,marker_center,marker_radius);
     glGenVertexArrays(1,&vao);
     glGenBuffers(1,&vbo);
     if (!vao || !vbo) {

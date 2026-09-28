@@ -21,6 +21,7 @@ python quest/tests/game_offscreen_profile_run.py --stereo --no-profile
 python quest/tests/game_offscreen_profile_run.py --stereo --eye-size 1760 --no-profile
 python quest/tests/game_offscreen_profile_run.py --stereo --libmain ../research/profile-v6/libmain.so
 python quest/tests/game_offscreen_profile_run.py --stereo --compile-only
+python quest/tests/game_offscreen_profile_run.py --stereo --no-profile --draw-radius 2 --yaw 180
 ```
 
 `--no-profile` disables production per-draw timers and reports wall time for 90
@@ -28,6 +29,12 @@ world frames after 30 warmup frames. A world frame has over 100 actual GX draws.
 The test exits within 40 seconds overall, with a 50-second failsafe. Inspect the
 reported sample count before comparing runs. Initial shader compilation is excluded
 from the steady aggregate. `--stock-world` provides the smaller flat-world control.
+
+`--draw-radius 0` retains the whole town; values 1–10 select a terrain acre radius
+in the disposable test settings only. `--yaw -180..180` rotates the synthetic
+headset view in stereo mode. Inspect both forward and backward views: radius 2
+can leave distant actors above missing terrain even when the forward screenshot
+looks intact. The installed game settings and production defaults are untouched.
 
 For save navigation, `--save-copy PATH.gci` copies only that explicitly selected file
 into disposable test Slot A and records the source hash before and after the run.

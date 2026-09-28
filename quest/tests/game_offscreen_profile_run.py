@@ -18,13 +18,18 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--libmain',type=Path,default=build/'game/libmain.so',
                     help='Built ARM32 game library to profile; no game rebuild is performed')
 parser.add_argument('--stock-world',action='store_true',help='Disable the default Quest full-world rendering')
+parser.add_argument('--draw-radius',type=int,default=0,help='Terrain acre radius for comparison,0=whole town,1..10=window')
 parser.add_argument('--stereo',action='store_true',help='Replay both eyes with production render helpers and fixed test poses (no XR)')
+parser.add_argument('--yaw',type=int,default=0,help='Synthetic headset yaw in degrees,-180..180; stereo only')
 parser.add_argument('--eye-size',type=int,default=640,help='Square target pixels per synthetic eye,64..2048(default640)')
 parser.add_argument('--save-copy',type=Path,help='Read-only source GCI file to copy into disposable test SlotA')
 parser.add_argument('--pad-script',type=Path,help='JSON with stop_frame,events,and captures counted after the first world draw')
 parser.add_argument('--no-profile',action='store_true',help='Disable per-draw profiler; measure90world frames after30warmup frames')
 parser.add_argument('--compile-only',action='store_true',help='Build the test executable without accessing a device')
 args=parser.parse_args()
+if not 0<=args.draw_radius<=10:parser.error('--draw-radius must be0..10')
+if not -180<=args.yaw<=180:parser.error('--yaw must be-180..180')
+if args.yaw and not args.stereo:parser.error('--yaw requires --stereo')
 if not 64<=args.eye_size<=2048:parser.error('--eye-size must be64..2048')
 if args.save_copy and (not args.save_copy.is_file() or args.save_copy.suffix.lower()!='.gci'):
     parser.error('--save-copy must identify an existing GCI file')
@@ -84,7 +89,7 @@ if args.compile_only:
     print('Compiled test only:',exe)
     raise SystemExit(0)
 settings=OUT/'settings.ini'
-settings.write_text('[Graphics]\nwindow_width=640\nwindow_height=480\nfullscreen=0\nvsync=0\nmax_fps=60\nmsaa=0\n[Enhancements]\npreload_textures=0\n[FirstPerson]\nfp_mode=0\n[VR]\nvr_mode=0\n')
+settings.write_text(f'[Graphics]\nwindow_width=640\nwindow_height=480\nfullscreen=0\nvsync=0\nmax_fps=60\nmsaa=0\n[Enhancements]\npreload_textures=0\n[FirstPerson]\nfp_mode=0\nvr_draw_radius={args.draw_radius}\n[VR]\nvr_mode=0\n')
 adb=paths['adb']
 def run(args,check=True,timeout=60):
     result=subprocess.run([adb,*args],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout)
@@ -106,6 +111,7 @@ if script_file:files[script_file]='input.txt'
 manifest={'mode':'single flat offscreen title; no XR, Activity or physical input',
           'profiling':not args.no_profile,
           'full_world':not args.stock_world,
+          'terrain_draw_radius':args.draw_radius,
           'audio':'actual sample generator on native pthread, device playback discarded',
           'data':'private temporary ROM copy and initially empty save folders; no app data',
           'remote':REMOTE,'files':[]}
@@ -118,7 +124,7 @@ if script:
 if args.stereo:
     manifest['mode']='two fixed test eyes, production render helpers; no XR runtime or tracked input'
     manifest['eye_target']=[args.eye_size,args.eye_size]
-    manifest['test_pose']={'fov_degrees':90,'ipd_mm':64,'pitch_degrees':-20}
+    manifest['test_pose']={'fov_degrees':90,'ipd_mm':64,'pitch_degrees':-20,'yaw_degrees':args.yaw}
     manifest['pacing']='uncapped; no xrWaitFrame/compositor pacing'
 if script:manifest['pacing']='navigation minimum60Hz pacing; not a performance benchmark'
 for path,name in files.items():
@@ -126,7 +132,7 @@ for path,name in files.items():
     manifest['files'].append({'name':name,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
 run(['shell',f'chmod 500 {REMOTE}/game-offscreen-profile && chmod 400 {REMOTE}/rom/AnimalCrossing.ciso'])
 test_arguments=' --stock-world' if args.stock_world else ''
-result=run(['shell',f'cd {REMOTE} && LD_LIBRARY_PATH={REMOTE} ACQUEST_TEST_EYE_SIZE={args.eye_size} ACQUEST_TEST_PROFILE={int(not args.no_profile)} ./game-offscreen-profile{test_arguments}'],check=False)
+result=run(['shell',f'cd {REMOTE} && LD_LIBRARY_PATH={REMOTE} ACQUEST_TEST_YAW={args.yaw} ACQUEST_TEST_EYE_SIZE={args.eye_size} ACQUEST_TEST_PROFILE={int(not args.no_profile)} ./game-offscreen-profile{test_arguments}'],check=False)
 (OUT/'results.log').write_text(result.stdout+result.stderr,encoding='utf-8')
 manifest['exit_code']=result.returncode
 if args.save_copy:

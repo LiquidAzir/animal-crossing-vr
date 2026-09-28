@@ -369,6 +369,18 @@ static void Player_actor_Item_draw_rod(ACTOR* actor, GAME* game) {
 
     Matrix_Position_VecZ(6000.0f, &player->item_rod_virtual_top_pos);
     Matrix_push();
+#ifdef TARGET_PC
+    {
+        float hand[12];
+        if (pc_vr_hand_tool_mtx(hand)) {
+            /* Both rod skeletons point along hand +Z, but their authored
+             * bend lies in X/Z. Roll around the shaft so a controller-held
+             * rod flexes in Y/Z; the virtual cast tip stays on the same ray.
+             * The tip callback below keeps the line on the visible rod. */
+            Matrix_RotateZ(-0x4000, MTX_MULT);
+        }
+    }
+#endif
     Matrix_RotateZ(player->item_rod_angle_z, MTX_MULT);
 
     mtx = _Matrix_to_Mtx_new(play->game.graph);

@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-/* Draw one opaque floating mitten into the caller's eye framebuffer/viewport.
+/* Draw one opaque white oval hand marker into the caller's eye framebuffer/viewport.
  * eye_from_grip is a row-major rigid 3x4 transform in meters (-Z forward).
  * gx_projection is row-major 4x4, with GX near/far NDC depth -1/0.
  * The caller sets GL_DEPTH_RANGE to the world viewport's near/far values.
