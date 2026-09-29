@@ -25,12 +25,16 @@ parser.add_argument('--eye-size',type=int,default=640,help='Square target pixels
 parser.add_argument('--save-copy',type=Path,help='Read-only source GCI file to copy into disposable test SlotA')
 parser.add_argument('--pad-script',type=Path,help='JSON with stop_frame,events,and captures counted after the first world draw')
 parser.add_argument('--no-profile',action='store_true',help='Disable per-draw profiler; measure90world frames after30warmup frames')
+parser.add_argument('--warmup-frames',type=int,default=30,help='World frames to exclude from timing,1..600(default30)')
+parser.add_argument('--sample-frames',type=int,default=90,help='World frames to time without per-draw profiling,1..1800(default90)')
 parser.add_argument('--compile-only',action='store_true',help='Build the test executable without accessing a device')
 args=parser.parse_args()
 if not 0<=args.draw_radius<=10:parser.error('--draw-radius must be0..10')
 if not -180<=args.yaw<=180:parser.error('--yaw must be-180..180')
 if args.yaw and not args.stereo:parser.error('--yaw requires --stereo')
 if not 64<=args.eye_size<=2048:parser.error('--eye-size must be64..2048')
+if not 1<=args.warmup_frames<=600:parser.error('--warmup-frames must be1..600')
+if not 1<=args.sample_frames<=1800:parser.error('--sample-frames must be1..1800')
 if args.save_copy and (not args.save_copy.is_file() or args.save_copy.suffix.lower()!='.gci'):
     parser.error('--save-copy must identify an existing GCI file')
 script=None
@@ -112,6 +116,8 @@ manifest={'mode':'single flat offscreen title; no XR, Activity or physical input
           'profiling':not args.no_profile,
           'full_world':not args.stock_world,
           'terrain_draw_radius':args.draw_radius,
+          'warmup_world_frames':args.warmup_frames,
+          'requested_sample_frames':args.sample_frames,
           'audio':'actual sample generator on native pthread, device playback discarded',
           'data':'private temporary ROM copy and initially empty save folders; no app data',
           'remote':REMOTE,'files':[]}
@@ -132,7 +138,7 @@ for path,name in files.items():
     manifest['files'].append({'name':name,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
 run(['shell',f'chmod 500 {REMOTE}/game-offscreen-profile && chmod 400 {REMOTE}/rom/AnimalCrossing.ciso'])
 test_arguments=' --stock-world' if args.stock_world else ''
-result=run(['shell',f'cd {REMOTE} && LD_LIBRARY_PATH={REMOTE} ACQUEST_TEST_YAW={args.yaw} ACQUEST_TEST_EYE_SIZE={args.eye_size} ACQUEST_TEST_PROFILE={int(not args.no_profile)} ./game-offscreen-profile{test_arguments}'],check=False)
+result=run(['shell',f'cd {REMOTE} && LD_LIBRARY_PATH={REMOTE} ACQUEST_TEST_WARMUP={args.warmup_frames} ACQUEST_TEST_SAMPLES={args.sample_frames} ACQUEST_TEST_YAW={args.yaw} ACQUEST_TEST_EYE_SIZE={args.eye_size} ACQUEST_TEST_PROFILE={int(not args.no_profile)} ./game-offscreen-profile{test_arguments}'],check=False)
 (OUT/'results.log').write_text(result.stdout+result.stderr,encoding='utf-8')
 manifest['exit_code']=result.returncode
 if args.save_copy:

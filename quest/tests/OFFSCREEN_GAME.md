@@ -26,9 +26,17 @@ python quest/tests/game_offscreen_profile_run.py --stereo --no-profile --draw-ra
 
 `--no-profile` disables production per-draw timers and reports wall time for 90
 world frames after 30 warmup frames. A world frame has over 100 actual GX draws.
+Use `--warmup-frames 60 --sample-frames 300` for a longer comparison. The receipt
+records both requested counts; the log reports actual samples and average draw,
+command, and vertex-load counts so unequal workloads are visible. A run that hits
+the time limit before collecting the requested samples is not a complete sample.
 The test exits within 40 seconds overall, with a 50-second failsafe. Inspect the
 reported sample count before comparing runs. Initial shader compilation is excluded
 from the steady aggregate. `--stock-world` provides the smaller flat-world control.
+
+Timing comparisons should use identical eye sizes, view directions, draw radii
+and sample windows. Keep diagnostic verification work outside timed runs, compare
+workload counts, and alternate ordering when confirming a promising result.
 
 `--draw-radius 0` retains the whole town; values 1–10 select a terrain acre radius
 in the disposable test settings only. `--yaw -180..180` rotates the synthetic

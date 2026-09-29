@@ -6,6 +6,8 @@ This is **not a public standalone release or a store-ready build**. As of Septem
 
 Whole-town drawing remains enabled. A smaller terrain radius improved a short offscreen measurement but left distant trees over missing ground, so it was not adopted. See the [shared visual-fix and Quest comparison notes](../docs/vr-comfort-followup-20260928.md). Updating to version 8 preserved the installed Quest ROM, save, and settings byte-for-byte; a save backup and previous APK are retained in the separate workspace's `backups` directory.
 
+A subsequent small vertex-preparation reuse experiment passed correctness checks but showed no useful timing gain at unchanged resolution. It was removed from the game; version 8 remains installed. [Experiment results](VERTEX_REUSE_EXPERIMENT.md) record the comparison and retained local evidence.
+
 Quest eye targets have an **app-local maximum edge of 1,760 pixels**. The source scales each runtime recommendation down uniformly, with pixel rounding, while respecting the runtime's maximum width/height and never enlarging a smaller recommendation. The version 7 headset session selected 1,680 x 1,760 from a 2,800 x 2,933 recommendation; an existing 1,680 x 1,760 recommendation stays that size. Runtime recommendations varied between those sizes during development, so this ceiling bounds rendering cost independently of that variation. Startup logs record recommended and selected dimensions, and reject zero dimensions. The cap changes only eye target resolution; field of view, UI target size, PC settings, and global headset properties are unaffected.
 
 ## Workspace and dependencies

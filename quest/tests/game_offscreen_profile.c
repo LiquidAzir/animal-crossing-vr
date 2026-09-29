@@ -26,6 +26,9 @@ static unsigned scene_frames;
 static unsigned scripted_stop;
 static int profiling_enabled=1;
 static unsigned steady_samples;
+static unsigned warmup_frames=30,sample_frames=90;
+static int *frame_draws,*frame_commands,*frame_vertex_loads;
+static uint64_t steady_draws,steady_commands,steady_vertex_loads;
 static double last_swap,steady_elapsed,steady_peak;
 typedef struct {unsigned frame,duration,buttons;int x,y;} TestPadEvent;
 static TestPadEvent pad_events[128];
@@ -129,11 +132,14 @@ void pc_platform_swap_buffers(void) {
     }
     double swap_time=now();
     ++swaps;
-    if(*(int*)required(game_library,"pc_gx_draw_call_count")>100){
+    if(*frame_draws>100){
         ++world_frames;
-        if(world_frames>30&&last_swap>0){
+        if(world_frames>warmup_frames&&last_swap>0){
             double duration=swap_time-last_swap;
             steady_elapsed+=duration;++steady_samples;
+            steady_draws+=*frame_draws;
+            steady_commands+=*frame_commands;
+            steady_vertex_loads+=*frame_vertex_loads;
             if(duration>steady_peak)steady_peak=duration;
         }
     }
@@ -154,7 +160,7 @@ void pc_platform_swap_buffers(void) {
 #else
     int capture_ready=(swaps>=120&&now()-first_swap>=8)||now()-began>=25;
 #endif
-    if(!profiling_enabled)capture_ready=steady_samples>=90||now()-began>=40;
+    if(!profiling_enabled)capture_ready=steady_samples>=sample_frames||now()-began>=40;
     if(scripted_stop)capture_ready=scene_frames>=scripted_stop||now()-began>=40;
     if(capture_ready){
         int width=*(int*)required(game_library,"g_pc_window_w");
@@ -166,7 +172,8 @@ void pc_platform_swap_buffers(void) {
         error|=glGetError();
 #endif
         printf("OFFSCREEN_RESULT frames=%u world_frames=%u scene_frames=%u elapsed=%.3f size=%dx%d capture=%d colored_pixels=%u gl_error=%x\n",swaps,world_frames,scene_frames,now()-first_swap,width,height,saved,colored,error);
-        if(steady_samples)printf("OFFSCREEN_STEADY profiling=%d warmup_world_frames=30 samples=%u elapsed_ms=%.3f avg_ms=%.3f peak_ms=%.3f cpu_frame_rate=%.2f\n",profiling_enabled,steady_samples,steady_elapsed*1000,steady_elapsed*1000/steady_samples,steady_peak*1000,steady_samples/steady_elapsed);
+        if(steady_samples)printf("OFFSCREEN_STEADY profiling=%d warmup_world_frames=%u samples=%u elapsed_ms=%.3f avg_ms=%.3f peak_ms=%.3f cpu_frame_rate=%.2f\n",profiling_enabled,warmup_frames,steady_samples,steady_elapsed*1000,steady_elapsed*1000/steady_samples,steady_peak*1000,steady_samples/steady_elapsed);
+        if(steady_samples)printf("OFFSCREEN_WORKLOAD avg_draws=%.3f avg_commands=%.3f avg_vertex_loads=%.3f\n",(double)steady_draws/steady_samples,(double)steady_commands/steady_samples,(double)steady_vertex_loads/steady_samples);
         fflush(NULL);_Exit(saved&&colored>1000&&!error?0:7);
     }
     eglSwapBuffers(test_display,test_surface);
@@ -182,6 +189,9 @@ int main(int argc,char** argv) {
     if(!sdl_library||!dlopen("./libopenxr_loader.so",RTLD_NOW|RTLD_GLOBAL)){fprintf(stderr,"dependencies: %s\n",dlerror());return 2;}
     game_library=dlopen("./libmain.so",RTLD_NOW|RTLD_LOCAL);
     if(!game_library){fprintf(stderr,"game: %s\n",dlerror());return 2;}
+    frame_draws=(int*)required(game_library,"pc_gx_draw_call_count");
+    frame_commands=(int*)required(game_library,"pc_emu64_frame_cmds");
+    frame_vertex_loads=(int*)required(game_library,"pc_emu64_frame_vtx_cmds");
     printf("OFFSCREEN_BOOT pointer_bits=%u offscreen title; no XR session, no physical input, private temporary data only\n",(unsigned)(8*sizeof(void*)));
     // Match pc_main's range bookkeeping, using the game image rather than our
     // harness image, so segmented-address decoding recognizes relocated data.
@@ -195,6 +205,11 @@ int main(int argc,char** argv) {
     *(uint32_t*)required(game_library,"pc_image_end")=(uintptr_t)image.dli_fbase+end;
     const char* profile_text=getenv("ACQUEST_TEST_PROFILE");
     profiling_enabled=!profile_text||atoi(profile_text)!=0;
+    const char* warmup_text=getenv("ACQUEST_TEST_WARMUP");
+    const char* samples_text=getenv("ACQUEST_TEST_SAMPLES");
+    warmup_frames=warmup_text?(unsigned)atoi(warmup_text):30;
+    sample_frames=samples_text?(unsigned)atoi(samples_text):90;
+    if(warmup_frames<1||warmup_frames>600||sample_frames<1||sample_frames>1800)return 3;
     *(int*)required(game_library,"g_pc_profile_enabled")=profiling_enabled;
     *(int*)required(game_library,"g_pc_verbose")=1;
     *(int*)required(game_library,"g_pc_profile_interval")=30;
