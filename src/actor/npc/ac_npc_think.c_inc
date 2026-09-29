@@ -525,7 +525,12 @@ static int aNPC_chk_pitfall(NPC_ACTOR* nactorx) {
     int ret = FALSE;
 
     if (fg_p != NULL) {
-        if (ITEM_IS_BURIED_PITFALL_HOLE(*fg_p) && aNPC_IS_NRM_NPC(nactorx)) {
+        if (ITEM_IS_BURIED_PITFALL_HOLE(*fg_p) && aNPC_IS_NRM_NPC(nactorx)
+#ifdef TARGET_PC
+            /* Boat travel temporarily replaces the seasonal item provider. */
+            && CLIP(bg_item_clip) != NULL && CLIP(bg_item_clip)->pit_fall_proc != NULL
+#endif
+        ) {
             CLIP(bg_item_clip)
                 ->pit_fall_proc(*fg_p, nactorx->condition_info.ut_x, nactorx->condition_info.ut_z,
                                 nactorx->actor_class.npc_id);

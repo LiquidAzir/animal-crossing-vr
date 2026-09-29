@@ -158,7 +158,7 @@ static void aSHR_actor_draw(ACTOR* actorx, GAME* game) {
 
     CLOSE_DISP(graph2);
 
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aSHR_shadow_data, FALSE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, &aSHR_shadow_data, FALSE);
     aSHR_actor_draw_ta_clr(actorx, game);
   }
 }

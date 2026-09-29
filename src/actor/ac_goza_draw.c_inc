@@ -50,5 +50,5 @@ static void aGOZ_actor_draw(ACTOR* actor, GAME* game) {
         return;
     }
 
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, aGOZ_shadow_data_table[type & 1], FALSE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, aGOZ_shadow_data_table[type & 1], FALSE);
 }

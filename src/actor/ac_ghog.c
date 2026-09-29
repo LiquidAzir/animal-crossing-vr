@@ -85,5 +85,5 @@ static void aGhog_actor_draw(ACTOR* actorx, GAME* game) {
 
     CLOSE_DISP(graph);
 
-    CLIP(bg_item_clip)->draw_shadow_proc(game, &aGhog_shadow_data, TRUE);
+    bIT_draw_shadow_safe(CLIP(bg_item_clip), game, &aGhog_shadow_data, TRUE);
 }

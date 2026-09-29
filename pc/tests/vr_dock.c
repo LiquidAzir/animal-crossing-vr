@@ -35,7 +35,6 @@ static int setup(GAME_PLAY* p,mActor_name_t name,s8 idx,int mv,s16 arg,int bx,in
 }
 static void aBTD_setupAction(BOAT_DEMO_ACTOR* demo,GAME_PLAY* p,int action){demo->action=action;transitions++;}
 static void aBT_setupAction(BOAT_ACTOR* b,GAME_PLAY* p,int action){transitions++;}
-#define aBT_ACTION_WAIT 1
 ACTOR* Actor_info_make_actor(Actor_info* info,GAME* g,s16 profile,f32 x,f32 y,f32 z,
     s16 rx,s16 ry,s16 rz,s8 bx,s8 bz,s16 mv,mActor_name_t name,s16 arg,s8 idx,int bank){spawns++;return &boat.actor_class;}
 void* zelda_malloc(size_t size){allocated++; memset(memory,0,sizeof(memory));return memory;}

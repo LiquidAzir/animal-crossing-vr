@@ -69,7 +69,7 @@ static void aTUK_actor_draw(ACTOR* actor, GAME* game) {
         SET_POLY_OPA_DISP(gfx);
 
         cKF_Si3_draw_R_SV(game, keyframe, mtx, aTUK_actor_draw_before, aTUK_actor_draw_after, actor);
-        (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, shadow_data[tukimi->arg0], FALSE);
+        bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, shadow_data[tukimi->arg0], FALSE);
         CLOSE_DISP(graph);
     }
 }

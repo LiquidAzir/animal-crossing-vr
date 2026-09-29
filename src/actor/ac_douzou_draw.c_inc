@@ -136,7 +136,7 @@ static void aDOU_actor_draw(ACTOR* actor, GAME* game) {
             }
 
             cKF_Si3_draw_R_SV(game, keyframe, m, &aDOU_actor_draw_before, NULL, actor);
-            (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aDOU_shadow_data, FALSE);
+            bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, &aDOU_shadow_data, FALSE);
             Matrix_pull();
         }
     }

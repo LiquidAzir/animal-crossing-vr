@@ -353,5 +353,5 @@ static void aHTBL_actor_draw(ACTOR* actorx, GAME* game) {
 
     CLOSE_DISP(graph);
 
-    CLIP(bg_item_clip)->draw_shadow_proc(game, aHTBL_shadow_data_table[type], TRUE);
+    bIT_draw_shadow_safe(CLIP(bg_item_clip), game, aHTBL_shadow_data_table[type], TRUE);
 }

@@ -186,6 +186,14 @@ writes). Start in the **diorama** (third-person) view.
 
 ## 8. Events & edge scenes (fallback correctness)
 
+- [ ] Take Kapp'n's boat to the island: the scenery/season switch must finish
+      without a crash. Walk across both island acres and enter/exit the cottage
+      and islander's house; confirm terrain, actors, and normal interaction.
+- [ ] After leaving the arrival acre, return to the dock and board for town.
+      Check the return scenery switch, then leave the town dock acre and revisit:
+      Kapp'n should offer another trip. Repeat on PC VR and native Quest.
+- [ ] After a successful round trip, save/quit and reload; town and island data
+      should persist. Repeat seasonal transitions from winter if available.
 - [ ] Scripted event/cutscene moment (train arrival, event NPC): camera takes
       over, player model VISIBLE during it, FP resumes after
 - [ ] Pelly/Pete mail moments, Resetti if you can bait him — no stuck

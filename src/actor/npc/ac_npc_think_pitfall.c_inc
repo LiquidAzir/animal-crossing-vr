@@ -1,6 +1,13 @@
 static void aNPC_think_pitfall_main_proc(NPC_ACTOR* nactorx, GAME_PLAY* play) {
     if (!aNPC_chk_talk_start(nactorx) && nactorx->action.step == aNPC_ACTION_END_STEP) {
         if (nactorx->action.idx == aNPC_ACT_TALK) {
+#ifdef TARGET_PC
+            /* Retry on the next think frame before queuing this one-shot init.
+             * The revive callback needs the replacement item's pit provider. */
+            if (CLIP(bg_item_clip) == NULL || CLIP(bg_item_clip)->pit_exit_proc == NULL) {
+                return;
+            }
+#endif
             aNPC_set_request_act(nactorx, 4, aNPC_ACT_REVIVE, aNPC_ACT_TYPE_DEFAULT, aNPC_req_default_data);
         } else {
             nactorx->actor_class.status_data.weight = 50;

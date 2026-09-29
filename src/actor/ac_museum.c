@@ -348,5 +348,5 @@ static void aMsm_actor_draw(ACTOR* actor, GAME* game) {
     }
     CLOSE_DISP(graph);
 
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aMsm_shadow_data, TRUE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, &aMsm_shadow_data, TRUE);
 }

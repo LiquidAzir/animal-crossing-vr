@@ -263,7 +263,7 @@ static void aTnt_actor_draw(ACTOR* actor, GAME* game) {
 
         gSPDisplayList(NEXT_POLY_OPA_DISP, obj_s_tent_model);
 
-        (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aTnt_shadow_data, FALSE);
+        bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, &aTnt_shadow_data, FALSE);
 
         CLOSE_DISP(game->graph);
     }

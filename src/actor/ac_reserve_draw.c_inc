@@ -47,9 +47,9 @@ void aRSV_actor_draw(ACTOR* actor, GAME* game) {
         NOW_POLY_OPA_DISP = disp;
 
         if (check != 0) {
-            Common_Get(clip).bg_item_clip->draw_shadow_proc(game, data, 1);
+            bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, data, 1);
         } else {
-            Common_Get(clip).bg_item_clip->draw_shadow_proc(game, data, 0);
+            bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, data, 0);
         }
 
         CLOSE_DISP(graph);
