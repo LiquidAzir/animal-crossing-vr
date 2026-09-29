@@ -84,3 +84,26 @@ Quest development APK version 8 is installed under the existing package with
 The current Quest town, settings, and ROM match their pre-update hashes. The
 separate Quest workspace retains a save export, previous APK, package receipt,
 and `research/install-v8.json`. The game was stopped during both installations.
+
+## Rod direction correction after headset feedback
+
+The tester confirmed that the vertical rod bend pointed upward. Both trees now
+use a positive quarter-turn around the controller-held rod shaft, reversing the
+previous roll so the casting bend points downward. Original rod animation,
+straight-ahead cast target, visible line-tip attachment, and other tools are
+unchanged. Each tree passed all 82,360 existing rod geometry checks with the
+corrected orientation expectations. Physical confirmation remains pending.
+
+Both native builds passed. The PC executable reached the title screen in an
+isolated fixture without a crash or stderr, then replaced only the installed
+executable; all 23 other installation files retained their hashes. Receipts and
+rollback executable are under `vr-rod-down-20260928` in the PC build and backup
+directories. Installed executable SHA256:
+`606B74FDD0A339515D5AC68AE745CF795DF120C9DD52A56E241ECD26729B383C`.
+
+Quest development APK version 9 was installed with `install -r`. Its SHA256 is
+`786864e8ec9e621f294323dee34874485bea39a2296e7b18f287af4870b359c2`.
+The current town was exported first, and the ROM, save, and settings match their
+pre-update hashes. The previous APK is retained; the installation receipt is
+`research/install-v9.json` in the separate Quest workspace. Both installations
+were performed with the game stopped. No graphics or performance setting changed.

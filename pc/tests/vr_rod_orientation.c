@@ -111,8 +111,8 @@ static void one_pose(int kind,cKF_Animation_R_c*animation,int frame,int yaw,int 
     xyz_t original_tip=hand_local(player.item_rod_top_pos),virtual_tip=player.item_rod_virtual_top_pos;
     draw(1);
     xyz_t corrected_tip=hand_local(player.item_rod_top_pos);
-    CHECK(near(corrected_tip.x,original_tip.y)&&near(corrected_tip.y,-original_tip.x)&&near(corrected_tip.z,original_tip.z),
-          "controller rod bend rolls into its vertical plane");
+    CHECK(near(corrected_tip.x,-original_tip.y)&&near(corrected_tip.y,original_tip.x)&&near(corrected_tip.z,original_tip.z),
+          "controller rod bend uses the requested opposite vertical roll");
     if(!trim)CHECK(fabsf(corrected_tip.x)<0.03f,"all animation frames bend vertically relative to hand");
     CHECK(!memcmp(&virtual_tip,&player.item_rod_virtual_top_pos,sizeof(virtual_tip)),"virtual cast point unchanged");
     CHECK(!memcmp(&expected_goal,&player.main_data.uki.cast_goal_point,sizeof(expected_goal)),"cast destination unchanged");
@@ -122,7 +122,7 @@ static void one_pose(int kind,cKF_Animation_R_c*animation,int frame,int yaw,int 
         xyz_t p={v[i].v.ob[0],v[i].v.ob[1],v[i].v.ob[2]};
         xyz_t old=hand_local(transform(&original_pose[vertex_joint(i)],p));
         xyz_t now=hand_local(transform(&pose[vertex_joint(i)],p));
-        CHECK(near(now.x,old.y)&&near(now.y,-old.x)&&near(now.z,old.z),"every original mesh vertex receives only the shaft roll");
+        CHECK(near(now.x,-old.y)&&near(now.y,old.x)&&near(now.z,old.z),"every original mesh vertex receives only the opposite shaft roll");
     }
     if(preview){
         for(int vr=0;vr<2;++vr){

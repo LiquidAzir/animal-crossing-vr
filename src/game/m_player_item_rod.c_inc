@@ -375,9 +375,9 @@ static void Player_actor_Item_draw_rod(ACTOR* actor, GAME* game) {
         if (pc_vr_hand_tool_mtx(hand)) {
             /* Both rod skeletons point along hand +Z, but their authored
              * bend lies in X/Z. Roll around the shaft so a controller-held
-             * rod flexes in Y/Z; the virtual cast tip stays on the same ray.
+             * rod flexes downward in Y/Z; the virtual cast tip stays on the same ray.
              * The tip callback below keeps the line on the visible rod. */
-            Matrix_RotateZ(-0x4000, MTX_MULT);
+            Matrix_RotateZ(0x4000, MTX_MULT);
         }
     }
 #endif
