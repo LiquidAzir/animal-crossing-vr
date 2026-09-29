@@ -122,6 +122,10 @@ image are found in the correct place.
 First person is a toggle by default. To start in first person every time,
 close the game and set **`fp_mode = 1`** under **`[FirstPerson]`** in
 `settings.ini`. VR auto-detection uses **`vr_mode = 1`** under **`[VR]`**.
+While playing, click **both sticks together** for VR settings: hand visuals,
+turning, motion swings, and volume. Use the left stick to navigate, A to select,
+and B to resume; choose **Apply** to save edits.
+
 Floating hands default to **`vr_empty_hands = 0`** under **`[FirstPerson]`**;
 existing explicit preferences are preserved. No build tools are needed for these steps.
 

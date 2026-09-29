@@ -31,6 +31,8 @@ enum {
     ITEM_CSTICK_DEADZONE,
     ITEM_BINDINGS,
     ITEM_VR_EMPTY_HANDS,
+    ITEM_VR_TURNING,
+    ITEM_VR_MOTION_SWINGS,
 };
 
 /* Per-item static metadata. restart=1 appends " *" and folds into the
@@ -84,6 +86,16 @@ static const Tab s_tabs[] = {
 };
 #define TAB_COUNT ((int)(sizeof(s_tabs) / sizeof(s_tabs[0])))
 
+/* The headset shortcut exposes only settings that take effect live without
+ * changing the desktop window, render targets, or controller bindings. */
+static const Item tab_vr_items[] = {
+    { "Hand visuals",   ITEM_VR_EMPTY_HANDS,   0 },
+    { "Turning",        ITEM_VR_TURNING,       0 },
+    { "Motion swings",  ITEM_VR_MOTION_SWINGS, 0 },
+    { "Master volume",  ITEM_MASTER_VOLUME,   0 },
+};
+static const Tab s_vr_tab = { "VR", TAB_ITEMS(tab_vr_items) };
+
 /* --- Sub-pages --- */
 typedef enum {
     SUB_SETTINGS = 0,
@@ -93,6 +105,7 @@ typedef enum {
 } SubPage;
 
 static int     s_active = 0;
+static int     s_vr_only = 0;
 static SubPage s_sub    = SUB_SETTINGS;
 static int     s_tab    = 0;
 static int     s_sel    = -1; /* start on the tab row */
@@ -244,6 +257,14 @@ static int        s_pending_restart = 0;
 /* --- Dirty + helpers --- */
 
 static void recompute_dirty(void) {
+    if (s_vr_only) {
+        s_pending_dirty =
+            (s_pending.vr_empty_hands != g_pc_settings.vr_empty_hands) ||
+            (s_pending.fp_snap_degrees != g_pc_settings.fp_snap_degrees) ||
+            (s_pending.vr_motion_swing != g_pc_settings.vr_motion_swing) ||
+            (s_pending.master_volume != g_pc_settings.master_volume);
+        return;
+    }
     s_pending_dirty =
         (s_pending.fullscreen       != g_pc_settings.fullscreen) ||
         (s_pending.vsync            != g_pc_settings.vsync) ||
@@ -322,6 +343,25 @@ static void item_cycle(int id, int dir) {
         case ITEM_VR_EMPTY_HANDS:
             s_pending.vr_empty_hands = !s_pending.vr_empty_hands;
             break;
+        case ITEM_VR_TURNING: {
+            static const int steps[] = { 0, 30, 45, 90 };
+            int next = dir > 0 ? 0 : 90;
+            /* Keep custom config angles untouched until this row is edited.
+             * A first edit selects the next preset in the chosen direction. */
+            if (dir > 0) {
+                for (int i = 0; i < 4; i++) {
+                    if (steps[i] > s_pending.fp_snap_degrees) { next = steps[i]; break; }
+                }
+            } else {
+                for (int i = 3; i >= 0; i--) {
+                    if (steps[i] < s_pending.fp_snap_degrees) { next = steps[i]; break; }
+                }
+            }
+            s_pending.fp_snap_degrees = next;
+        } break;
+        case ITEM_VR_MOTION_SWINGS:
+            s_pending.vr_motion_swing = !s_pending.vr_motion_swing;
+            break;
         case ITEM_MASTER_VOLUME: {
             int v = s_pending.master_volume + (dir > 0 ? 10 : -10);
             if (v < 0)   v = 0;
@@ -395,6 +435,13 @@ static void item_format(int id, char* buf, size_t n) {
         case ITEM_VR_EMPTY_HANDS:
             snprintf(buf, n, "%s", s_pending.vr_empty_hands ? "< On >" : "< Off >");
             break;
+        case ITEM_VR_TURNING:
+            if (s_pending.fp_snap_degrees == 0) snprintf(buf, n, "< Smooth >");
+            else snprintf(buf, n, "< Snap %d >", s_pending.fp_snap_degrees);
+            break;
+        case ITEM_VR_MOTION_SWINGS:
+            snprintf(buf, n, "%s", s_pending.vr_motion_swing ? "< On >" : "< Off >");
+            break;
         case ITEM_MASTER_VOLUME:
             snprintf(buf, n, "< %d%% >", s_pending.master_volume);
             break;
@@ -429,6 +476,8 @@ static int item_changed(int id) {
         case ITEM_BORDERLESS_ACRES: return s_pending.borderless_acres != g_pc_settings.borderless_acres;
         case ITEM_NES_ASPECT:    return s_pending.nes_aspect    != g_pc_settings.nes_aspect;
         case ITEM_VR_EMPTY_HANDS: return s_pending.vr_empty_hands != g_pc_settings.vr_empty_hands;
+        case ITEM_VR_TURNING: return s_pending.fp_snap_degrees != g_pc_settings.fp_snap_degrees;
+        case ITEM_VR_MOTION_SWINGS: return s_pending.vr_motion_swing != g_pc_settings.vr_motion_swing;
         case ITEM_MASTER_VOLUME: return s_pending.master_volume != g_pc_settings.master_volume;
         case ITEM_STICK_DEADZONE:  return s_pending.stick_deadzone  != g_pc_settings.stick_deadzone;
         case ITEM_CSTICK_DEADZONE: return s_pending.cstick_deadzone != g_pc_settings.cstick_deadzone;
@@ -463,7 +512,8 @@ static void recompute_restart_needed(void) {
 
 /* --- Nav helpers --- */
 
-static int cur_item_count(void) { return s_tabs[s_tab].count; }
+static const Tab* cur_tab(void) { return s_vr_only ? &s_vr_tab : &s_tabs[s_tab]; }
+static int cur_item_count(void) { return cur_tab()->count; }
 static int idx_apply(void)      { return cur_item_count(); }
 static int idx_back(void)       { return cur_item_count() + 1; }
 
@@ -496,6 +546,19 @@ static void res_confirm_finish(void) {
 static void apply_pending(void) {
     if (!s_pending_dirty) return;
 
+    if (s_vr_only) {
+        /* These four consumers read settings live. Avoid pc_settings_apply:
+         * it also changes SDL window/display state, unrelated to this page.
+         * Copy only our fields so unrelated live changes are preserved. */
+        g_pc_settings.vr_empty_hands = s_pending.vr_empty_hands;
+        g_pc_settings.fp_snap_degrees = s_pending.fp_snap_degrees;
+        g_pc_settings.vr_motion_swing = s_pending.vr_motion_swing;
+        g_pc_settings.master_volume = s_pending.master_volume;
+        snapshot();
+        pc_settings_save();
+        return;
+    }
+
     int res_changed = (s_pending.window_width  != g_pc_settings.window_width) ||
                       (s_pending.window_height != g_pc_settings.window_height);
     if (res_changed) {
@@ -524,6 +587,7 @@ static void apply_pending(void) {
  * ========================================================================= */
 
 void pc_settings_menu_enter(void) {
+    s_vr_only = 0;
     /* First-time entry captures what the process actually booted with.
      * Anything that changes from here and can't live-apply gets flagged
      * as "restart required". */
@@ -539,6 +603,12 @@ void pc_settings_menu_enter(void) {
     s_capture = 0;
     s_capture_grace = 0;
     s_active = 1;
+}
+
+void pc_settings_menu_enter_vr(void) {
+    pc_settings_menu_enter();
+    s_vr_only = 1;
+    s_sel = 0;
 }
 
 int pc_settings_menu_active(void) {
@@ -557,7 +627,7 @@ int pc_settings_menu_nav_up(void) {
     }
     if (s_sub != SUB_SETTINGS) return 1;
     /* Clamp at the top - no wrap. */
-    if (s_sel == 0)      s_sel = -1;            /* first item -> tab row */
+    if (s_sel == 0 && !s_vr_only) s_sel = -1;            /* first item -> tab row */
     else if (s_sel > 0)  s_sel--;
     return 1;
 }
@@ -598,11 +668,12 @@ static int nav_horizontal(int dir) {
         return 1;
     }
     if (s_sel == -1) {
+        if (s_vr_only) return 1;
         /* Tab row: clamp at the ends, no wrap. */
         if (dir < 0) { if (s_tab > 0) s_tab--; }
         else         { if (s_tab < TAB_COUNT - 1) s_tab++; }
     } else if (s_sel < cur_item_count()) {
-        item_cycle(s_tabs[s_tab].items[s_sel].id, dir);
+        item_cycle(cur_tab()->items[s_sel].id, dir);
     }
     return 1;
 }
@@ -641,7 +712,7 @@ int pc_settings_menu_confirm(void) {
         /* Confirm on the tab row - just hop into the first item. */
         s_sel = 0;
     } else if (s_sel < cur_item_count()) {
-        int id = s_tabs[s_tab].items[s_sel].id;
+        int id = cur_tab()->items[s_sel].id;
         if (id == ITEM_BINDINGS) bind_enter_page();
         else                     item_cycle(id, +1);
     } else if (s_sel == idx_apply()) {
@@ -810,16 +881,17 @@ static void draw_tab_row(struct game_s* game, f32 y) {
 
 static void draw_settings_page(struct game_s* game) {
     int r, g, b, a;
-    f32 lx = 70.0f;
-    f32 vx = 200.0f;
+    f32 lx = s_vr_only ? 42.0f : 70.0f;
+    f32 vx = s_vr_only ? 180.0f : 200.0f;
     f32 y_tab = 50.0f;
-    f32 y0    = 78.0f;
-    f32 line_h = 15.0f;
+    f32 y0 = s_vr_only ? 64.0f : 78.0f;
+    f32 line_h = s_vr_only ? 22.0f : 15.0f;
 
-    pc_menu_draw_centered(game, "- Settings -", 30.0f, 255, 255, 255, 255, 1.0f);
-    draw_tab_row(game, y_tab);
+    pc_menu_draw_centered(game, s_vr_only ? "- VR Settings -" : "- Settings -",
+                          30.0f, 255, 255, 255, 255, 1.0f);
+    if (!s_vr_only) draw_tab_row(game, y_tab);
 
-    const Tab* tab = &s_tabs[s_tab];
+    const Tab* tab = cur_tab();
     for (int i = 0; i < tab->count; i++) {
         const Item* it = &tab->items[i];
         int selected = (s_sel == i);
@@ -839,9 +911,11 @@ static void draw_settings_page(struct game_s* game) {
 
     /* Anchor Apply/Back to the tallest tab's footprint so they don't
      * shift up when the user moves to a tab with fewer items. */
-    int max_items = 0;
-    for (int t = 0; t < TAB_COUNT; t++) {
-        if (s_tabs[t].count > max_items) max_items = s_tabs[t].count;
+    int max_items = tab->count;
+    if (!s_vr_only) {
+        for (int t = 0; t < TAB_COUNT; t++) {
+            if (s_tabs[t].count > max_items) max_items = s_tabs[t].count;
+        }
     }
 
     /* Apply: green when there's something to apply. */
@@ -863,12 +937,17 @@ static void draw_settings_page(struct game_s* game) {
     f32 bky = apy + line_h;
     int sel_back = (s_sel == idx_back());
     pc_menu_row_colors(sel_back, &r, &g, &b, &a);
-    pc_menu_draw_centered(game, "Back", bky, r, g, b, a,
+    pc_menu_draw_centered(game, s_vr_only ? "Resume" : "Back", bky, r, g, b, a,
                           sel_back ? PC_MENU_SCALE_SELECTED : 1.0f);
 
     /* Restart banner stays up until the process actually restarts (survives
      * reopening the menu). Sits below Back so it never competes with the cursor. */
-    if (s_pending_restart) {
+    if (s_vr_only) {
+        pc_menu_draw_centered(game, "Left stick: move and change", 211.0f,
+                              180, 180, 180, 220, 0.85f);
+        pc_menu_draw_centered(game, "A: select   B: resume", 225.0f,
+                              180, 180, 180, 220, 0.85f);
+    } else if (s_pending_restart) {
         pc_menu_draw_centered(game, "Restart the game to apply all changes",
                               bky + line_h + 6.0f, 255, 195, 85, 230, 1.0f);
     }

@@ -53,6 +53,18 @@ frame-timing summaries every 30 seconds automatically).
 Setup: headset on, SteamVR running, `--verbose` not needed (vr_log always
 writes). Start in the **diorama** (third-person) view.
 
+## VR settings shortcut
+
+- [ ] While playing, click both sticks together (either click may lead slightly):
+      VR Settings opens once without opening the game Start/Z screen.
+- [ ] Move the left stick to navigate, A/right trigger to select, and B/left
+      trigger to resume. Held controls must not repeat or leak into gameplay.
+- [ ] Change hands, turning, motion swings, and volume; Apply, Resume, and reopen.
+      Confirm the values persist after restarting. Other settings stay unchanged.
+- [ ] Make an unapplied edit and press B: Keep editing/Discard behaves correctly.
+- [ ] Turn/lean while paused: the world stays head-tracked; gameplay is frozen.
+      Individually click each stick afterward to confirm Start/Z still works.
+
 ## 1. Boot & menus (panel-only frames)
 
 - [ ] Title screen and save select appear on the floating panel, readable

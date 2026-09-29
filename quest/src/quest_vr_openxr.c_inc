@@ -201,6 +201,7 @@ extern "C" void quest_vr_set_resumed(int resumed) {
             for (int eye = 0; eye < 2; ++eye) s_vr.eye[eye] = s_vr.sink;
         }
         s_vr.input_synced = s_vr.hand_valid = s_vr.head_pose_valid = 0;
+        pc_vr_menu_reset(&s_vr.menu_input);
         s_vr.empty_hand_valid[0] = s_vr.empty_hand_valid[1] = 0;
         pc_vr_swing_cancel(&s_vr.swing);
     }
@@ -329,6 +330,7 @@ extern "C" void pc_vr_frame_begin(void) {
             speed = sqrtf(v.x*v.x + v.y*v.y + v.z*v.z);
         }
     }
+    if (!pcvr_menu_input_available()) pc_vr_menu_reset(&s_vr.menu_input);
     pc_vr_swing_update(&s_vr.swing, SDL_GetTicks(), speed,
         s_vr.hand_valid && pc_vr_tool_input_allowed() && g_pc_settings.vr_motion_swing &&
         pc_fp_swingable_equipped() && !pcvr_digital(s_vr.act_l));

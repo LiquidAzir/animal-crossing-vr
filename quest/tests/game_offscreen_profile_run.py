@@ -24,6 +24,7 @@ parser.add_argument('--yaw',type=int,default=0,help='Synthetic headset yaw in de
 parser.add_argument('--eye-size',type=int,default=640,help='Square target pixels per synthetic eye,64..2048(default640)')
 parser.add_argument('--save-copy',type=Path,help='Read-only source GCI file to copy into disposable test SlotA')
 parser.add_argument('--pad-script',type=Path,help='JSON with stop_frame,events,and captures counted after the first world draw')
+parser.add_argument('--vr-menu-test',action='store_true',help='Isolated VR settings render/pause test with synthetic API input and head yaw; no save')
 parser.add_argument('--no-profile',action='store_true',help='Disable per-draw profiler; measure90world frames after30warmup frames')
 parser.add_argument('--warmup-frames',type=int,default=30,help='World frames to exclude from timing,1..600(default30)')
 parser.add_argument('--sample-frames',type=int,default=90,help='World frames to time without per-draw profiling,1..1800(default90)')
@@ -37,8 +38,16 @@ if not 1<=args.warmup_frames<=600:parser.error('--warmup-frames must be1..600')
 if not 1<=args.sample_frames<=1800:parser.error('--sample-frames must be1..1800')
 if args.save_copy and (not args.save_copy.is_file() or args.save_copy.suffix.lower()!='.gci'):
     parser.error('--save-copy must identify an existing GCI file')
+if args.vr_menu_test and (not args.stereo or args.save_copy or args.pad_script or args.yaw):
+    parser.error('--vr-menu-test requires --stereo, initial yaw0, and no --save-copy/--pad-script')
 script=None
 script_file=None
+if args.vr_menu_test:
+    args.no_profile=True
+    script={'stop_frame':178,'events':[],
+            'captures':[122,128,132,138,144,150,156,162,168,172,178]}
+    script_file=OUT/'input.txt'
+    script_file.write_text('STOP 178\n'+''.join(f'CAPTURE {at}\n' for at in script['captures']))
 if args.pad_script:
     script=json.loads(args.pad_script.read_text(encoding='utf-8'))
     def frame(value):
@@ -63,8 +72,9 @@ if args.pad_script:
     script_file=OUT/'input.txt';script_file.write_text('\n'.join(lines)+'\n')
 exe=OUT/'game-offscreen-profile'
 command=[paths['clang_armv7_api24'],'-std=c11','-O2','-fPIE','-pie','-DTARGET_PC',
+         '-D_LANGUAGE_C','-DF3DEX_GBI_2','-DVERSION=0',
          '-Wl,--export-dynamic','-I'+str(WORKSPACE/'third_party/SDL/include'),
-         '-I'+str(ROOT/'include'),'-I'+str(ROOT/'quest/tests'),
+         '-I'+str(ROOT/'include'),'-I'+str(ROOT/'quest/tests'),'-I'+str(ROOT/'pc/include'),
          str(ROOT/'quest/tests/game_offscreen_profile.c'),'-L'+str(build/'sdl'),
          '-lSDL2','-lGLESv3','-lEGL','-ldl','-o',str(exe)]
 result=subprocess.run(command,text=True,capture_output=True)
@@ -79,6 +89,7 @@ if args.stereo:
     c_object=OUT/'game_offscreen_profile.o'
     commands=[
         [paths['clang_armv7_api24'],'-std=c11','-O2','-fPIE','-DTARGET_PC','-DOFFSCREEN_STEREO',
+         '-D_LANGUAGE_C','-DF3DEX_GBI_2','-DVERSION=0',
          *includes,'-c',str(ROOT/'quest/tests/game_offscreen_profile.c'),'-o',str(c_object)],
         [paths['clangxx_armv7_api24'],'-std=c++17','-O2','-fPIE','-pie','-DTARGET_PC',
          '-nostdlib++','-fno-exceptions','-fno-rtti','-fno-threadsafe-statics',
@@ -127,6 +138,9 @@ if args.save_copy:
 if script:
     manifest['input_script']=script
     manifest['navigation_only']=True
+if args.vr_menu_test:
+    manifest['vr_menu_test']='actual menu API injected during PADRead; title guard bypassed only in harness; no real controller/chord'
+    manifest['pause_checks']='play->game_frame frozen, real UI pixels stable under head yaw, both eye images change and recover, Apply then Resume'
 if args.stereo:
     manifest['mode']='two fixed test eyes, production render helpers; no XR runtime or tracked input'
     manifest['eye_target']=[args.eye_size,args.eye_size]
@@ -138,7 +152,7 @@ for path,name in files.items():
     manifest['files'].append({'name':name,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
 run(['shell',f'chmod 500 {REMOTE}/game-offscreen-profile && chmod 400 {REMOTE}/rom/AnimalCrossing.ciso'])
 test_arguments=' --stock-world' if args.stock_world else ''
-result=run(['shell',f'cd {REMOTE} && LD_LIBRARY_PATH={REMOTE} ACQUEST_TEST_WARMUP={args.warmup_frames} ACQUEST_TEST_SAMPLES={args.sample_frames} ACQUEST_TEST_YAW={args.yaw} ACQUEST_TEST_EYE_SIZE={args.eye_size} ACQUEST_TEST_PROFILE={int(not args.no_profile)} ./game-offscreen-profile{test_arguments}'],check=False)
+result=run(['shell',f'cd {REMOTE} && LD_LIBRARY_PATH={REMOTE} ACQUEST_TEST_VR_MENU={int(args.vr_menu_test)} ACQUEST_TEST_WARMUP={args.warmup_frames} ACQUEST_TEST_SAMPLES={args.sample_frames} ACQUEST_TEST_YAW={args.yaw} ACQUEST_TEST_EYE_SIZE={args.eye_size} ACQUEST_TEST_PROFILE={int(not args.no_profile)} ./game-offscreen-profile{test_arguments}'],check=False)
 (OUT/'results.log').write_text(result.stdout+result.stderr,encoding='utf-8')
 manifest['exit_code']=result.returncode
 if args.save_copy:
@@ -153,5 +167,9 @@ if script:
     for at in script.get('captures',[]):
         name=f'capture-{at:06d}.bmp'
         run(['pull',REMOTE+'/'+name,str(OUT/name)],check=False)
+        if args.vr_menu_test:
+            for target in ('ui','ui320','left','right'):
+                name=f'menu-{at:06d}-{target}.bmp'
+                run(['pull',REMOTE+'/'+name,str(OUT/name)],check=False)
 print('Receipt:',OUT)
 raise SystemExit(result.returncode)

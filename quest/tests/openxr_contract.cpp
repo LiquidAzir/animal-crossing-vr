@@ -6,6 +6,7 @@
 #include <string>
 #include <algorithm>
 #include "pc_vr_swing.h"
+#include "pc_vr_menu_input.h"
 #include "quest_host_vector.h"
 using std::isfinite;
 typedef unsigned GLuint;
@@ -23,6 +24,7 @@ static struct {
     int hand_valid, head_pose_valid, empty_hand_valid[2], submitted_this_frame;
     int eye[2], sink;
     PCVRSwing swing;
+    PCVRMenuInput menu_input;
     XrAction act_a, act_b, act_l, act_r, act_trigger_l, act_trigger_r;
 } s_vr;
 #define PC_VR_NEAR_M 0.05f
@@ -165,10 +167,12 @@ static void frame_tests() {
     reset();events={XR_SESSION_STATE_READY};CHECK(s_xr.begin_frame());CHECK(s_xr.acquire_eye(0));CHECK(s_xr.acquire_eye(1));
     s_vr.input_synced=s_vr.hand_valid=s_vr.head_pose_valid=1;s_vr.empty_hand_valid[0]=s_vr.empty_hand_valid[1]=1;
     s_vr.swing.high=1;s_vr.swing.pulse=2;s_vr.eye[0]=10;s_vr.eye[1]=11;s_vr.sink=12;s_vr.submitted_this_frame=0;
+    s_vr.menu_input.ready=1;s_vr.menu_input.output_clicks=1;s_vr.menu_input.edge_count=1;
     quest_vr_set_resumed(0);
     CHECK(!s_xr.resumed&&!s_xr.frame_begun);CHECK(layers==0);CHECK(s_vr.submitted_this_frame);
     CHECK(!s_xr.eyes[0].acquired&&!s_xr.eyes[1].acquired);
     CHECK(!s_vr.input_synced&&!s_vr.hand_valid&&!s_vr.head_pose_valid);
+    CHECK(!s_vr.menu_input.ready&&!s_vr.menu_input.output_clicks&&!s_vr.menu_input.edge_count);
     CHECK(!s_vr.empty_hand_valid[0]&&!s_vr.empty_hand_valid[1]);
     CHECK(!s_vr.swing.high&&!s_vr.swing.pulse);CHECK(s_vr.eye[0]==12&&s_vr.eye[1]==12);
     auto count=calls.size();quest_vr_set_resumed(0);CHECK(calls.size()==count);

@@ -62,6 +62,7 @@ The desktop window shows a mirror of the left eye.
 | Right grip | GC R |
 | Right stick click | Z |
 | Left stick click | Start (menu) |
+| Both stick clicks together | Open VR Settings |
 | X + Y together | Recenter the view |
 
 Rebind anything in SteamVR → Settings → Controllers → Manage Controller
@@ -101,6 +102,27 @@ and in VR:
   `fp_eye_height` (game units above the feet, default 52),
   `fp_snap_degrees` (0 = smooth VR turning).
 
+## VR settings in the headset
+
+While playing, **click both controller sticks together** to pause and open VR
+Settings. Move the **left stick up/down** to choose a row and **left/right** to
+change its value. **A/right trigger** selects; **B/left trigger** resumes. If edits
+have not been applied, B asks whether to keep editing or discard them.
+
+- **Hand visuals:** show or hide the optional empty-hand markers (off by default).
+- **Turning:** smooth turning, or snap turns of 30, 45, or 90 degrees.
+- **Motion swings:** enable or disable swinging the controller to use tools;
+  ordinary button/trigger tool use stays available.
+- **Master volume:** change the game's sound level.
+
+Choose **Apply** to save changes, then **Resume**. These options take effect
+without restarting. The menu leaves rendering quality and resolution unchanged.
+Individual stick clicks keep their existing Start/Z actions, with a brief
+180 ms chord-detection delay. Release the controls when resuming to avoid an
+accidental movement or tool press. Custom SteamVR bindings must provide the
+existing Start and Z actions for this shortcut. The shortcut is unavailable on
+the title screen and while playing an NES game, matching the pause restrictions.
+
 ## Floating hands (optional)
 
 First-person VR can show two small rounded white hand markers following your
@@ -110,8 +132,8 @@ actions. A controller that loses tracking disappears until tracking returns.
 Hands are depth-tested against the world and do not change tool behavior.
 
 The default setting is `vr_empty_hands = 0` under `[FirstPerson]` in `settings.ini`.
-Use **Settings → Gameplay → VR empty hands → On → Apply**
-to enable them without restarting. Existing explicit preferences are preserved.
+Use **both stick clicks → Hand visuals → On → Apply** in the headset
+to enable them without restarting. The desktop Gameplay toggle also remains available. Existing explicit preferences are preserved.
 The updated `vr_actions` folder must accompany the executable. Custom SteamVR
 bindings can bind **Left Empty Hand** and **Right Empty Hand** to each
 controller's handgrip pose (`/pose/handgrip`); the existing tool pose remains separate.

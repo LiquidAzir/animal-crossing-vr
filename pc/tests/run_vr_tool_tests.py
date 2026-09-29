@@ -63,14 +63,15 @@ def main():
         ('src/game/m_player_main_swing_net.c_inc', ['Player_actor_request_main_swing_net']),
         ('src/game/m_player_main_ready_rod.c_inc', ['Player_actor_request_main_ready_rod',
          'Player_actor_request_proc_index_fromReady_rod']),
-        ('pc/src/pc_vr.cpp', ['pc_vr_merge_pad']),
+        ('pc/src/pc_vr.cpp', ['pcvr_menu_input_available', 'pc_vr_merge_pad']),
     ]
     chunks = []
     for path, names in specs:
         source = read(path)
         for name in names:
             body = function(source, name)
-            if body is None and name in ('pc_vr_tool_input_allowed', 'Player_actor_face_vr_tool_target'):
+            if body is None and name in ('pc_vr_tool_input_allowed', 'Player_actor_face_vr_tool_target',
+                                         'pcvr_menu_input_available'):
                 continue  # These helpers do not exist in the regression baseline.
             if body is None:
                 raise RuntimeError(f'Missing production function: {path}:{name}')

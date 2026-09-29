@@ -4,6 +4,7 @@
 #include "pc_settings.h"
 #include "pc_vr.h"
 #include "pc_vr_swing.h"
+#include "pc_vr_menu_input.h"
 #include <openxr/openxr.h>
 #include <dlfcn.h>
 #include <stdarg.h>
@@ -72,6 +73,26 @@ static int stereo_enabled;
 static unsigned stereo_frames;
 extern "C" int pc_vr_active(void) {return stereo_enabled;}
 
+extern "C" void offscreen_stereo_set_yaw(int degrees) {
+    if(degrees < -180 || degrees > 180)_Exit(3);
+    const float yaw=degrees*(float)PC_PI/180.0f;
+    M34 yaw_rotation;
+    m34_identity(yaw_rotation);
+    yaw_rotation[0][0]=yaw_rotation[2][2]=cosf(yaw);
+    yaw_rotation[0][2]=sinf(yaw);yaw_rotation[2][0]=-sinf(yaw);
+    for(int eye=0;eye<2;++eye){
+        const float pitch=-20.0f*(float)PC_PI/180.0f;
+        M34 seated_eye,rotated_eye;
+        m34_identity(seated_eye);
+        seated_eye[1][1]=seated_eye[2][2]=cosf(pitch);
+        seated_eye[1][2]=-sinf(pitch);seated_eye[2][1]=sinf(pitch);
+        seated_eye[0][3]=eye?0.032f:-0.032f;
+        m34_mul(yaw_rotation,seated_eye,rotated_eye);
+        m34_invert_rigid(rotated_eye,s_vr.inv_eye_pose[eye]);
+    }
+    pcvr_update_view_correction();
+}
+
 extern "C" void offscreen_stereo_init(void* library,int enabled,int eye_size) {
     host_game=library;
     host_settings=(PCSettings*)symbol("g_pc_settings");
@@ -92,26 +113,13 @@ extern "C" void offscreen_stereo_init(void* library,int enabled,int eye_size) {
     const char* yaw_text=getenv("ACQUEST_TEST_YAW");
     const int yaw_degrees=yaw_text?atoi(yaw_text):0;
     if(yaw_degrees < -180 || yaw_degrees > 180)_Exit(3);
-    const float yaw=yaw_degrees*(float)PC_PI/180.0f;
-    M34 yaw_rotation;
-    m34_identity(yaw_rotation);
-    yaw_rotation[0][0]=yaw_rotation[2][2]=cosf(yaw);
-    yaw_rotation[0][2]=sinf(yaw);yaw_rotation[2][0]=-sinf(yaw);
     for(int eye=0;eye<2;++eye){
         if(!pcvr_create_target(&s_vr.eye[eye],eye_size,eye_size))_Exit(4);
         s_xr.views[eye].fov={-0.785398163f,0.785398163f,0.785398163f,-0.785398163f};
         // Fixed 64 mm IPD and 20 degrees downward pitch: no runtime tracking.
-        const float pitch=-20.0f*(float)PC_PI/180.0f;
-        M34 seated_eye;
-        m34_identity(seated_eye);
-        seated_eye[1][1]=seated_eye[2][2]=cosf(pitch);
-        seated_eye[1][2]=-sinf(pitch);seated_eye[2][1]=sinf(pitch);
-        seated_eye[0][3]=eye?0.032f:-0.032f;
-        M34 rotated_eye;
-        m34_mul(yaw_rotation,seated_eye,rotated_eye);
-        m34_invert_rigid(rotated_eye,s_vr.inv_eye_pose[eye]);
         pcvr_update_eye_projection(eye);
     }
+    offscreen_stereo_set_yaw(yaw_degrees);
     if(!pcvr_create_target(&s_vr.ui,1280,960)||!pcvr_create_panel_gl())_Exit(4);
     s_vr.active=stereo_enabled=1;
     *(float*)symbol("g_pc_vr_cull_expand")=24;
@@ -119,6 +127,53 @@ extern "C" void offscreen_stereo_init(void* library,int enabled,int eye_size) {
     pcvr_update_view_correction();
     glBindFramebuffer(GL_FRAMEBUFFER,0);
     printf("OFFSCREEN_STEREO fixed poses; %dx%d per eye,90deg FOV,IPD64mm,pitch-20deg,yaw%ddeg; production matrix/UI helpers; no XR\n",eye_size,eye_size,yaw_degrees);
+}
+
+extern "C" int offscreen_stereo_menu_capture(unsigned frame) {
+    static unsigned first_ui,first_eye[2];
+    if(!stereo_enabled)return 0;
+    GLint read_fbo,draw_fbo,pack;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING,&read_fbo);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&draw_fbo);
+    glGetIntegerv(GL_PACK_ALIGNMENT,&pack);glPixelStorei(GL_PACK_ALIGNMENT,1);
+    unsigned hashes[3]={2166136261u,2166136261u,2166136261u};
+    int okay=1;
+    for(int target=0;target<3;++target){
+        const PCVRTarget& source=target==0?s_vr.ui:s_vr.eye[target-1];
+        const size_t bytes=(size_t)source.w*source.h*4;
+        unsigned char* pixels=(unsigned char*)malloc(bytes);
+        if(!pixels){okay=0;break;}
+        glBindFramebuffer(GL_READ_FRAMEBUFFER,source.fbo);
+        glReadPixels(0,0,source.w,source.h,GL_RGBA,GL_UNSIGNED_BYTE,pixels);
+        for(size_t i=0;i<bytes;++i)hashes[target]=(hashes[target]^pixels[i])*16777619u;
+        char filename[64];
+        snprintf(filename,sizeof(filename),"menu-%06u-%s.bmp",frame,target==0?"ui":target==1?"left":"right");
+        okay&=device_save_bmp(filename,source.w,source.h,pixels);
+        if(target==0){
+            /* Inspection thumbnail only; rendering still uses the production
+             * 1280x960 UI target and the game's logical 320x240 coordinates. */
+            unsigned char* thumbnail=(unsigned char*)malloc(320*240*4);
+            if(!thumbnail)okay=0;
+            else {
+                for(int y=0;y<240;++y)for(int x=0;x<320;++x)
+                    memcpy(thumbnail+(y*320+x)*4,pixels+(((y*source.h/240+source.h/480)*source.w)+x*source.w/320+source.w/640)*4,4);
+                snprintf(filename,sizeof(filename),"menu-%06u-ui320.bmp",frame);
+                okay&=device_save_bmp(filename,320,240,thumbnail);free(thumbnail);
+            }
+        }
+        free(pixels);
+    }
+    glBindFramebuffer(GL_READ_FRAMEBUFFER,read_fbo);glBindFramebuffer(GL_DRAW_FRAMEBUFFER,draw_fbo);
+    glPixelStorei(GL_PACK_ALIGNMENT,pack);
+    if(frame==122){first_ui=hashes[0];first_eye[0]=hashes[1];first_eye[1]=hashes[2];}
+    if(frame==128||frame==132||frame==138)okay&=hashes[0]==first_ui;
+    if(frame==132)okay&=hashes[1]!=first_eye[0]&&hashes[2]!=first_eye[1];
+    /* Exact eye recovery also catches accidental gameplay/camera advance. */
+    if(frame==128||frame==138)okay&=hashes[1]==first_eye[0]&&hashes[2]==first_eye[1];
+    if(frame<174)okay&=pc_vr_flat_scene_active()==0;
+    printf("OFFSCREEN_MENU_CAPTURE frame=%u UI=%dx%d ui_hash=%08x left=%08x right=%08x head_tracking_check=%d\n",
+           frame,s_vr.ui.w,s_vr.ui.h,hashes[0],hashes[1],hashes[2],okay);
+    return okay&&glGetError()==GL_NO_ERROR;
 }
 
 extern "C" void pc_vr_frame_begin(void) {

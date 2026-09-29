@@ -9,6 +9,8 @@
 #include "pc_vr.h"
 #include "pc_fp_camera.h"
 #include "pc_vr_swing.h"
+#include "pc_vr_menu_input.h"
+#include "pc_pause_menu.h"
 #include "pc_vr_hands.h"
 #include "pc_sky.h"
 #include "pc_profiler.h"
@@ -87,6 +89,7 @@ static struct {
     XrAction act_trigger_l, act_trigger_r, act_hand_r, act_empty_hand[2], act_haptic_l, act_haptic_r;
     XrSpace aim_space, grip_space[2];
     int input_ready, input_synced, recenter_latch;
+    PCVRMenuInput menu_input;
     M34 world_from_seated, hand_world, tool_local;
     int hand_valid;
     PCVRSwing swing;
@@ -567,12 +570,14 @@ void pc_vr_ensure_submitted(void) {
     pc_vr_compose_and_submit();
 }
 
+static int pcvr_menu_input_available(void) {
+    return s_vr.active && s_vr.input_ready && s_vr.input_synced && s_vr.head_pose_valid && s_xr.focused && s_xr.resumed;
+}
+
 void pc_vr_merge_pad(unsigned short* buttons,
                                 signed char* stickX, signed char* stickY,
                                 signed char* cstickX, signed char* cstickY,
                                 unsigned char* triggerL, unsigned char* triggerR) {
-    if (!s_vr.active || !s_vr.input_ready) return;
-
     /* dolphin/pad.h values (avoid header dependency in C++ TU) */
     enum {
         BTN_LEFT = 0x0001, BTN_RIGHT = 0x0002, BTN_DOWN = 0x0004, BTN_UP = 0x0008,
@@ -581,11 +586,36 @@ void pc_vr_merge_pad(unsigned short* buttons,
         BTN_START = 0x1000
     };
 
-    float mx, my, cx, cy;
-    pcvr_analog(s_vr.act_move, &mx, &my);
-    pcvr_analog(s_vr.act_camera, &cx, &cy);
-
-    int l_held = pcvr_digital(s_vr.act_l);
+    PCVRMenuSample in = {0};
+    in.active = s_vr.active;
+    in.available = pcvr_menu_input_available();
+    in.tick = SDL_GetTicks();
+    in.frame = pc_frame_counter;
+    if (in.available) {
+        pcvr_analog(s_vr.act_move, &in.mx, &in.my);
+        pcvr_analog(s_vr.act_camera, &in.cx, &in.cy);
+        in.a = pcvr_digital(s_vr.act_a); in.b = pcvr_digital(s_vr.act_b);
+        in.x = pcvr_digital(s_vr.act_x); in.y = pcvr_digital(s_vr.act_y);
+        in.l = pcvr_digital(s_vr.act_l); in.r = pcvr_digital(s_vr.act_r);
+        in.start = pcvr_digital(s_vr.act_start); in.z = pcvr_digital(s_vr.act_z);
+    }
+    in.neutral = !in.a && !in.b && !in.x && !in.y && !in.l && !in.r && !in.start && !in.z &&
+        fabsf(in.mx) <= 0.12f && fabsf(in.my) <= 0.12f &&
+        fabsf(in.cx) <= 0.12f && fabsf(in.cy) <= 0.12f && !*buttons &&
+        abs((int)*stickX) <= 12 && abs((int)*stickY) <= 12 &&
+        abs((int)*cstickX) <= 12 && abs((int)*cstickY) <= 12 && *triggerL <= 12 && *triggerR <= 12;
+    unsigned int clicks = 0;
+    if (pc_vr_menu_filter(&s_vr.menu_input, &in, g_pc_paused,
+                          pc_pause_menu_open_vr_settings, pc_pause_menu_vr_input, &clicks)) {
+        pc_vr_swing_cancel(&s_vr.swing);
+        s_vr.menu_input.y_prev = in.y;
+        *buttons = 0; *stickX = *stickY = *cstickX = *cstickY = 0;
+        *triggerL = *triggerR = 0;
+        return;
+    }
+    if (!in.available) return; // inactive flat mode keeps its ordinary pad input
+    float mx = in.mx, my = in.my, cx = in.cx, cy = in.cy;
+    int l_held = in.l;
 
     if (l_held) {
         /* Left grip held: left stick becomes the D-pad (tool switching) */
@@ -613,12 +643,11 @@ void pc_vr_merge_pad(unsigned short* buttons,
      * must be up (X+Y is the recenter chord). Y is swallowed while gripped.
      * Not while the pause menu is open — the camera is frozen there. */
     extern int g_pc_paused;
-    static int s_y_prev = 0;
-    int y_now = pcvr_digital(s_vr.act_y);
-    if (l_held && y_now && !s_y_prev && !pcvr_digital(s_vr.act_x) && !g_pc_paused) {
+    int y_now = in.y;
+    if (l_held && y_now && !s_vr.menu_input.y_prev && !in.x && !g_pc_paused) {
         pc_fp_toggle();
     }
-    s_y_prev = y_now;
+    s_vr.menu_input.y_prev = y_now;
 
     /* Motion swing: inject the tool-use press (ORed with real A) */
     /* Selecting a tool must not also use the old tool from a pending gesture.
@@ -626,14 +655,14 @@ void pc_vr_merge_pad(unsigned short* buttons,
     if (!pc_vr_tool_input_allowed() || l_held) pc_vr_swing_cancel(&s_vr.swing);
     if (s_vr.swing.pulse > 0) *buttons |= BTN_A;
 
-    if (pcvr_digital(s_vr.act_a)) *buttons |= BTN_A;
-    if (pcvr_digital(s_vr.act_b)) *buttons |= BTN_B;
-    if (pcvr_digital(s_vr.act_x)) *buttons |= BTN_X;
+    if (in.a) *buttons |= BTN_A;
+    if (in.b) *buttons |= BTN_B;
+    if (in.x) *buttons |= BTN_X;
     if (y_now && !l_held) *buttons |= BTN_Y;
-    if (pcvr_digital(s_vr.act_z)) *buttons |= BTN_Z;
-    if (pcvr_digital(s_vr.act_start)) *buttons |= BTN_START;
+    if ((clicks & 2u)) *buttons |= BTN_Z;
+    if ((clicks & 1u)) *buttons |= BTN_START;
     if (l_held) { *buttons |= BTN_L; *triggerL = 255; }
-    if (pcvr_digital(s_vr.act_r)) { *buttons |= BTN_R; *triggerR = 255; }
+    if (in.r) { *buttons |= BTN_R; *triggerR = 255; }
 }
 
 int pc_vr_hand_tool_mtx(float out[12]) {

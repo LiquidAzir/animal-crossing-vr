@@ -16,6 +16,10 @@ struct game_s;
  * Call when opening the menu from either host (pause or title). */
 void pc_settings_menu_enter(void);
 
+/* Headset shortcut: a compact live-settings page with Apply and Resume.
+ * Uses the same navigation/drawing API and unapplied-change confirmation. */
+void pc_settings_menu_enter_vr(void);
+
 /* 1 while the menu (settings page or res-confirm sub-page) is active. */
 int  pc_settings_menu_active(void);
 

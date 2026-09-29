@@ -16,6 +16,8 @@
 #include <time.h>
 #include <unistd.h>
 #include "dolphin/pad.h"
+#include "m_play.h"
+#include "pc_settings.h"
 #include "gles_device_context.h"
 
 static void* game_library;
@@ -34,9 +36,16 @@ typedef struct {unsigned frame,duration,buttons;int x,y;} TestPadEvent;
 static TestPadEvent pad_events[128];
 static unsigned pad_event_count,capture_frames[128],capture_count;
 static double began, first_swap;
+static int menu_test;
+static unsigned menu_last_input=(unsigned)-1, menu_checks;
+static GAME_PLAY* menu_play;
+static unsigned menu_game_frame;
+static PCSettings menu_original;
 #ifdef OFFSCREEN_STEREO
 extern void offscreen_stereo_init(void* library,int enabled,int eye_size);
 extern int offscreen_stereo_capture(void);
+extern void offscreen_stereo_set_yaw(int degrees);
+extern int offscreen_stereo_menu_capture(unsigned frame);
 #endif
 static void* required(void* library,const char* name) {
     dlerror();void* value=dlsym(library,name);const char* error=dlerror();
@@ -44,6 +53,56 @@ static void* required(void* library,const char* name) {
 }
 static double now(void) {struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return t.tv_sec+t.tv_nsec/1e9;}
 static void timeout(int signal) {(void)signal;write(2,"OFFSCREEN_TIMEOUT\n",18);_Exit(8);}
+static void menu_check(int condition,const char* message) {
+    ++menu_checks;
+    if(!condition){fprintf(stderr,"OFFSCREEN_MENU_FAIL frame=%u %s\n",scene_frames,message);_Exit(9);}
+}
+/* Synthetic API input, intentionally separate from the real controller/chord
+ * tests. It enters during PADRead, at the same frame stage as VR input. */
+static void menu_input(void) {
+    if(!menu_test||menu_last_input==scene_frames)return;
+    menu_last_input=scene_frames;
+    int* paused=required(game_library,"g_pc_paused");
+    int(*input)(float,float,int,int)=required(game_library,"pc_pause_menu_vr_input");
+    if(scene_frames==120){
+        GAME* game=*(GAME**)required(game_library,"game_class_p");
+        menu_check(game&&game->exec==required(game_library,"play_main"),"fixture is an actual play scene");
+        menu_play=(GAME_PLAY*)game;menu_game_frame=menu_play->game_frame;
+        menu_original=*(PCSettings*)required(game_library,"g_pc_settings");
+        /* The disposable title scene supplies scenery without a save. Only
+         * this harness bypasses the title-logo guard; production keeps it. */
+        *(int*)required(game_library,"g_pc_title_main_menu_visible")=0;
+        int(*open)(void)=required(game_library,"pc_pause_menu_open_vr_settings");
+        menu_check(open()==1&&*paused,"settings opens and pauses in PADRead");
+        printf("OFFSCREEN_MENU_OPEN game_frame=%u; synthetic title guard bypass; no save\n",menu_game_frame);
+    }
+#ifdef OFFSCREEN_STEREO
+    if(scene_frames==130)offscreen_stereo_set_yaw(35);
+    if(scene_frames==136)offscreen_stereo_set_yaw(0);
+#endif
+    if(scene_frames>=120&&scene_frames<=174){
+        float x=0,y=0;int confirm=0;
+        switch(scene_frames){
+            case 142: case 148: case 154:x=1;break;
+            case 160:x=-1;break;
+            case 146: case 152: case 158: case 164: case 170:y=-1;break;
+            case 166: case 174:confirm=1;break;
+        }
+        menu_check(input(x,y,confirm,0)==1,"menu consumes input including close frame");
+        if(scene_frames<166){
+            PCSettings* settings=required(game_library,"g_pc_settings");
+            menu_check(memcmp(settings,&menu_original,sizeof(menu_original))==0,"pending changes do not apply early");
+        }
+        if(scene_frames==166){
+            PCSettings* settings=required(game_library,"g_pc_settings");
+            menu_check(settings->vr_empty_hands!=menu_original.vr_empty_hands,"Apply commits hands");
+            menu_check(settings->fp_snap_degrees!=menu_original.fp_snap_degrees,"Apply commits turning");
+            menu_check(settings->vr_motion_swing!=menu_original.vr_motion_swing,"Apply commits motion swings");
+            menu_check(settings->master_volume<menu_original.master_volume,"Apply commits volume");
+        }
+        menu_check(*paused==(scene_frames<174),"pause lasts until Resume");
+    }
+}
 static void load_script(void) {
     FILE* input=fopen("input.txt","r");
     if(!input)return;
@@ -110,6 +169,7 @@ void pc_platform_init(void) {
 int pc_platform_poll_events(void) {return 1;}
 BOOL PADInit(void) {return TRUE;}
 u32 PADRead(PADStatus* status) {
+    menu_input();
     memset(status,0,sizeof(PADStatus)*4);
     for(int i=1;i<4;++i)status[i].err=PAD_ERR_NO_CONTROLLER;
     for(unsigned i=0;i<pad_event_count;++i){
@@ -145,6 +205,12 @@ void pc_platform_swap_buffers(void) {
     }
     last_swap=swap_time;
     if(world_frames)++scene_frames;
+    if(menu_test&&scene_frames>=121&&scene_frames<=174){
+        menu_check(*(GAME**)required(game_library,"game_class_p")==&menu_play->game,"play instance retained while paused");
+        menu_check(menu_play->game_frame==menu_game_frame,"gameplay frame stays frozen");
+    }
+    if(menu_test&&scene_frames==178)
+        menu_check(menu_play->game_frame>menu_game_frame,"gameplay resumes after closing");
     if(swaps==1)first_swap=now();
     if(swaps==30)*(int*)required(game_library,"g_pc_verbose")=0;
     if(swaps%30==0)printf("OFFSCREEN_PROGRESS frames=%u elapsed=%.3f\n",swaps,now()-first_swap);
@@ -152,6 +218,9 @@ void pc_platform_swap_buffers(void) {
         char filename[64];unsigned colored,error;
         snprintf(filename,sizeof(filename),"capture-%06u.bmp",scene_frames);
         int saved=capture_mirror(filename,&colored,&error);
+#ifdef OFFSCREEN_STEREO
+        if(menu_test)saved&=offscreen_stereo_menu_capture(scene_frames);
+#endif
         printf("OFFSCREEN_CAPTURE scene_frame=%u saved=%d colored_pixels=%u gl_error=%x file=%s\n",scene_frames,saved,colored,error,filename);
         if(!saved||error)_Exit(7);
     }
@@ -174,6 +243,7 @@ void pc_platform_swap_buffers(void) {
         printf("OFFSCREEN_RESULT frames=%u world_frames=%u scene_frames=%u elapsed=%.3f size=%dx%d capture=%d colored_pixels=%u gl_error=%x\n",swaps,world_frames,scene_frames,now()-first_swap,width,height,saved,colored,error);
         if(steady_samples)printf("OFFSCREEN_STEADY profiling=%d warmup_world_frames=%u samples=%u elapsed_ms=%.3f avg_ms=%.3f peak_ms=%.3f cpu_frame_rate=%.2f\n",profiling_enabled,warmup_frames,steady_samples,steady_elapsed*1000,steady_elapsed*1000/steady_samples,steady_peak*1000,steady_samples/steady_elapsed);
         if(steady_samples)printf("OFFSCREEN_WORKLOAD avg_draws=%.3f avg_commands=%.3f avg_vertex_loads=%.3f\n",(double)steady_draws/steady_samples,(double)steady_commands/steady_samples,(double)steady_vertex_loads/steady_samples);
+        if(menu_test)printf("OFFSCREEN_MENU_RESULT checks=%u paused=%d game_frame_before=%u after=%u\n",menu_checks,*(int*)required(game_library,"g_pc_paused"),menu_game_frame,menu_play?menu_play->game_frame:0);
         fflush(NULL);_Exit(saved&&colored>1000&&!error?0:7);
     }
     eglSwapBuffers(test_display,test_surface);
@@ -184,6 +254,8 @@ int main(int argc,char** argv) {
     signal(SIGALRM,timeout);alarm(50);began=now();
     setenv("SDL_VIDEODRIVER","offscreen",1);setenv("SDL_AUDIODRIVER","dummy",1);
     setenv("SDL_JOYSTICK_HIDAPI","0",1);
+    const char* menu_text=getenv("ACQUEST_TEST_VR_MENU");
+    menu_test=menu_text&&atoi(menu_text)!=0;
     load_script();
     sdl_library=dlopen("./libSDL2.so",RTLD_NOW|RTLD_GLOBAL);
     if(!sdl_library||!dlopen("./libopenxr_loader.so",RTLD_NOW|RTLD_GLOBAL)){fprintf(stderr,"dependencies: %s\n",dlerror());return 2;}

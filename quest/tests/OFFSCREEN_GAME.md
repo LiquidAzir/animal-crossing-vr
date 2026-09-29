@@ -74,3 +74,25 @@ and requested intermediate captures. Audio sample generation runs on a native
 thread, but device playback is discarded because Android SDL audio requires JNI.
 No physical controller input is consumed. GPU/CPU test slots should be coordinated
 with other diagnostics and the user's headset session.
+
+The dedicated settings check uses no save file:
+
+```powershell
+python quest/tests/game_offscreen_profile_run.py --stereo --vr-menu-test
+```
+
+It opens the actual VR settings API during `PADRead` in the disposable title
+play scene. The harness alone clears the title-menu guard to reuse that scenery;
+production still blocks this shortcut at the title menu. It does not test the
+physical two-stick chord, which has separate input tests. Synthetic navigation
+edits all four settings, checks that Apply commits them, and selects Resume.
+Only the temporary fixture's settings file is written.
+
+The test checks that the actual gameplay frame remains frozen, then changes
+synthetic head yaw from 0 to 35 degrees and back while paused. The raw UI must
+stay identical, both eye images must change with yaw, and they must recover
+exactly when yaw returns. Captures include the production 1280x960 UI texture,
+320x240 inspection thumbnails, and both eye targets at every scripted checkpoint.
+This checks native menu rendering and continued view updates, not live OpenXR
+tracking or controller hardware. A test failure retains earlier captures for
+inspection. Use `--compile-only` to prepare the harness without accessing a device.
