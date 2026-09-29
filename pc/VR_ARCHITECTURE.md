@@ -278,7 +278,7 @@ present, 2 = force), `vr_world_scale` (mm per game unit), `vr_ui_distance` /
 live under `[FirstPerson]`: `fp_mode`, `fp_eye_height`, `fp_snap_degrees`,
 `vr_fp_world_scale`, `vr_solid_buildings`, `vr_solid_shell`, `vr_draw_radius`,
 `vr_town_residency`, `vr_motion_swing`, `vr_tool_on_hand`, `vr_tool_pitch`,
-`vr_empty_hands` (default 1, live Gameplay settings toggle; explicit 0 remains off).
+`vr_empty_hands` (default 0, live Gameplay settings toggle; explicit 1 enables it).
 The generated settings.ini documents each. CLI: `--vr`, `--no-vr`. If OpenVR
 init fails the game logs once and runs flat — the same binary serves both
 modes.

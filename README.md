@@ -122,8 +122,8 @@ image are found in the correct place.
 First person is a toggle by default. To start in first person every time,
 close the game and set **`fp_mode = 1`** under **`[FirstPerson]`** in
 `settings.ini`. VR auto-detection uses **`vr_mode = 1`** under **`[VR]`**.
-Floating hands default to **`vr_empty_hands = 1`** under **`[FirstPerson]`**;
-an existing off setting is preserved. No build tools are needed for these steps.
+Floating hands default to **`vr_empty_hands = 0`** under **`[FirstPerson]`**;
+existing explicit preferences are preserved. No build tools are needed for these steps.
 
 ### Updating an existing VR installation
 
@@ -148,7 +148,7 @@ verifying a VR session end to end: [VR_PLAYTEST.md](VR_PLAYTEST.md).
 - Corrected tool/net alignment and gaze-directed movement and tool actions.
 - Improved seasonal building backs, including houses, Able Sisters, police,
   museum, post office, Nook's Cranny, and the fountain; repaired ramp-side gaps.
-- Controller-tracked floating hands when empty-handed, enabled by default,
+- Controller-tracked floating hands when empty-handed, available as an optional setting,
   with corrected Touch and Index hand bindings.
 - First-person catches and discoveries, with the presented item in front of
   your view, plus raised dialogue placement.

@@ -19,8 +19,8 @@ Implementation and local checks: [Fishing, hands, and rug fixes](docs/vr-fishing
 
 ## September 27 follow-up
 
-- [ ] With both controllers awake, stow every held item: both default-on hands
-      appear and follow the grips. Equip a tool again: both hands disappear.
+- [ ] With both controllers awake, stow every held item: no hand markers should
+      appear by default. Equip a tool and confirm its tracking still works.
 - [ ] Catch a bug, catch a fish, and dig up a fossil while facing different
       directions. During each announcement, the item appears ahead and slightly
       below gaze. Turn/tilt the head: it remains visible. Check tiny-catch arrows,
@@ -79,7 +79,7 @@ writes). Start in the **diorama** (third-person) view.
 
 ### Optional floating hands
 
-- [ ] In Settings → Gameplay, verify VR empty hands is On (the default). With no item
+- [ ] In Settings → Gameplay, verify VR empty hands is Off by default, then enable it. With no item
       equipped, both small hands follow controller position and rotation.
 - [ ] Compare On/Off while standing, walking, running, turning, and recentering.
       Check comfortable size, thumb direction, and alignment at the grip.

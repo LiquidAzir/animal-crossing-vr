@@ -6,7 +6,7 @@ no arms, no finger tracking, and no additional input or collision behavior.
 
 ## Scope and safeguards
 
-- `vr_empty_hands` defaults to `1`. Settings → Gameplay → VR empty hands
+- `vr_empty_hands` defaults to `0` as of September 28, 2026. Settings → Gameplay → VR empty hands
   changes it through the existing Apply flow without restarting.
 - Separate suggested `empty_hand_left` / `empty_hand_right` pose actions use
   `/pose/grip`. All previous buttons, haptics, and the tool's `/pose/tip`
@@ -87,3 +87,21 @@ The updated executable is installed, SHA256
 Its predecessor and installation receipt are in
 `../Backups/floating-hands-default-on-20260920/`. The local setting remains ON;
 all 23 other installed files, including settings and saves, are unchanged.
+
+
+## Empty hands disabled again — September 28, 2026
+
+At the tester's request, empty-hand markers are now off by default in both
+versions (`vr_empty_hands = 0`), including the Quest first-install settings.
+The installed PC and Quest settings were also changed from 1 to 0; all other
+settings and saves were preserved. Controller input, aim/tool tracking, motion
+swings, and the rod direction correction are unchanged. The existing optional
+Gameplay toggle remains available. No hand rendering code was removed.
+
+Both native builds passed, as did the existing focused settings/menu, runtime,
+player-eligibility, and Quest OpenXR checks. The PC build reached the title screen
+in an isolated startup test without a crash or stderr. The tested executable
+and Quest development APK version 10 are installed locally. PC receipts and
+backups use `vr-hands-off-20260928`; Quest receipts are `research/install-v10.json`
+and `research/disable-hands-v10.json` in its separate workspace. Previous binaries,
+settings, and a fresh Quest save export are retained there.

@@ -103,16 +103,15 @@ and in VR:
 
 ## Floating hands (optional)
 
-First-person VR shows two small mitten-style hands by default, following your
-controllers while you are
-empty-handed. There are no arms, finger tracking, or new controls. Both hands
+First-person VR can show two small rounded white hand markers following your
+controllers while empty-handed. They are off by default. There are no arms, finger tracking, or new controls. Both hands
 hide when an item is equipped and during dialogue, pickups, menus, and scripted
 actions. A controller that loses tracking disappears until tracking returns.
 Hands are depth-tested against the world and do not change tool behavior.
 
-The setting is `vr_empty_hands = 1` under `[FirstPerson]` in `settings.ini`.
-It defaults to on. Use **Settings → Gameplay → VR empty hands → Off → Apply**
-to hide them immediately, without restarting. An existing explicit off preference is preserved.
+The default setting is `vr_empty_hands = 0` under `[FirstPerson]` in `settings.ini`.
+Use **Settings → Gameplay → VR empty hands → On → Apply**
+to enable them without restarting. Existing explicit preferences are preserved.
 The updated `vr_actions` folder must accompany the executable. Custom SteamVR
 bindings can bind **Left Empty Hand** and **Right Empty Hand** to each
 controller's handgrip pose (`/pose/handgrip`); the existing tool pose remains separate.

@@ -45,17 +45,17 @@ static int saved_value_is(int value) {
 
 int main(void) {
     PCSettings defaults = g_pc_settings;
-    CHECK(defaults.vr_empty_hands == 1);
-    CHECK(strstr(DEFAULT_SETTINGS, "vr_empty_hands = 1\n") != NULL);
-    pc_settings_load(); /* Missing config writes default-on value. */
-    CHECK(g_pc_settings.vr_empty_hands == 1);
-    CHECK(saved_value_is(1));
+    CHECK(defaults.vr_empty_hands == 0);
+    CHECK(strstr(DEFAULT_SETTINGS, "vr_empty_hands = 0\n") != NULL);
+    pc_settings_load(); /* Missing config writes default-off value. */
+    CHECK(g_pc_settings.vr_empty_hands == 0);
+    CHECK(saved_value_is(0));
 
-    /* Legacy configs without the key inherit the enabled default. */
+    /* Legacy configs without the key inherit the disabled default. */
     write_config("[FirstPerson]\nvr_tool_on_hand = 1\nvr_tool_pitch = 12\n");
     g_pc_settings = defaults;
     pc_settings_load();
-    CHECK(g_pc_settings.vr_empty_hands == 1);
+    CHECK(g_pc_settings.vr_empty_hands == 0);
     CHECK(g_pc_settings.vr_tool_pitch == 12);
     write_config("[FirstPerson]\n\tvr_empty_hands \t= 1 \t\nvr_tool_pitch = -8\n");
     pc_settings_load();
@@ -65,7 +65,7 @@ int main(void) {
     CHECK(g_pc_settings.vr_empty_hands == 1);
     apply_setting("vr_empty_hands", "-1");
     CHECK(g_pc_settings.vr_empty_hands == 1);
-    /* An explicit saved OFF preference overrides the enabled default. */
+    /* Explicit saved OFF remains valid alongside optional saved ON above. */
     write_config("[FirstPerson]\nvr_empty_hands = 0\n");
     g_pc_settings = defaults;
     pc_settings_load();
@@ -104,39 +104,39 @@ int main(void) {
     snapshot();
     char display[32];
     item_format(ITEM_VR_EMPTY_HANDS, display, sizeof(display));
-    CHECK(strcmp(display, "< On >") == 0);
+    CHECK(strcmp(display, "< Off >") == 0);
     CHECK(!s_pending_dirty && !item_changed(ITEM_VR_EMPTY_HANDS));
     item_cycle(ITEM_VR_EMPTY_HANDS, -1);
-    CHECK(s_pending.vr_empty_hands == 0 && g_pc_settings.vr_empty_hands == 1);
+    CHECK(s_pending.vr_empty_hands == 1 && g_pc_settings.vr_empty_hands == 0);
     CHECK(s_pending_dirty && item_changed(ITEM_VR_EMPTY_HANDS));
     item_format(ITEM_VR_EMPTY_HANDS, display, sizeof(display));
-    CHECK(strcmp(display, "< Off >") == 0);
+    CHECK(strcmp(display, "< On >") == 0);
     item_cycle(ITEM_VR_EMPTY_HANDS, 1);
-    CHECK(s_pending.vr_empty_hands == 1 && !s_pending_dirty);
+    CHECK(s_pending.vr_empty_hands == 0 && !s_pending_dirty);
     CHECK(!item_changed(ITEM_VR_EMPTY_HANDS));
     apply_pending();
     CHECK(apply_calls == 0);
 
     item_cycle(ITEM_VR_EMPTY_HANDS, 1);
     apply_pending();
-    PCSettings disabled = defaults;
-    disabled.vr_empty_hands = 0;
-    CHECK(memcmp(&g_pc_settings, &disabled, sizeof(disabled)) == 0);
+    PCSettings enabled = defaults;
+    enabled.vr_empty_hands = 1;
+    CHECK(memcmp(&g_pc_settings, &enabled, sizeof(enabled)) == 0);
     CHECK(apply_calls == 1 && !s_pending_dirty);
     CHECK(!s_pending_restart && s_sub == SUB_SETTINGS);
-    CHECK(saved_value_is(0));
+    CHECK(saved_value_is(1));
     CHECK(!item_changed(ITEM_VR_EMPTY_HANDS));
 
     item_cycle(ITEM_VR_EMPTY_HANDS, -1);
-    CHECK(s_pending.vr_empty_hands == 1 && s_pending_dirty);
+    CHECK(s_pending.vr_empty_hands == 0 && s_pending_dirty);
     snapshot(); /* Discard pending toggle, leaving the applied value intact. */
-    CHECK(s_pending.vr_empty_hands == 0 && !s_pending_dirty);
-    CHECK(g_pc_settings.vr_empty_hands == 0 && apply_calls == 1);
+    CHECK(s_pending.vr_empty_hands == 1 && !s_pending_dirty);
+    CHECK(g_pc_settings.vr_empty_hands == 1 && apply_calls == 1);
     item_cycle(ITEM_VR_EMPTY_HANDS, -1);
     apply_pending();
     CHECK(memcmp(&g_pc_settings, &defaults, sizeof(defaults)) == 0);
     CHECK(apply_calls == 2 && !s_pending_dirty && !s_pending_restart);
-    CHECK(saved_value_is(1));
+    CHECK(saved_value_is(0));
     printf("VR empty-hand settings/menu: %d checks, %d failures\n", checks, failures);
     return failures != 0;
 }
