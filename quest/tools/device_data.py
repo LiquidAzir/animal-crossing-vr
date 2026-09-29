@@ -78,7 +78,7 @@ class Device:
         result = subprocess.run(self.prefix + ['shell', 'pidof', PACKAGE],
                                 capture_output=True, timeout=15)
         if result.stdout.strip():
-            raise RuntimeError('Stop Animal Crossing Quest before importing or exporting data.')
+            raise RuntimeError('Stop Animal Crossing on Quest before importing or exporting data.')
         location = self.shell('pwd').decode().strip()
         if not location.endswith('/' + PACKAGE):
             raise RuntimeError(f'Unexpected run-as working directory: {location!r}')

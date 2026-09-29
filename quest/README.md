@@ -1,18 +1,18 @@
-# Standalone Quest development port
+# Animal Crossing for Quest 3
 
-This is an isolated Android/OpenXR development branch of the Animal Crossing PC VR port. It runs native game code rather than streaming the PC app. Keep it in its own workspace; the existing PC source, installation, ROM, settings, and saves remain separate and unchanged.
+This is the standalone **Animal Crossing** app for Quest 3. It runs native game code rather than streaming the PC app. Future Quest changes update this same installed app using its existing package and signing key, preserving its settings and saves. Keep the Quest workspace and game data separate from the PC version.
 
-This is **not a public standalone release or a store-ready build**. As of September 28, 2026, development APK version 12 is installed on the test Quest 3. The native game verifies all 14,495 assets, runs a focused OpenXR session, loads the copied PC town, and renders its inventory in both eyes. The actual game also logged a successful write to the separate Quest save. The tester reports playable performance and visible hands in version 7; its observed outdoor rendering was around 36-40 FPS against a 72 Hz headset target. Version 8 simplifies the hands to white rounded markers, repairs fish-room exhibit culling, and rotates the controller-held fishing rod's bend vertically. After the tester reported that bend pointing upward, version 9 reverses its roll to point downward. The direction correction still needs physical confirmation. Version 10 hides the empty-hand markers by default at the tester's request. Version 11 adds an in-headset VR settings menu, opened by clicking both sticks together, while retaining controller input and tool tracking. Version 12 fixes a verified crash during the island scenery transition and lets completed boat trips reset for the return journey. The user confirmed the settings menu works; a full island round trip with version 12 still needs playtesting. See the [island investigation and verification notes](../docs/vr-island-travel-20260928.md). Audio quality, sleep/resume, and a complete save/quit/reload cycle also remain on the release checklist.
+As of September 28, 2026, APK build 13 is installed on the Quest 3. Build 13 names the app **Animal Crossing**, removes the version-name dev suffix, and retains the exact native game libraries from build 12. The native game verifies all 14,495 assets, runs a focused OpenXR session, loads the copied PC town, and renders its inventory in both eyes. The actual game also logged a successful write to the separate Quest save. The tester reports playable performance and visible hands in version 7; its observed outdoor rendering was around 36-40 FPS against a 72 Hz headset target. Version 8 simplifies the hands to white rounded markers, repairs fish-room exhibit culling, and rotates the controller-held fishing rod's bend vertically. After the tester reported that bend pointing upward, version 9 reverses its roll to point downward. The direction correction still needs physical confirmation. Version 10 hides the empty-hand markers by default at the tester's request. Version 11 adds an in-headset VR settings menu, opened by clicking both sticks together, while retaining controller input and tool tracking. Version 12 fixes a verified crash during the island scenery transition and lets completed boat trips reset for the return journey. The user confirmed the settings menu works; a full island round trip with version 12 still needs playtesting. See the [island investigation and verification notes](../docs/vr-island-travel-20260928.md). Audio quality, sleep/resume, and a complete save/quit/reload cycle also remain on the release checklist.
 
-Whole-town drawing remains enabled. A smaller terrain radius improved a short offscreen measurement but left distant trees over missing ground, so it was not adopted. See the [shared visual-fix and Quest comparison notes](../docs/vr-comfort-followup-20260928.md). Updating to version 12 preserved the installed Quest ROM, save, and settings byte-for-byte; a save backup and previous APK are retained in the separate workspace's `backups` directory.
+Whole-town drawing remains enabled. A smaller terrain radius improved a short offscreen measurement but left distant trees over missing ground, so it was not adopted. See the [shared visual-fix and Quest comparison notes](../docs/vr-comfort-followup-20260928.md). Updating to build 13 preserved the installed Quest ROM, save, and settings byte-for-byte; a save backup and previous APK are retained in the separate workspace's `backups` directory.
 
-A subsequent small vertex-preparation reuse experiment passed correctness checks but showed no useful timing gain at unchanged resolution. It was removed from the game; version 12 retains the existing world rendering and performance settings. [Experiment results](VERTEX_REUSE_EXPERIMENT.md) record the comparison and retained local evidence.
+A subsequent small vertex-preparation reuse experiment passed correctness checks but showed no useful timing gain at unchanged resolution. It was removed from the game; build 13 retains the existing world rendering and performance settings. [Experiment results](VERTEX_REUSE_EXPERIMENT.md) record the comparison and retained local evidence.
 
 Quest eye targets have an **app-local maximum edge of 1,760 pixels**. The source scales each runtime recommendation down uniformly, with pixel rounding, while respecting the runtime's maximum width/height and never enlarging a smaller recommendation. The version 7 headset session selected 1,680 x 1,760 from a 2,800 x 2,933 recommendation; an existing 1,680 x 1,760 recommendation stays that size. Runtime recommendations varied between those sizes during development, so this ceiling bounds rendering cost independently of that variation. Startup logs record recommended and selected dimensions, and reject zero dimensions. The cap changes only eye target resolution; field of view, UI target size, PC settings, and global headset properties are unaffected.
 
 ## Workspace and dependencies
 
-The development tools expect this layout:
+The build tools expect this layout:
 
 ```text
 Animal Crossing Quest 3/
@@ -52,7 +52,7 @@ python quest/tools/build_quest.py --mode probe --abi armeabi-v7a
 # Optional ARM64 runtime probe; this is not an ARM64 game port.
 python quest/tools/build_quest.py --mode probe --abi arm64-v8a
 
-# Full game development build, currently ARM32 only.
+# Full game build, currently ARM32 only.
 python quest/tools/build_quest.py --mode game --abi armeabi-v7a
 ```
 
@@ -78,7 +78,7 @@ Enable Quest developer mode, authorize the computer's USB debugging connection, 
 adb install -r "../build/probe-arm32/apk/AnimalCrossingQuest-probe-armeabi-v7a.apk"
 ```
 
-The runtime probe is labeled **Animal Crossing Quest XR Test** and uses package `com.liquidazir.animalcrossingquest.probe`. The full game keeps the label **Animal Crossing Quest (Development)** and uses `com.liquidazir.animalcrossingquest`. They have separate app data. The two probe ABIs share the same probe package; they are alternative builds rather than side-by-side apps. The probe renders simple stereo colors and exits after its bounded test; it does not load game data.
+The runtime probe is labeled **Animal Crossing Quest XR Test** and uses package `com.liquidazir.animalcrossingquest.probe`. The full game is labeled **Animal Crossing** and uses `com.liquidazir.animalcrossingquest`. They have separate app data. The two probe ABIs share the same probe package; they are alternative builds rather than side-by-side apps. The probe renders simple stereo colors and exits after its bounded test; it does not load game data.
 
 The current full game uses **internal private app storage**, obtained through Android `getFilesDir` / `SDL_AndroidGetInternalStoragePath`:
 
@@ -117,7 +117,7 @@ The helper takes its ADB executable from `../toolchain/paths.json`; `--adb` can 
 
 Use your own compatible GAFE01 game dump. No Nintendo ROM or assets are distributed. Keep original PC ROMs/saves separate, and import only copies of saves for testing. Loading the copied town and a subsequent write have been observed on Quest; a complete save/quit/reload cycle remains unverified. Preserve independent PC and Quest backups.
 
-Existing Quest `settings.ini` is preserved on app launch; shaders are refreshed from the APK. APK updates signed with the same key using `adb install -r` preserve app data. Uninstalling or clearing app data removes private files, so export wanted saves first. The helper uses `run-as` for these **debug development APKs**; it is not a consumer release import mechanism. Do not overwrite Quest settings with PC defaults because the render backend and performance settings differ.
+Existing Quest `settings.ini` is preserved on app launch; shaders are refreshed from the APK. APK updates signed with the same key using `adb install -r` preserve app data. Uninstalling or clearing app data removes private files, so export wanted saves first. The helper uses `run-as` for these **debuggable APKs**; it is not a consumer release import mechanism. Do not overwrite Quest settings with PC defaults because the render backend and performance settings differ.
 
 ## Controller mapping in the current source
 
@@ -151,7 +151,7 @@ Logs, captures, source hashes, and device details are retained in `../research/g
 
 `python quest/tests/run_eye_size_tests.py` checks the production eye-size selector without a device, including runtime bounds, portrait/landscape sizes, no upscaling, invalid zero dimensions, pixel rounding, and extreme integer values.
 
-Performance measurements on the same Quest 3 show the following progress. These are development build labels, not public releases:
+Performance measurements on the same Quest 3 show the following progress. These are internal build numbers:
 
 | Diagnostic | Earlier v5 | Streaming v6 |
 | --- | --- | --- |

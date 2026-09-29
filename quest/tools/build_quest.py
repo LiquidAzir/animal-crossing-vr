@@ -1,4 +1,4 @@
-"""Configure, build and package the isolated standalone Quest development port.
+"""Configure, build and package the standalone Animal Crossing Quest app.
 
 Uses existing local tools and pinned dependencies; never downloads, installs,
 deletes directories, changes remotes, or accesses the working PC installation.
