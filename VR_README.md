@@ -51,22 +51,9 @@ The desktop window shows a mirror of the left eye.
 
 ## Controls (Touch)
 
-| Input | Action |
-|---|---|
-| Left stick | Move |
-| Right stick | Camera (C-stick) |
-| Right trigger or A | A (talk / use tool / confirm) |
-| Left trigger or B | B (run / pick up / cancel) |
-| X / Y | GC X / Y |
-| Left grip | GC L — **hold it and the left stick becomes the D-pad** (tool switching; you can't walk while it's held) |
-| Right grip | GC R |
-| Right stick click | Z |
-| Left stick click | Start (menu) |
-| Both stick clicks together | Open VR Settings |
-| X + Y together | Recenter the view |
+The **[complete VR controls table](README.md#vr-controls)** in the main README covers Touch and Valve Index: movement, inventory, map, tool selection, motion tools, recentering, and VR Settings. Touch bindings also apply to standalone Quest 3.
 
-Rebind anything in SteamVR → Settings → Controllers → Manage Controller
-Bindings. Keyboard and a normal gamepad keep working in VR too.
+Keyboard and normal gamepad controls remain available in the PC build.
 
 ## First-person mode
 
