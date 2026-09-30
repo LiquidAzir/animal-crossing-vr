@@ -1,0 +1,21 @@
+OpenXR SDK 1.1.63 loader and headers
+https://github.com/KhronosGroup/OpenXR-SDK
+
+Copyright (c) 2017-2026 The Khronos Group Inc.
+Copyright (c) 2017-2019 Valve Corporation
+Copyright (c) 2017-2019 LunarG, Inc.
+Copyright (c) 2019-2021 Collabora, Ltd.
+
+The OpenXR loader and API headers are offered under Apache-2.0 OR MIT.
+The Apache 2.0 license is included in LICENSE-OpenXR.txt.
+
+The Android loader includes JsonCpp, jnipp, and Android JNI wrappers.
+Their notices and licenses accompany this file. Android JNI wrappers:
+Copyright 2020-2021, Collabora, Ltd. (BSL-1.0).
+
+SDL2 2.30.10 is included under its zlib license (LICENSE-SDL2.txt).
+The native libraries use Android NDK 27.3.13750724 runtime components;
+LLVM and Android cpufeatures notices are included separately.
+
+These notices describe third-party components, not Nintendo game content.
+No disc image, extracted game asset, or personal save is distributed.

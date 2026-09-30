@@ -6,6 +6,8 @@ import shlex
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
+import sys
 
 TOOLS = Path(__file__).resolve().parents[1] / 'tools'
 spec = importlib.util.spec_from_file_location('device_data', TOOLS / 'device_data.py')
@@ -101,6 +103,27 @@ class Transfers(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             self.device.export_saves(self.folder)
         self.assertEqual(target.read_bytes(), b'local backup')
+
+
+class PortableReleaseTests(unittest.TestCase):
+    def test_flat_shallow_path_with_explicit_adb(self):
+        # Exercise the flattened release location without creating a file at
+        # the drive root or touching a real device.
+        shallow = Path(Path.cwd().anchor) / 'AnimalCrossing-Quest/device_data.py'
+        namespace = {'__file__': str(shallow), '__name__': 'flat_data_test'}
+        exec(compile((TOOLS / 'device_data.py').read_text(), str(shallow), 'exec'), namespace)
+        self.assertEqual(namespace['WORKSPACE'], shallow.parent)
+        device = Mock()
+        device.export_saves.return_value = []
+        factory = Mock(return_value=device)
+        namespace['Device'] = factory
+        with patch.object(sys, 'argv', ['device_data.py', '--serial', 'TEST_QUEST',
+                                      '--adb', 'test-adb', '--export-save', 'test-backup']), \
+                patch('builtins.print'):
+            namespace['main']()
+        factory.assert_called_once_with(Path('test-adb'), 'TEST_QUEST')
+        device.ensure_stopped.assert_called_once_with()
+        device.export_saves.assert_called_once_with(Path('test-backup'))
 
 
 if __name__ == '__main__':

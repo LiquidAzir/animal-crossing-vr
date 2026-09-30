@@ -8,7 +8,7 @@ This project is multi-licensed:
   to decomp files) is licensed under the MIT License below.
 
 - The VR fork additions (pc_vr, pc_fp_camera, the VR/first-person hooks in
-  decomp files, and vr_actions/) are licensed under the MIT License below,
+  decomp files, vr_actions/, and quest/) are licensed under the MIT License below,
   Copyright (c) 2026 LiquidAzir, under the same terms as the PC port
   layer's MIT license text.
 

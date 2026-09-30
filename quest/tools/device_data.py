@@ -15,7 +15,10 @@ import subprocess
 import uuid
 
 PACKAGE = 'com.liquidazir.animalcrossingquest'
-WORKSPACE = Path(__file__).resolve().parents[3]
+TOOL_DIR = Path(__file__).resolve().parent
+# A release places this helper next to the APK, rather than quest/tools/.
+WORKSPACE = (TOOL_DIR.parents[2] if TOOL_DIR.name == 'tools' and
+             TOOL_DIR.parent.name == 'quest' else TOOL_DIR)
 MARKER = b'__ACQUEST_DATA_OK__\n'
 
 
@@ -180,8 +183,15 @@ def main():
         if not source.is_file() or source.stat().st_size == 0:
             parser.error(f'Input file is missing or empty: {source}')
     if not args.adb:
-        paths = json.loads((WORKSPACE / 'toolchain/paths.json').read_text(encoding='utf-8-sig'))
-        args.adb = Path(paths['adb'])
+        paths_file = WORKSPACE / 'toolchain/paths.json'
+        if paths_file.is_file():
+            paths = json.loads(paths_file.read_text(encoding='utf-8-sig'))
+            args.adb = Path(paths['adb'])
+        else:
+            found = shutil.which('adb')
+            if not found:
+                parser.error('ADB was not found. Install Android Platform Tools and pass --adb PATH_TO_ADB.')
+            args.adb = Path(found)
     device = Device(args.adb, args.serial)
     device.ensure_stopped()
     results = [device.import_file(source, destination) for source, destination in imports]
