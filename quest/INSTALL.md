@@ -20,7 +20,7 @@ Move with the left stick, turn with the right, and use **A/right trigger** to co
 ## If setup stops
 
 - **No headset / unauthorized:** wake Quest, reconnect USB, and accept its USB-debugging prompt. Disconnect any second Quest during setup.
-- **ADB not found:** open SideQuest once to finish setup, or select `adb.exe` from Google's [platform-tools](https://developer.android.com/tools/releases/platform-tools) when asked.
+- **ADB not found:** open SideQuest once to finish setup, or extract Google's [platform-tools](https://developer.android.com/tools/releases/platform-tools) beside `Install-Quest.cmd` so `platform-tools/adb.exe` is available.
 - **App is running:** quit Animal Crossing in the headset and retry; the installer will not interrupt your game.
 - **Game data error:** confirm your dump is USA Rev 0 in one of the supported formats. Renaming RVZ to ISO does not convert it.
 
