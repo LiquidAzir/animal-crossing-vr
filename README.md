@@ -41,6 +41,10 @@ Both require your own **Animal Crossing USA Rev 0 (GAFE01_00)** disc image: `.is
 
 These are the default bindings. **Touch controls are the same in PC VR and standalone Quest 3.** Grip means the side squeeze button; a stick click means pressing the stick down.
 
+![Quest 3 controllers with labeled buttons, sticks, triggers, grips, and VR shortcuts. Full controls follow in the table.](docs/images/quest-controls.svg)
+
+[Open the controller diagram at full size](docs/images/quest-controls.svg).
+
 | Action | Quest / Touch (PC or standalone) | Valve Index (PC) |
 |---|---|---|
 | Move | Left stick | Left stick |
