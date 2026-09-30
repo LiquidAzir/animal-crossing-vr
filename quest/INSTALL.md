@@ -15,7 +15,7 @@ Extract the new Quest package and run its installer again. It updates the app in
 
 ## Playing
 
-Move with the left stick, turn with the right, and use **A/right trigger** to confirm or use tools. **X + Y** recenters. **Left grip + Y** toggles first person. Click **both sticks together** for VR Settings; choose **Apply** to save changes. Hand markers start off.
+See **[all VR controls in one place](https://github.com/LiquidAzir/animal-crossing-vr#vr-controls)** for movement, inventory, map, tool switching, motion tools, and VR Settings. Use the Quest / Touch column.
 
 ## If setup stops
 

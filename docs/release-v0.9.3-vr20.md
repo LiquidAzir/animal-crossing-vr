@@ -26,6 +26,8 @@ Already using PC VR? Back up your save and apply the complete zip over the exist
 
 For updates, run the new installer again; it preserves existing ROMs, saves, and settings. **Do not uninstall or clear app data.** [Quest setup/manual import](https://github.com/LiquidAzir/animal-crossing-vr/blob/quest/standalone/quest/INSTALL.md).
 
+**[VR controls: Quest / Touch and Valve Index](https://github.com/LiquidAzir/animal-crossing-vr#vr-controls)** — movement, inventory, map, tools, and the settings menu.
+
 ## Changes since VR19
 
 - Standalone Quest 3 runtime with OpenXR tracking, motion tools, and separate local saves.

@@ -13,6 +13,8 @@ Based on [ACGC-PC-Port](https://github.com/flyngmt/ACGC-PC-Port) and [ac-decomp]
 
 Both require your own **Animal Crossing USA Rev 0 (GAFE01_00)** disc image: `.iso`, `.gcm`, or `.ciso`. No ROMs or saves are included. Quest runs on the headset after setup; it does not need the PC game or streaming.
 
+**Quick links:** [VR controls](#vr-controls) · [PC installation](#windows-pc-vr) · [Quest installation](#standalone-quest-3)
+
 ## Installation
 
 ### Windows PC VR
@@ -35,15 +37,35 @@ Both require your own **Animal Crossing USA Rev 0 (GAFE01_00)** disc image: `.is
 
 **Updating:** run the installer from the new package again. Existing ROMs, saves, and settings are kept; do not uninstall or clear app data. [Quest setup help and manual installation](quest/INSTALL.md).
 
-## Controls and settings
+## VR controls
 
-- **Left stick:** move. **Right stick:** turn.
-- **A / right trigger:** talk, confirm, or use a tool. **B / left trigger:** cancel or hold to run.
-- **Both stick clicks together:** VR Settings. Use the left stick, A to select, and **Apply** to save.
-- **X + Y:** recenter. **Left grip + Y:** toggle first person.
-- Empty-hand visuals are **off by default**; enable them in VR Settings if wanted.
+These are the default bindings. **Touch controls are the same in PC VR and standalone Quest 3.** Grip means the side squeeze button; a stick click means pressing the stick down.
 
-These labels are for Touch controllers. Index bindings and keyboard controls are in [the PC guide](VR_README.md).
+| Action | Quest / Touch (PC or standalone) | Valve Index (PC) |
+|---|---|---|
+| Move | Left stick | Left stick |
+| Turn / camera | Right stick | Right stick |
+| Talk, confirm, use equipped tool | Right **A** or right trigger | Right **A** or right trigger |
+| Pick up, cancel / back | Right **B** or left trigger | Right **B** or left trigger |
+| Run | Hold right **B**, left trigger, or right grip while moving | Hold right **B**, left trigger, or right grip while moving |
+| Open inventory | Left **Y** or left stick click | Left **B** or left stick click |
+| Rearrange items in inventory | Left grip to pick up / drop the selected item | Left grip to pick up / drop the selected item |
+| Next inventory / collection page | Right grip | Right grip |
+| Open town map (once obtained) | Left **X** | Left **A** |
+| Previous / next pocket tool | Hold left grip + left stick **left / right** | Hold left grip + left stick **left / right** |
+| Put tool away | Hold left grip + left stick **down** | Hold left grip + left stick **down** |
+| Toggle lights in your house / island cottage | Right stick click | Right stick click |
+| Toggle first person / third person | Hold left grip, then press **Y** | Hold left grip, then press left **B** |
+| Recenter view | Press **X + Y** together | Press left **A + B** together |
+| Open VR Settings / pause | Click **both sticks together** | Click **both sticks together** |
+
+Tool shortcuts work during normal outdoor movement and use tools in your pockets. Putting a tool away needs an empty pocket slot. Holding left grip changes the left stick to D-pad input, so release it to walk again.
+
+**Motion tools:** in first person, equip a net, axe, shovel, or fishing rod and swing your **right controller** to use it. **A/right trigger** also works. Look toward your target with the axe, shovel, or rod; the net follows your hand. Let your hand slow between swings. Gestures are disabled in menus and dialogue, and can be turned off in VR Settings.
+
+**VR Settings:** left stick **up/down** selects a row, **left/right** changes its value, **A/right trigger** confirms, and **B/left trigger** goes back or resumes. Choose **Apply** to save changes, then resume; unapplied edits prompt before being discarded. Settings include hand visuals (**off by default**), smooth/snap turning, motion swings, and volume. Open this menu during gameplay; it is unavailable on the title screen or inside NES games.
+
+On PC, **F5** also toggles first person. Custom SteamVR bindings can differ; change them in **SteamVR → Settings → Controllers → Manage Controller Bindings**. [PC setup and troubleshooting](VR_README.md).
 
 ## This release
 
