@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1140" viewBox="0 0 1800 1140" role="img" aria-labelledby="title description">
+  <title id="title">Animal Crossing VR — Quest controller controls</title>
+  <desc id="description">Quest 3 Touch Plus controller diagram for PC VR and standalone Quest. Left stick moves and clicks for inventory. Y opens inventory; X opens the map. Left trigger picks up or goes back, and runs while held. Left grip modifies the stick for tool shortcuts and moves inventory items. Right stick turns and clicks for home lights. A and right trigger talk, use tools, and confirm. B picks up or goes back, and runs while held. Right grip runs or advances inventory pages. Click both sticks for VR Settings; press X and Y to recenter; hold left grip then press Y to change camera mode. Full details are in the README controls table.</desc>
+  <!-- Original schematic, with physical button placement checked against Meta's
+       controller terminology diagram: https://developers.meta.com/horizon/design/controllers/ -->
+  <defs>
+    <linearGradient id="shell" x1="0" y1="0" x2="1" y2=".7">
+      <stop stop-color="#fff"/><stop offset=".55" stop-color="#f4f4ef"/><stop offset="1" stop-color="#c6ccc8"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fafbf7"/><stop offset="1" stop-color="#dfe4df"/>
+    </linearGradient>
+    <linearGradient id="button" x1="0" y1="0" x2=".8" y2="1">
+      <stop stop-color="#535c57"/><stop offset="1" stop-color="#202b25"/>
+    </linearGradient>
+    <filter id="shadow" x="-40%" y="-20%" width="180%" height="150%">
+      <feDropShadow dx="0" dy="13" stdDeviation="12" flood-color="#1b392d" flood-opacity=".13"/>
+    </filter>
+    <g id="controller">
+      <!-- Front trigger and inner side grip protrude beyond the body. -->
+      <path d="M73 15 Q76 -23 118 -25 Q161 -26 175 14 L164 46 L88 46Z" fill="#b9c1ba" stroke="#929f94" stroke-width="2"/>
+      <path d="M30 62 Q22 25 90 7 Q186 -24 235 62 Q257 105 227 161 L206 352 Q202 400 160 410 Q114 411 109 365 L87 229 Q75 188 42 145 Q15 105 30 62Z" fill="url(#shell)" stroke="#a8b4a9" stroke-width="2.5"/>
+      <path d="M210 163 Q237 166 239 190 L233 231 Q230 245 215 244 L211 220Z" fill="#b3beb5" stroke="#89988c" stroke-width="2"/>
+      <path d="M35 68 Q33 29 91 15 Q185 -11 226 66 Q247 111 210 151 Q167 190 91 166 Q42 146 35 104Z" fill="url(#face)" stroke="#b2bcb2" stroke-width="2"/>
+      <path d="M97 194 Q122 215 126 262 L141 362 Q144 382 166 385" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4"/>
+      <path d="M169 396 L169 410" stroke="#86958a" stroke-width="5" stroke-linecap="round"/>
+      <ellipse cx="81" cy="88" rx="36" ry="32" fill="#9ba89d"/>
+      <ellipse cx="81" cy="80" rx="30" ry="27" fill="url(#button)" stroke="#14251b" stroke-width="2"/>
+      <ellipse cx="81" cy="78" rx="23" ry="20" fill="none" stroke="#79857b" stroke-width="1.5"/>
+      <circle cx="178" cy="60" r="22" fill="url(#button)" stroke="#839084" stroke-width="2"/>
+      <circle cx="192" cy="113" r="22" fill="url(#button)" stroke="#839084" stroke-width="2"/>
+      <circle cx="80" cy="147" r="15" fill="url(#button)" stroke="#839084" stroke-width="1.5"/>
+      <path d="M116 146 Q139 151 156 137" fill="none" stroke="#bdc6bb" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #203c30; }
+      .heading { font-size: 24px; font-weight: 700; }
+      .label { font-size: 22px; }
+      .detail { font-size: 20px; fill: #566b60; }
+      .left-line, .right-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+      .left-line { stroke: #23816c; }
+      .right-line { stroke: #b96733; }
+      .left-dot { fill: #23816c; stroke: #fff; stroke-width: 2; }
+      .right-dot { fill: #b96733; stroke: #fff; stroke-width: 2; }
+      .button-letter { fill: #fff; font-size: 22px; text-anchor: middle; }
+      .shortcut { font-size: 23px; font-weight: 700; }
+    </style>
+  </defs>
+  <rect width="1800" height="1140" rx="28" fill="#f3f5eb"/>
+  <path d="M0 150 H1800" stroke="#d9e1d2" stroke-width="2"/>
+  <text x="60" y="72" font-size="48" font-weight="700">Animal Crossing VR controls</text>
+  <text x="62" y="116" font-size="24" fill="#566b60">Animal Crossing VR · Quest 3 Touch Plus · Default controls for PC VR and standalone Quest</text>
+  <path d="M900 192 V756" stroke="#dce3d6" stroke-width="2"/>
+  <rect x="353" y="192" width="246" height="51" rx="25" fill="#dfebe1"/>
+  <text x="476" y="226" font-size="25" font-weight="700" text-anchor="middle">LEFT HAND</text>
+  <rect x="1201" y="192" width="246" height="51" rx="25" fill="#f0e5d6"/>
+  <text x="1324" y="226" font-size="25" font-weight="700" text-anchor="middle">RIGHT HAND</text>
+  <g transform="translate(350 340)" filter="url(#shadow)"><use href="#controller"/></g>
+  <g transform="translate(1450 340) scale(-1 1)" filter="url(#shadow)"><use href="#controller"/></g>
+  <text x="528" y="408" class="button-letter">Y</text>
+  <text x="542" y="461" class="button-letter">X</text>
+  <path d="M424 483 H436 M424 487 H436 M424 491 H436" stroke="#fff" stroke-width="1.7"/>
+  <text x="1272" y="408" class="button-letter">B</text>
+  <text x="1258" y="461" class="button-letter">A</text>
+  <path d="M1361 491 Q1365 476 1370 487 Q1377 500 1379 487 Q1379 479 1375 483 L1370 491 Q1362 499 1361 491" fill="none" stroke="#fff" stroke-width="1.5"/>
+  <!-- Callout endpoints sit beside the controls to keep button lettering visible. -->
+  <g>
+    <text x="60" y="295" class="heading">LEFT TRIGGER</text>
+    <text x="60" y="326" class="label">Pick up / Back</text>
+    <text x="60" y="353" class="detail">Hold while moving: Run</text>
+    <path class="left-line" d="M60 369 H291 L335 323 H468"/><circle cx="468" cy="323" r="5" class="left-dot"/>
+    <text x="60" y="442" class="heading">LEFT STICK</text>
+    <text x="60" y="473" class="label">Move</text>
+    <text x="60" y="500" class="detail">Click: Inventory</text>
+    <path class="left-line" d="M60 516 H294 L405 438"/><circle cx="405" cy="438" r="5" class="left-dot"/>
+    <text x="60" y="604" class="heading">MENU BUTTON</text>
+    <text x="60" y="635" class="label">Not used here</text>
+    <path class="left-line" d="M60 651 H296 L417 500"/><circle cx="417" cy="500" r="5" class="left-dot"/>
+    <text x="635" y="308" class="heading">Y BUTTON</text>
+    <text x="635" y="339" class="label">Inventory</text>
+    <path class="left-line" d="M635 355 H591 L543 382"/><circle cx="543" cy="382" r="5" class="left-dot"/>
+    <text x="635" y="442" class="heading">X BUTTON</text>
+    <text x="635" y="473" class="label">Town map</text>
+    <path class="left-line" d="M635 489 H596 L559 467"/><circle cx="559" cy="467" r="5" class="left-dot"/>
+    <text x="635" y="587" class="heading">LEFT GRIP</text>
+    <text x="635" y="618" class="label">Tool shortcuts ↓</text>
+    <text x="635" y="645" class="detail">Inventory: Move items</text>
+    <path class="left-line" d="M635 661 H608 V541 H582"/><circle cx="582" cy="541" r="5" class="left-dot"/>
+  </g>
+  <g>
+    <text x="1535" y="295" class="heading">RIGHT TRIGGER</text>
+    <text x="1535" y="326" class="label">Talk / Use tool</text>
+    <text x="1535" y="353" class="detail">Confirm</text>
+    <path class="right-line" d="M1740 369 H1509 L1465 323 H1332"/><circle cx="1332" cy="323" r="5" class="right-dot"/>
+    <text x="1535" y="442" class="heading">RIGHT STICK</text>
+    <text x="1535" y="473" class="label">Turn / Camera</text>
+    <text x="1535" y="500" class="detail">Click: Home lights</text>
+    <path class="right-line" d="M1740 516 H1506 L1395 438"/><circle cx="1395" cy="438" r="5" class="right-dot"/>
+    <text x="1535" y="604" class="heading">META BUTTON</text>
+    <text x="1535" y="635" class="label">Headset menu</text>
+    <path class="right-line" d="M1740 651 H1504 L1383 500"/><circle cx="1383" cy="500" r="5" class="right-dot"/>
+    <text x="960" y="281" class="heading">B BUTTON</text>
+    <text x="960" y="312" class="label">Pick up / Back</text>
+    <text x="960" y="339" class="detail">Hold while moving: Run</text>
+    <path class="right-line" d="M960 355 H1209 L1257 382"/><circle cx="1257" cy="382" r="5" class="right-dot"/>
+    <text x="960" y="415" class="heading">A BUTTON</text>
+    <text x="960" y="446" class="label">Talk / Use tool</text>
+    <text x="960" y="473" class="detail">Confirm</text>
+    <path class="right-line" d="M960 489 H1204 L1241 467"/><circle cx="1241" cy="467" r="5" class="right-dot"/>
+    <text x="960" y="587" class="heading">RIGHT GRIP</text>
+    <text x="960" y="618" class="label">Hold to run</text>
+    <text x="960" y="645" class="detail">Inventory: Next page</text>
+    <path class="right-line" d="M960 661 H1192 V541 H1218"/><circle cx="1218" cy="541" r="5" class="right-dot"/>
+  </g>
+  <text x="900" y="796" text-anchor="middle" font-size="19" fill="#647669">Front triggers: index fingers · Side grips: middle fingers · Stick click: press the stick down</text>
+  <g>
+    <rect x="60" y="837" width="405" height="160" rx="16" fill="#fff"/>
+    <rect x="485" y="837" width="405" height="160" rx="16" fill="#fff"/>
+    <rect x="910" y="837" width="405" height="160" rx="16" fill="#fff"/>
+    <rect x="1335" y="837" width="405" height="160" rx="16" fill="#e0ebdf"/>
+    <text x="84" y="880" class="shortcut">Hold left grip + left stick</text>
+    <text x="84" y="921" class="label">← / →  Cycle pocket tools</text>
+    <text x="84" y="953" class="label">↓  Put tool away</text>
+    <text x="509" y="880" class="shortcut">Hold left grip, press Y</text>
+    <text x="509" y="927" class="label">First / third person</text>
+    <text x="934" y="880" class="shortcut">Press X + Y together</text>
+    <text x="934" y="927" class="label">Recenter view</text>
+    <text x="1359" y="880" class="shortcut">Click both sticks together</text>
+    <text x="1359" y="927" class="label">VR Settings / Pause</text>
+  </g>
+  <text x="60" y="1047" font-size="23" font-weight="700">Motion tools: equip a tool in first person, then swing your right controller.</text>
+  <text x="60" y="1086" font-size="21" fill="#566b60">Tool shortcuts work outdoors; release left grip to walk. See the controls table for full details and menu controls.</text>
+</svg>
