@@ -77,6 +77,8 @@ Both versions live in this repository, with separate branches/builds to keep pla
 - VR fork (stereo renderer, first person, motion tools) by
   [LiquidAzir](https://github.com/LiquidAzir).
 
+This VR fork was developed with AI assistance, with human direction and hands-on playtesting by LiquidAzir.
+
 ## License
 
 Dual/multi-licensed — see [LICENSE](LICENSE):
