@@ -35,6 +35,18 @@ static int aBT_check_other_boat(ACTOR* actorx, GAME* game) {
     ACTOR* actor = play->actor_info.list[ACTOR_PART_ITEM].actor;
     int res = TRUE;
 
+#ifdef TARGET_PC
+    /* A completed trip restores the old dock's foreground BOAT. The town
+     * residency sweep must not respawn that old boat while the player is on
+     * the island and occupy the single boat/controller slot needed to return.
+     * Determine the region from authored block kinds, not the camera or gaze. */
+    if (g_pc_town_residency &&
+        mFI_CheckBlockKind(actorx->block_x, actorx->block_z, mRF_BLOCKKIND_ISLAND) !=
+            mFI_CheckBlockKind(play->block_table.block_x, play->block_table.block_z, mRF_BLOCKKIND_ISLAND)) {
+        return FALSE;
+    }
+#endif
+
     while (TRUE) {
         ACTOR* other_actor = Actor_info_fgName_search_sub(actor, BOAT);
 
@@ -112,7 +124,10 @@ static int aBT_check_alive(BOAT_ACTOR* boat_actor, GAME_PLAY* play) {
     if (mFI_Wpos2BlockNum(&bx, &bz, boat_actor->actor_class.world.position) == TRUE &&
         (
 #ifdef TARGET_PC
-         g_pc_town_residency ||
+         /* Waiting docks stay visible across town, but a completed trip
+          * must retire when leaving its destination acre. The stock respawn
+          * then reinitializes Kapp'n and the opposite travel direction. */
+         (g_pc_town_residency && boat_actor->action != aBT_ACTION_ANCHOR) ||
 #endif
          (play->block_table.block_x == bx && play->block_table.block_z == bz))) {
         alive = TRUE;

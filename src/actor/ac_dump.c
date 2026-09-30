@@ -172,7 +172,7 @@ static void aDUM_actor_draw(ACTOR* actor, GAME* game) {
         SET_POLY_OPA_DISP(gfx);
     }
 
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aDUM_shadow_data, FALSE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, &aDUM_shadow_data, FALSE);
 
     CLOSE_DISP(graph);
 }

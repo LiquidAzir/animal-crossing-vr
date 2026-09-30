@@ -1007,5 +1007,5 @@ static void Cottage_actor_draw(ACTOR* actor, GAME* game) {
     CLOSE_DISP(graph);
 
     cKF_Si3_draw_R_SV_solid(game, keyframe, mtx, &Cottage_actor_draw_before, &Cottage_actor_draw_after, actor, NULL);
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, cottage_data->shadow_data, TRUE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, cottage_data->shadow_data, TRUE);
 }

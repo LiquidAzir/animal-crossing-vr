@@ -954,7 +954,8 @@ void Museum_Fish_Suisou_draw(ACTOR* actorx, GAME* game, int r5) {
         gSPMatrix(NEXT_POLY_OPA_DISP, _Matrix_to_Mtx_new(play->game.graph),
                   G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 
-        Setpos_HiliteReflect_xlu_init(&suisou_pos[r5], play);
+        /* The room exhibit uses slot 4; its legacy draw selector is 5. */
+        Setpos_HiliteReflect_xlu_init(&suisou_pos[4], play);
 
         gDPSetTextureAdjustMode(NEXT_POLY_OPA_DISP, G_TA_DOLPHIN);
         gDPSetTextureAdjustMode(NEXT_POLY_XLU_DISP, G_TA_DOLPHIN);
@@ -1070,6 +1071,12 @@ void Museum_Fish_Actor_draw(ACTOR* actorx, GAME* game) {
 
 BOOL mfish_cull_check(GAME* game, xyz_t* worldPos, f32 x, f32 y, f32 _y) {
     xyz_t screenPos;
+#ifdef TARGET_PC
+    /* These draw-only bounds use the original 320x240 camera, which does not
+     * track the VR headset. Submit the exhibit for the actual eye views. */
+    extern int g_pc_full_world;
+    if (g_pc_full_world) return TRUE;
+#endif
     Game_play_Projection_Trans((GAME_PLAY*)game, worldPos, &screenPos);
     if ((-x < screenPos.x) && (screenPos.x < x + 320) && (-y < screenPos.y) && (screenPos.y < _y + 240)) {
         return TRUE;

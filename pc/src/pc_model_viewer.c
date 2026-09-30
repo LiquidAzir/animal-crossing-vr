@@ -133,7 +133,18 @@ typedef enum {
     MV_RAW_POLICE_LEGACY = 3,
     MV_RAW_SHRINE_LEGACY = 4,
     MV_RAW_MUSEUM = 5,
-    MV_RAW_MUSEUM_LEGACY = 6
+    MV_RAW_MUSEUM_LEGACY = 6,
+    MV_RAW_TERRAIN_FIRST = 7,
+    MV_RAW_MAINLAND_DOCK1 = MV_RAW_TERRAIN_FIRST,
+    MV_RAW_MAINLAND_DOCK2,
+    MV_RAW_MAINLAND_DOCK3,
+    MV_RAW_ISLAND_DOCK1,
+    MV_RAW_ISLAND_DOCK2,
+    MV_RAW_ISLAND_DOCK3,
+    MV_RAW_ISLAND_DOCK4,
+    MV_RAW_RIVER_BRIDGE1,
+    MV_RAW_RIVER_BRIDGE2,
+    MV_RAW_TERRAIN_LAST = MV_RAW_RIVER_BRIDGE2
 } MVRawKind;
 
 typedef struct {
@@ -389,8 +400,8 @@ static const MVModelEntry s_model_table[] = {
     { "Gacha Machine",          &cKF_bs_r_obj_gara,      &cKF_ba_r_obj_gara,      -1, 0, 0 },
     { "Sewing Machine",         &cKF_bs_r_obj_misin,     &cKF_ba_r_obj_misin,     -1, 0, 0 },
 
-    { "My Home Interior",       &cKF_bs_r_obj_s_myhome_i, &cKF_ba_r_obj_s_myhome_i, aSTR_PAL_MYHOME_ISLAND, 0, 0 },
-    { "House Interior",         &cKF_bs_r_obj_s_house_i, &cKF_ba_r_obj_s_house_i, aSTR_PAL_HOUSE_I, 0, 0 },
+    { "Island Cottage",       &cKF_bs_r_obj_s_myhome_i, &cKF_ba_r_obj_s_myhome_i, aSTR_PAL_MYHOME_ISLAND, 0, 0 },
+    { "Islander House",         &cKF_bs_r_obj_s_house_i, &cKF_ba_r_obj_s_house_i, aSTR_PAL_HOUSE_I, 0, 0 },
 
     { "Lighthouse Switch",      &cKF_bs_r_obj_toudai_switch, &cKF_ba_r_obj_toudai_switch, aSTR_PAL_TOUDAI, 0, 0 },
     { "Lighthouse Pole",        &cKF_bs_r_obj_toudai_pole, &cKF_ba_r_obj_toudai_pole, aSTR_PAL_TOUDAI, 0, 0 },
@@ -418,6 +429,24 @@ static const MVModelEntry s_model_table[] = {
     { "Museum (Winter)", NULL, NULL, aSTR_PAL_MUSEUM, 1, MV_RAW_MUSEUM },
     { "Museum (Previous Fill, Summer)", NULL, NULL, aSTR_PAL_MUSEUM, 0, MV_RAW_MUSEUM_LEGACY },
     { "Museum (Previous Fill, Winter)", NULL, NULL, aSTR_PAL_MUSEUM, 1, MV_RAW_MUSEUM_LEGACY },
+    { "Mainland Dock 1 (Summer)", NULL, NULL, -1, 0, MV_RAW_MAINLAND_DOCK1 },
+    { "Mainland Dock 1 (Winter)", NULL, NULL, -1, 1, MV_RAW_MAINLAND_DOCK1 },
+    { "Mainland Dock 2 (Summer)", NULL, NULL, -1, 0, MV_RAW_MAINLAND_DOCK2 },
+    { "Mainland Dock 2 (Winter)", NULL, NULL, -1, 1, MV_RAW_MAINLAND_DOCK2 },
+    { "Mainland Dock 3 (Summer)", NULL, NULL, -1, 0, MV_RAW_MAINLAND_DOCK3 },
+    { "Mainland Dock 3 (Winter)", NULL, NULL, -1, 1, MV_RAW_MAINLAND_DOCK3 },
+    { "Island Dock 1 (Summer)", NULL, NULL, -1, 0, MV_RAW_ISLAND_DOCK1 },
+    { "Island Dock 1 (Winter)", NULL, NULL, -1, 1, MV_RAW_ISLAND_DOCK1 },
+    { "Island Dock 2 (Summer)", NULL, NULL, -1, 0, MV_RAW_ISLAND_DOCK2 },
+    { "Island Dock 2 (Winter)", NULL, NULL, -1, 1, MV_RAW_ISLAND_DOCK2 },
+    { "Island Dock 3 (Summer)", NULL, NULL, -1, 0, MV_RAW_ISLAND_DOCK3 },
+    { "Island Dock 3 (Winter)", NULL, NULL, -1, 1, MV_RAW_ISLAND_DOCK3 },
+    { "Island Dock 4 (Summer)", NULL, NULL, -1, 0, MV_RAW_ISLAND_DOCK4 },
+    { "Island Dock 4 (Winter)", NULL, NULL, -1, 1, MV_RAW_ISLAND_DOCK4 },
+    { "River Bridge 1 (Summer)", NULL, NULL, -1, 0, MV_RAW_RIVER_BRIDGE1 },
+    { "River Bridge 1 (Winter)", NULL, NULL, -1, 1, MV_RAW_RIVER_BRIDGE1 },
+    { "River Bridge 2 (Summer)", NULL, NULL, -1, 0, MV_RAW_RIVER_BRIDGE2 },
+    { "River Bridge 2 (Winter)", NULL, NULL, -1, 1, MV_RAW_RIVER_BRIDGE2 },
 };
 
 #define STRUCTURE_COUNT (int)(sizeof(s_model_table) / sizeof(s_model_table[0]))
@@ -935,6 +964,8 @@ static void mv_draw_museum(GAME* game, int winter, int solid) {
     CLOSE_DISP(graph);
 }
 
+#include "pc_model_viewer_terrain.c_inc"
+
 static void mv_draw_structures(GAME_MODEL_VIEWER* mv) {
     GAME* game = (GAME*)mv;
     GRAPH* g = game->graph;
@@ -993,6 +1024,8 @@ static void mv_draw_structures(GAME_MODEL_VIEWER* mv) {
                     mv_draw_museum(game, entry->is_winter, solid);
                     break;
                 default:
+                    if (entry->raw_kind >= MV_RAW_TERRAIN_FIRST && entry->raw_kind <= MV_RAW_TERRAIN_LAST)
+                        mv_draw_terrain_surface(game, entry);
                     break;
             }
             Matrix_pull();

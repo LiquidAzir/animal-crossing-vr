@@ -18,7 +18,7 @@ static void aRAD_actor_draw(ACTOR* actor, GAME* game){
         gSPMatrix(gfx++, cur,G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
         gSPDisplayList(gfx++,radio_DL_model);
         SET_POLY_OPA_DISP(gfx);
-        Common_Get(clip.bg_item_clip)->draw_shadow_proc(game, &aRAD_shadow_data, 0);
+        bIT_draw_shadow_safe(Common_Get(clip.bg_item_clip), game, &aRAD_shadow_data, 0);
     }
 
     CLOSE_DISP(graph);

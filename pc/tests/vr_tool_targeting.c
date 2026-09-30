@@ -8,6 +8,7 @@
 #include "m_play.h"
 #include "m_name_table.h"
 #include <stdlib.h>
+#include "pc_vr_menu_input.h"
 #undef mEv_IsTitleDemo
 #ifdef TEST_FIXED
 #include "pc_vr_swing.h"
@@ -25,6 +26,8 @@ static struct {
     int active, have_pose, head_pose_valid;
     float head_pose[3][4];
     int input_ready, act_move, act_camera;
+    int menu_input_available;
+    PCVRMenuInput menu_input;
     int act_a, act_b, act_x, act_y, act_l, act_r, act_z, act_start;
 #ifdef TEST_FIXED
     PCVRSwing swing;
@@ -34,6 +37,10 @@ static struct {
 } s_vr;
 static float s_yaw;
 static int g_pc_paused, fp_active, flat_scene, in_talk, title_demo;
+static u32 pc_frame_counter;
+static u32 SDL_GetTicks(void) { return pc_frame_counter * 16u; }
+static int pc_pause_menu_open_vr_settings(void) { return 0; }
+static int pc_pause_menu_vr_input(float x, float y, int a, int b) { return g_pc_paused; }
 static int trigger_a, held_a, accept_request, checked_yaw, target_queries;
 static int axe_result, scoop_result, damage_result, valid_unit;
 static xyz_t cast_target;
@@ -120,6 +127,7 @@ static void reset(int kind, int expected_yaw) {
     memset(action_held, 0, sizeof(action_held));
     move_x = move_y = 0;
     s_vr.input_ready = 1;
+    s_vr.menu_input_available = s_vr.menu_input.ready = 1; /* input has already settled */
     s_vr.act_move = 0; s_vr.act_camera = 1;
     s_vr.act_a = 2; s_vr.act_b = 3; s_vr.act_x = 4; s_vr.act_y = 5;
     s_vr.act_l = 6; s_vr.act_r = 7; s_vr.act_z = 8; s_vr.act_start = 9;
@@ -150,6 +158,7 @@ static void check_facing(int expected) {
 }
 
 static unsigned short merge(int pending_swing, int* movement) {
+    ++pc_frame_counter;
     unsigned short buttons = 0;
     signed char x = 0, y = 0, cx = 0, cy = 0;
     unsigned char l = 0, r = 0;
@@ -274,8 +283,8 @@ int main(void) {
         }
     }
 
-    /* Execute the actual pad merger: synthetic gestures may never press menu A,
-     * but real A/B and all existing gamepad bits remain usable there. */
+    /* Execute the actual pad merger: the VR settings pause consumes physical
+     * input too; ordinary gameplay dialogue/inventory keep physical A/B. */
     int movement;
     for (int reason = 0; reason < 5; reason++) {
         reset(mPlayer_ITEM_KIND_NET, 0);
@@ -286,7 +295,9 @@ int main(void) {
         if (reason == 4) s_vr.head_pose_valid = 0;
         CHECK(!(merge(2, &movement) & 0x100), "pending motion cannot activate menu/dialogue/invalid context");
         action_held[s_vr.act_a] = action_held[s_vr.act_b] = 1;
-        CHECK((merge(2, &movement) & 0x300) == 0x300, "physical A/B survive synthetic-input cancellation");
+        unsigned short merged = merge(2, &movement) & 0x300;
+        CHECK(merged == ((reason == 0 || reason == 4) ? 0 : 0x300),
+              "pause/tracking loss consume physical A/B; normal game menus retain them");
     }
     reset(mPlayer_ITEM_KIND_NET, 0);
     CHECK(merge(2, &movement) & 0x100, "allowed motion still injects A");

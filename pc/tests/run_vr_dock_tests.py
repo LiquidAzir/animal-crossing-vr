@@ -13,7 +13,8 @@ specs = {
     'src/actor/ac_boat_demo.c': ['aBTD_actor_ct', 'aBTD_actor_dt'],
     'src/game/m_actor.c': ['Actor_malloc_actor_class', 'Actor_info_delete'],
 }
-chunks = []
+boat_source = (ROOT / 'src/actor/ac_boat.c').read_text()
+chunks = [boat_source[boat_source.index('enum {'):boat_source.index('static void aBT_actor_ct')]]
 for path, names in specs.items():
     source = (ROOT / path).read_text()
     for name in names:

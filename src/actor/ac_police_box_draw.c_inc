@@ -96,5 +96,5 @@ static void aPBOX_actor_draw(ACTOR* actor, GAME* game) {
     CLOSE_DISP(graph);
 
     _texture_z_light_fog_prim_shadow(graph);
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aPBOX_shadow_data, FALSE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, &aPBOX_shadow_data, FALSE);
 }

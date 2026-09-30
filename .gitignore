@@ -59,3 +59,10 @@ temp/
 include/PR/
 include/gcc/
 include/compiler/gcc/stdlib.h
+
+# Standalone Quest packages and private signing material
+quest/.local/
+quest/out/
+*.apk
+*.keystore
+*.jks

@@ -29,7 +29,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     extract('pc/src/pc_vr.cpp', [
         'm34_identity', 'm34_mul', 'm34_from_hmd', 'pc_vr_tool_input_allowed',
-        'pc_vr_set_empty_hands_available', 'pcvr_empty_hands_visible',
+        'pc_vr_set_empty_hands_available', 'pc_vr_set_scene_depth_range', 'pcvr_empty_hands_visible',
         'pcvr_poll_empty_hands', 'pcvr_draw_empty_hands'], 'runtime_source.inc')
     cc_dir = Path('C:/msys64/mingw32/bin')
     env = dict(os.environ, PATH=str(cc_dir) + os.pathsep + os.environ['PATH'])

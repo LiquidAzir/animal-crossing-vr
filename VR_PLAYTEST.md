@@ -1,9 +1,26 @@
 # VR Playtest Checklist
 
+## September 28 follow-up
+
+- [ ] Cast into a river and the sea in first-person VR. The view stays first
+      person when the lure lands, while waiting for a bite, during reeling,
+      after a cancelled cast, and through the catch announcement.
+      Toggle first person off/on while waiting: each view still works.
+- [ ] With no item equipped, look at both hands against the ground, walls,
+      and outdoor scenery. Both follow the controllers in each eye. Move a
+      hand behind a nearby surface: that surface should cover it. Check
+      entering/exiting a shop, equipping a tool, menus, and lost tracking.
+- [ ] Inspect Nook's displayed rugs from the front, back, and oblique angles
+      while moving the head. Their two sides remain visible without the
+      competing checker/stripe pattern. Other shop items and repaired
+      building backs should look as before.
+
+Implementation and local checks: [Fishing, hands, and rug fixes](docs/vr-fishing-hands-20260928.md).
+
 ## September 27 follow-up
 
-- [ ] With both controllers awake, stow every held item: both default-on hands
-      appear and follow the grips. Equip a tool again: both hands disappear.
+- [ ] With both controllers awake, stow every held item: no hand markers should
+      appear by default. Equip a tool and confirm its tracking still works.
 - [ ] Catch a bug, catch a fish, and dig up a fossil while facing different
       directions. During each announcement, the item appears ahead and slightly
       below gaze. Turn/tilt the head: it remains visible. Check tiny-catch arrows,
@@ -36,6 +53,18 @@ frame-timing summaries every 30 seconds automatically).
 Setup: headset on, SteamVR running, `--verbose` not needed (vr_log always
 writes). Start in the **diorama** (third-person) view.
 
+## VR settings shortcut
+
+- [ ] While playing, click both sticks together (either click may lead slightly):
+      VR Settings opens once without opening the game Start/Z screen.
+- [ ] Move the left stick to navigate, A/right trigger to select, and B/left
+      trigger to resume. Held controls must not repeat or leak into gameplay.
+- [ ] Change hands, turning, motion swings, and volume; Apply, Resume, and reopen.
+      Confirm the values persist after restarting. Other settings stay unchanged.
+- [ ] Make an unapplied edit and press B: Keep editing/Discard behaves correctly.
+- [ ] Turn/lean while paused: the world stays head-tracked; gameplay is frozen.
+      Individually click each stick afterward to confirm Start/Z still works.
+
 ## 1. Boot & menus (panel-only frames)
 
 - [ ] Title screen and save select appear on the floating panel, readable
@@ -62,7 +91,7 @@ writes). Start in the **diorama** (third-person) view.
 
 ### Optional floating hands
 
-- [ ] In Settings → Gameplay, verify VR empty hands is On (the default). With no item
+- [ ] In Settings → Gameplay, verify VR empty hands is Off by default, then enable it. With no item
       equipped, both small hands follow controller position and rotation.
 - [ ] Compare On/Off while standing, walking, running, turning, and recentering.
       Check comfortable size, thumb direction, and alignment at the grip.
@@ -157,6 +186,14 @@ writes). Start in the **diorama** (third-person) view.
 
 ## 8. Events & edge scenes (fallback correctness)
 
+- [ ] Take Kapp'n's boat to the island: the scenery/season switch must finish
+      without a crash. Walk across both island acres and enter/exit the cottage
+      and islander's house; confirm terrain, actors, and normal interaction.
+- [ ] After leaving the arrival acre, return to the dock and board for town.
+      Check the return scenery switch, then leave the town dock acre and revisit:
+      Kapp'n should offer another trip. Repeat on PC VR and native Quest.
+- [ ] After a successful round trip, save/quit and reload; town and island data
+      should persist. Repeat seasonal transitions from winter if available.
 - [ ] Scripted event/cutscene moment (train arrival, event NPC): camera takes
       over, player model VISIBLE during it, FP resumes after
 - [ ] Pelly/Pete mail moments, Resetti if you can bait him — no stuck

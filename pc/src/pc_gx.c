@@ -860,6 +860,7 @@ void pc_gx_flush_vertices(void) {
      * routing are known. Never draw behind inventory item previews or UI. */
     if (g_gx.projection_type == GX_PERSPECTIVE && !pc_vr_flat_scene_active()) {
         int vr = pc_vr_in_scene_pass();
+        if (vr) pc_vr_set_scene_depth_range(g_gx.viewport[4], g_gx.viewport[5]);
         pc_sky_draw(vr ? pc_vr_eye_projection() : (const float*)g_gx.projection_mtx,
                     vr ? pc_vr_view_correction() : NULL);
     }
@@ -1829,16 +1830,16 @@ void GXSetFieldMask(GXBool odd, GXBool even) { (void)odd; (void)even; }
 void GXSetFieldMode(GXBool field_mode, GXBool half_aspect) { (void)field_mode; (void)half_aspect; }
 void GXSetPixelFmt(u32 pix_fmt, u32 z_fmt) { (void)pix_fmt; (void)z_fmt; }
 
-void GXSetCullMode(u32 mode) {
+static void pc_gx_apply_cull_mode(u32 mode, int authored) {
     pc_gx_flush_if_begin_complete();
     if (g_pc_model_viewer_no_cull) mode = GX_CULL_NONE;
     /* VR: world geometry is single-sided — authored for a camera that could
      * never see the back of anything. Head tracking and first person both
      * expose those faces, which read as missing walls. Draw both sides.
-     * Hooked here (the port's only GXSetCullMode) rather than in emu64 so
-     * no caller can bypass it. GX_CULL_ALL is left alone: it means "draw
+     * Ordinary GX callers keep this override; only explicitly marked meshes
+     * with authored front/back sheets opt out. GX_CULL_ALL means "draw
      * nothing", not a facing optimization. */
-    if (mode == GX_CULL_BACK || mode == GX_CULL_FRONT) {
+    if (!authored && (mode == GX_CULL_BACK || mode == GX_CULL_FRONT)) {
         extern float g_pc_vr_cull_expand;
         if (g_pc_vr_cull_expand > 0.0f || pc_fp_view_is_active()) {
             mode = GX_CULL_NONE;
@@ -1847,6 +1848,14 @@ void GXSetCullMode(u32 mode) {
     if (g_gx.cull_mode == (int)mode) return;
     DIRTY(PC_GX_DIRTY_CULL);
     g_gx.cull_mode = mode;
+}
+
+void GXSetCullMode(u32 mode) {
+    pc_gx_apply_cull_mode(mode, 0);
+}
+
+void pc_gx_set_authored_cull_mode(unsigned int mode) {
+    pc_gx_apply_cull_mode(mode, 1);
 }
 void GXSetCoPlanar(GXBool enable) { (void)enable; }
 

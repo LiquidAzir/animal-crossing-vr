@@ -193,5 +193,15 @@ static void aBridgeA_actor_draw(ACTOR* actorx, GAME* game) {
     Mtx* mtx_p = (Mtx*)GRAPH_ALLOC_TYPE(game->graph, Mtx, bridge->keyframe.skeleton->num_shown_joints);
 
     _texture_z_light_fog_prim(game->graph);
-    cKF_Si3_draw_R_SV(game, &bridge->keyframe, mtx_p, &aBridgeA_before_disp, NULL, actorx);
+#ifdef TARGET_PC
+    /* Only the known stationary base receives fitted post backs. Preserve the
+     * original deck deformation callback and all of its matrix allocations. */
+    if (bridge->keyframe.skeleton == &cKF_bs_r_obj_s_bridgeA ||
+        bridge->keyframe.skeleton == &cKF_bs_r_obj_w_bridgeA) {
+        cKF_Si3_draw_R_SV_solid(game, &bridge->keyframe, mtx_p, &aBridgeA_before_disp, NULL, actorx, NULL);
+    } else
+#endif
+    {
+        cKF_Si3_draw_R_SV(game, &bridge->keyframe, mtx_p, &aBridgeA_before_disp, NULL, actorx);
+    }
 }

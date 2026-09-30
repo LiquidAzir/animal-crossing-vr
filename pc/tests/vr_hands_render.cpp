@@ -89,7 +89,7 @@ static void save(const char* name,const std::vector<unsigned char>& p) {
     SDL_Surface* surface=SDL_CreateRGBSurfaceWithFormat(0,W,H,32,SDL_PIXELFORMAT_RGBA32);
     CHECK(surface!=NULL,"preview surface created"); if(!surface) return;
     for(int y=0;y<H;y++) std::memcpy((char*)surface->pixels+y*surface->pitch,p.data()+(H-y-1)*W*4,W*4);
-    CHECK(SDL_SaveBMP(surface,name)==0,"native mitten preview written"); SDL_FreeSurface(surface);
+    CHECK(SDL_SaveBMP(surface,name)==0,"native hand-marker preview written"); SDL_FreeSurface(surface);
 }
 static void unusual_state() {
     for(size_t i=0;i<sizeof(caps)/sizeof(caps[0]);i++) glEnable(caps[i]);
@@ -106,7 +106,10 @@ static void GLAD_API_PTR failed_shader_source(GLuint shader,GLsizei,const GLchar
     const char* invalid="#version 330 core\n#error deliberate initialization failure for renderer regression";
     real_shader_source(shader,1,&invalid,NULL);
 }
-static float gx_depth(float eye_z) { return 1.0f+(projection[10]*eye_z+projection[11])/(-eye_z); }
+static float gx_depth(float eye_z, float near_depth, float far_depth) {
+    return near_depth+(far_depth-near_depth)*0.5f*
+        (1.0f+(projection[10]*eye_z+projection[11])/(-eye_z));
+}
 
 int main(int argc,char** argv) {
     (void)argc; (void)argv;
@@ -152,7 +155,7 @@ int main(int argc,char** argv) {
     CHECK(pc_vr_hands_draw(pose,projection,0),"shutdown permits successful fresh initialization");
     CHECK(hostile.equals(Snapshot()),"first successful draw including VAO initialization restores GL state");
     auto left=pixels(); auto left_depth=depths();
-    CHECK(coverage(left)>4000,"opaque cream mitten rendered despite hostile incoming state");
+    CHECK(coverage(left)>4000,"opaque white marker rendered despite hostile incoming state");
     CHECK(pc_vr_hands_draw(pose,projection,0),"subsequent draw succeeds");
     CHECK(hostile.equals(Snapshot()),"steady-state draw restores GL state");
     CHECK(pixels()==left,"LEQUAL permits identical redraw without state-dependent color changes");
@@ -160,19 +163,24 @@ int main(int argc,char** argv) {
     CHECK(std::memcmp(restored_buffer,foreign_data,sizeof(foreign_data))==0,"caller vertex buffer contents preserved");
     CHECK(glGetError()==GL_NO_ERROR,"initialization, drawing and restoration produce no GL errors");
 
-    clear(); CHECK(pc_vr_hands_draw(pose,projection,1),"right mitten draws"); auto right=pixels();
-    int mirror_difference=0; bool alpha_opaque=true; float min_depth=1,max_depth=0;
+    clear(); CHECK(pc_vr_hands_draw(pose,projection,1),"right hand marker draws"); auto right=pixels();
+    int mirror_difference=0; bool alpha_opaque=true, neutral_white=true; float min_depth=1,max_depth=0;
     for(int y=0;y<H;y++) for(int x=0;x<W;x++) {
         mirror_difference+=hand_pixel(left,x,y)!=hand_pixel(right,W-x-1,y);
         if(hand_pixel(left,x,y)) {
             alpha_opaque=alpha_opaque&&left[(y*W+x)*4+3]==255;
+            const int channel=(y*W+x)*4;
+            neutral_white=neutral_white&&left[channel]==left[channel+1]&&left[channel+1]==left[channel+2];
             const float d=left_depth[y*W+x]; if(d<min_depth)min_depth=d; if(d>max_depth)max_depth=d;
         }
     }
-    CHECK(mirror_difference<=4,"left and right thumbs have mirrored silhouettes");
-    CHECK(centroid(left)>W*0.5+5 && centroid(right)<W*0.5-5,"thumbs face inward for left and right hands");
-    CHECK(alpha_opaque,"mitten fragments are fully opaque");
-    CHECK(min_depth>gx_depth(-0.35f)&&max_depth<gx_depth(-0.5f),"GX projection conversion writes expected world depth");
+    CHECK(mirror_difference<=4,"left and right markers have symmetric silhouettes");
+    CHECK(std::fabs(centroid(left)-(W-1)*0.5)<0.5 && std::fabs(centroid(right)-(W-1)*0.5)<0.5,
+          "both markers stay centered on the grip without a side bump");
+    CHECK(neutral_white,"marker lighting remains neutral white without cream tint");
+    CHECK(alpha_opaque,"marker fragments are fully opaque");
+    CHECK(min_depth>gx_depth(-0.35f,0.2f,0.8f)&&max_depth<gx_depth(-0.5f,0.2f,0.8f),
+          "hand depths match the GX world using the caller's viewport range");
 
     clear(); pose[3]=0.1f; pc_vr_hands_draw(pose,projection,0); auto moved=pixels();
     CHECK(centroid(moved)>centroid(left)+100,"row-major grip translation moves the mesh"); pose[3]=0;
@@ -216,11 +224,11 @@ int main(int argc,char** argv) {
     CHECK(invalid_state.equals(Snapshot()),"reinitialization preserves caller state again");
 
     // Real production artwork in synthetic poses; rotation belongs to tracking,
-    // never to a baked renderer offset. Both show the forward mitten extension.
+    // never to a baked renderer offset. Both show the same simple rounded marker.
     clear(); const float angle=0.68f, c=std::cos(angle),s=std::sin(angle);
     float preview[12]={1,0,0,-0.11f, 0,c,-s,-0.04f, 0,s,c,-0.40f};
     pc_vr_hands_draw(preview,projection,0); preview[3]=0.11f; pc_vr_hands_draw(preview,projection,1);
-    auto preview_pixels=pixels(); CHECK(coverage(preview_pixels)>12000,"two tracked-pose mittens appear in native preview");
+    auto preview_pixels=pixels(); CHECK(coverage(preview_pixels)>12000,"two tracked-pose markers appear in native preview");
     save("vr-hands-preview.bmp",preview_pixels);
     CHECK(glGetError()==GL_NO_ERROR,"all rendering, invalid-input and lifecycle checks leave no GL errors");
     pc_vr_hands_shutdown(); glUseProgram(0); glBindVertexArray(0); glBindBuffer(GL_ARRAY_BUFFER,0);

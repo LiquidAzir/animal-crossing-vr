@@ -13,6 +13,10 @@
 
 #ifdef TARGET_PC
 #include "pc_fp_camera.h"
+/* Distinguish ordinary fishing from scripted SIMPLE camera requests. Modes
+ * 0 and 1 keep their original meanings; this mode uses the same stock motion
+ * as 0, with a first-person view override when the player enables it. */
+#define CAMERA2_SIMPLE_FISHING 2
 #endif
 
 #if VERSION >= VER_GAFU01_00
@@ -235,8 +239,8 @@ static void Camera2_SetView(GAME_PLAY* play) {
     }
 
 #ifdef TARGET_PC
-    /* Keep first person through movement, conversations, doors, and item
-     * presentations. Other scripted cameras retain their stock view. */
+    /* Keep first person through movement, conversations, doors, fishing, and
+     * item presentations. Other scripted cameras retain their stock view. */
     {
         static int pc_fp_last_index = -1;
         PLAYER_ACTOR* fp_player = get_player_actor_withoutCheck(play);
@@ -253,7 +257,9 @@ static void Camera2_SetView(GAME_PLAY* play) {
                       camera->now_main_index == CAMERA2_PROCESS_WADE ||
                       camera->now_main_index == CAMERA2_PROCESS_TALK ||
                       camera->now_main_index == CAMERA2_PROCESS_ITEM ||
-                      camera->now_main_index == CAMERA2_PROCESS_DOOR);
+                      camera->now_main_index == CAMERA2_PROCESS_DOOR ||
+                      (camera->now_main_index == CAMERA2_PROCESS_SIMPLE &&
+                       camera->main_data.simple.mode == CAMERA2_SIMPLE_FISHING));
 
         /* Catch/discovery messages also use A. Keeping ITEM first person
          * must not let a motion-tool gesture dismiss its presentation. */
@@ -2130,7 +2136,14 @@ extern int Camera2_request_main_simple_fishing(GAME_PLAY* play, const xyz_t* pla
         center.z = player_pos->z * 0.65f + bobber_pos->z * 0.35f;
     }
 
+#ifdef TARGET_PC
+    /* Preserve the fishing request and its priority/morph even in FP, so
+     * toggling the view during a cast still restores the stock camera. */
+    return Camera2_request_main_simple2(play, &center, &dir, dist * dist_mult, 40,
+                                       CAMERA2_SIMPLE_FISHING, priority);
+#else
     return Camera2_request_main_simple(play, &center, &dir, dist * dist_mult, 40, priority);
+#endif
 }
 extern int Camera2_request_main_simple_fishing_return(GAME_PLAY* play, const xyz_t* player_pos, int priority) {
     xyz_t center_pos;
@@ -2139,7 +2152,12 @@ extern int Camera2_request_main_simple_fishing_return(GAME_PLAY* play, const xyz
 
     Camera2_main_Normal_SetEndCenterPos_fromPlayer(play, &center_pos);
     Camera2_main_Simple_AngleDistStd(play, &dir, &dist);
+#ifdef TARGET_PC
+    return Camera2_request_main_simple2(play, &center_pos, &dir, dist, 30,
+                                       CAMERA2_SIMPLE_FISHING, priority);
+#else
     return Camera2_request_main_simple(play, &center_pos, &dir, dist, 30, priority);
+#endif
 }
 
 extern int Camera2_request_main_simple(GAME_PLAY* play, const xyz_t* pos, const s_xyz* dir, f32 dist, int morph_counter,

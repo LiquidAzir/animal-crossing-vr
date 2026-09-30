@@ -42,6 +42,9 @@ const float* pc_vr_eye_projection(void);
 /* Row-major 3x4: transforms the game's combined view*model position matrix
  * into VR eye space (X = V_vr * V_game^-1). */
 const float* pc_vr_view_correction(void);
+/* Record the perspective world's viewport depth range for native hand draws.
+ * UI routing can change GL depth state after the world has finished. */
+void pc_vr_set_scene_depth_range(float near_depth, float far_depth);
 /* Ortho draw routing: pc_gx calls with 1 to target the UI FBO, 0 to return
  * to the current eye FBO. Returns the FBO name it bound. */
 unsigned int pc_vr_bind_ui_target(int ui);

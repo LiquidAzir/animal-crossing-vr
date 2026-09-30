@@ -276,6 +276,6 @@ static void aHUS_actor_draw(ACTOR* actorx, GAME* game) {
 
     cKF_Si3_draw_R_SV_solid(game, keyframe, mtx, &aHUS_actor_draw_before, &aHUS_actor_draw_after, actorx, NULL);
 
-    CLIP(bg_item_clip)->draw_shadow_proc(game, aHUS_shadow_data[house->structure_type], TRUE);
+    bIT_draw_shadow_safe(CLIP(bg_item_clip), game, aHUS_shadow_data[house->structure_type], TRUE);
     aHUS_actor_draw_ta_clr(actorx, game);
 }

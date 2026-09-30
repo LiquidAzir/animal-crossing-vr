@@ -11,9 +11,9 @@ int g_pc_solid_buildings = 1, g_pc_solid_shell_pct = 97;
 int g_pc_model_viewer, g_pc_model_viewer_solid;
 int pc_vr_active(void) { return vr; }
 int pc_fp_view_is_active(void) { return fp; }
-static Gfx house_list[1], tailor_list[1], post_list[1], shop_list[1], sentinel_list[1];
-static cKF_Skeleton_R_c house_skel, tailor_skel, post_skel, shop_skel, other_skel;
-static cKF_SkeletonInfo_R_c house, tailor, post_office, shop, other, sentinel;
+static Gfx house_list[1], tailor_list[1], post_list[1], shop_list[1], island_list[1], bridge_list[1], sentinel_list[1];
+static cKF_Skeleton_R_c house_skel, tailor_skel, post_skel, shop_skel, island_skel, bridge_skel, other_skel;
+static cKF_SkeletonInfo_R_c house, tailor, post_office, shop, island, bridge, other, sentinel;
 static GAME game;
 static GRAPH graph;
 static Mtx matrices[64];
@@ -66,6 +66,14 @@ static int pc_shop_back_lookup(cKF_Skeleton_R_c* skel, Gfx** out) {
     *out = skel == &shop_skel && ready ? shop_list : NULL;
     return skel == &shop_skel;
 }
+static int pc_island_house_back_lookup(cKF_Skeleton_R_c* skel, Gfx** out) {
+    *out = skel == &island_skel && ready ? island_list : NULL;
+    return skel == &island_skel;
+}
+static int pc_bridge_back_lookup(cKF_Skeleton_R_c* skel, Gfx** out) {
+    *out = skel == &bridge_skel && ready ? bridge_list : NULL;
+    return skel == &bridge_skel;
+}
 static ckf_shell_cache_t* ckf_shell_measure(cKF_SkeletonInfo_R_c* keyframe) {
     ++measurements;
     return &legacy;
@@ -83,9 +91,9 @@ void cKF_Si3_draw_R_SV(GAME* g, cKF_SkeletonInfo_R_c* k, Mtx* m,
                      cKF_draw_callback before, cKF_draw_callback after, void* arg) {
     ++draws;
     if (g_ckf_shell_pass) ++shell_draws;
-    if (vr && g_pc_solid_buildings && (k == &house || k == &tailor || k == &post_office || k == &shop)) {
+    if (vr && g_pc_solid_buildings && (k == &house || k == &tailor || k == &post_office || k == &shop || k == &island || k == &bridge)) {
         CHECK(g_ckf_house_back_owner == k, "repair belongs to this skeleton instance");
-        CHECK(g_ckf_house_back == (ready ? (k == &house ? house_list : k == &tailor ? tailor_list : k == &post_office ? post_list : shop_list) : NULL),
+        CHECK(g_ckf_house_back == (ready ? (k == &house ? house_list : k == &tailor ? tailor_list : k == &post_office ? post_list : k == &shop ? shop_list : k == &island ? island_list : bridge_list) : NULL),
               "loaded or deferred repair state reaches the original draw");
     }
     if (before) before(g,k,0,NULL,NULL,arg,NULL,NULL);
@@ -145,11 +153,11 @@ static void verify_light_routing(void) {
 }
 
 int main(void) {
-    house.skeleton=&house_skel; tailor.skeleton=&tailor_skel; post_office.skeleton=&post_skel; shop.skeleton=&shop_skel; other.skeleton=&other_skel;
+    house.skeleton=&house_skel; tailor.skeleton=&tailor_skel; post_office.skeleton=&post_skel; shop.skeleton=&shop_skel; island.skeleton=&island_skel; bridge.skeleton=&bridge_skel; other.skeleton=&other_skel;
     game.graph=&graph;
-    for (int loaded=0;loaded<2;++loaded) for (int kind=0;kind<4;++kind) {
+    for (int loaded=0;loaded<2;++loaded) for (int kind=0;kind<6;++kind) {
         reset(); ready=loaded;
-        cKF_Si3_draw_R_SV_solid(&game,kind==0?&house:kind==1?&tailor:kind==2?&post_office:&shop,matrices,pre,post,NULL,pipeline_reset);
+        cKF_Si3_draw_R_SV_solid(&game,kind==0?&house:kind==1?&tailor:kind==2?&post_office:kind==3?&shop:kind==4?&island:&bridge,matrices,pre,post,NULL,pipeline_reset);
         CHECK(draws==1 && pre_calls==1 && post_calls==1,"repaired model and callbacks run once");
         CHECK(measurements==0 && shell_draws==0 && resets==0,"no legacy facade even for deferred assets");
         CHECK(g_ckf_house_back==sentinel_list && g_ckf_house_back_owner==&sentinel,"temporary repair state restored");

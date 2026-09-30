@@ -418,6 +418,6 @@ static void aFLAG_actor_draw(ACTOR* actor, GAME* game) {
         CLOSE_DISP(graph);
 
         cKF_Si3_draw_R_SV(game, keyframe, mtx, &aFLAG_before_draw, NULL, actor);
-        (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aFLAG_shadow_data, FALSE);
+        bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, &aFLAG_shadow_data, FALSE);
     }
 }

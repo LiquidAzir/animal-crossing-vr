@@ -38,7 +38,7 @@ PCSettings g_pc_settings = {
     .vr_motion_swing = 1,
     .vr_tool_on_hand = 1,
     .vr_tool_pitch = 0,
-    .vr_empty_hands = 1,
+    .vr_empty_hands = 0,
 };
 
 static const char* SETTINGS_FILE = "settings.ini";
@@ -146,7 +146,7 @@ static const char* DEFAULT_SETTINGS =
     "vr_tool_pitch = 0\n"
     "\n"
     "# VR first person: show floating hands at empty controllers (0/1, no restart)\n"
-    "vr_empty_hands = 1\n";
+    "vr_empty_hands = 0\n";
 
 static const char* skip_ws(const char* s) {
     while (*s == ' ' || *s == '\t') s++;

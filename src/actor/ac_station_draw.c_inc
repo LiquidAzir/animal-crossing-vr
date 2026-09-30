@@ -68,6 +68,6 @@ static void aSTA_actor_draw(ACTOR* actor, GAME* game) {
 
     cKF_Si3_draw_R_SV_solid(game, keyframe, mtx, &aSTA_actor_draw_before, NULL, actor, NULL);
     type = station->struct_class.structure_type - aSTR_TYPE_STATION1;
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, shadow_low_data[type], FALSE);
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, shadow_hi_data[type], TRUE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, shadow_low_data[type], FALSE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, shadow_hi_data[type], TRUE);
 }

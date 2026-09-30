@@ -66,6 +66,20 @@ typedef struct background_item_clip_s {
     bIT_FADE_ENTRY_PROC fade_entry_proc;
 } bIT_Clip_c;
 
+
+/* The island boat swaps the seasonal background actor between update frames.
+ * Town-wide VR visibility can still draw buildings while that actor's clip is
+ * absent. Keep their geometry and omit only the optional shadow until the new
+ * provider is ready; never retain callbacks into the retired actor. */
+static inline void bIT_draw_shadow_safe(bIT_Clip_c* clip, GAME* game, bIT_ShadowData_c* data, int type) {
+#ifdef TARGET_PC
+    if (clip == NULL || clip->draw_shadow_proc == NULL) {
+        return;
+    }
+#endif
+    clip->draw_shadow_proc(game, data, type);
+}
+
 #ifdef __cplusplus
 }
 #endif

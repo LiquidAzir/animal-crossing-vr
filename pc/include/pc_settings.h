@@ -38,7 +38,7 @@ typedef struct {
     int vr_motion_swing;  /* VR FP: swinging the right controller triggers the tool (default 1) */
     int vr_tool_on_hand;  /* VR FP: render the held tool at the real controller pose (default 1) */
     int vr_tool_pitch;    /* tool-on-hand pitch adjustment, degrees (default 0) */
-    int vr_empty_hands;   /* VR FP: floating hands at empty controllers, live toggle (default 1) */
+    int vr_empty_hands;   /* VR FP: floating hands at empty controllers, live toggle (default 0) */
 } PCSettings;
 
 extern PCSettings g_pc_settings;

@@ -155,6 +155,11 @@ uintptr_t pc_gbi_unpack_runtime_ptr(unsigned int packed);
 #define G_DECAL_ALWAYS 0x30
 #define G_DECAL_SPECIAL 0x40
 #define G_DECAL_ALL (G_DECAL_ALWAYS | G_DECAL_SPECIAL)
+#ifdef TARGET_PC
+/* Opt out of first-person two-sided rendering for meshes with authored,
+ * coincident front/back surfaces. Keep this scoped to the geometry draw list. */
+#define G_PC_AUTHORED_CULL 0x80
+#endif
 
 /* Indicies for G_SPECIAL_1 */
 #define G_SPECIAL_NONE 0

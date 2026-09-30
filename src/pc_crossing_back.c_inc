@@ -1,0 +1,102 @@
+/* The fixed-camera acres leave the hidden faces of docks and bridges open.
+ * Only the explicit authored openings in pc_crossing_back_data are completed.
+ * Build once from the loaded disc vertices; keep the live seasonal textures
+ * and palettes. Neither the source meshes nor collision data are changed. */
+#include <math.h>
+
+extern u8 bridge_1_pal_dummy[], bridge_2_pal_dummy[];
+extern u8 bridge_1_tex_dummy[], bridge_2_tex_dummy[];
+
+typedef struct {
+    u16 source;
+    s16 offset[3];
+    s16 uv[2];
+} pc_crossing_vertex;
+
+typedef struct {
+    u8 count;
+    pc_crossing_vertex vertices[4];
+} pc_crossing_patch;
+
+typedef struct {
+    Gfx* original;
+    Vtx* (*source)(void);
+    const pc_crossing_patch* patches;
+    u16 patch_count, source_count;
+    u8 material;
+    Vtx* vertices;
+    Gfx* list;
+    int ready;
+} pc_crossing_spec;
+
+#include "pc_crossing_back_data.c_inc"
+
+/* Public for the model viewer: the caller owns the original acre matrix and
+ * enables this only for first-person/VR or the explicit solid-model preview. */
+Gfx* pc_crossing_back_lookup(Gfx* original) {
+    int m;
+    for (m = 0; m < ARRAY_COUNT(pc_crossing_specs); ++m) {
+        pc_crossing_spec* spec = &pc_crossing_specs[m];
+        if (spec->original == original) {
+            if (!spec->ready) {
+                Vtx* source = spec->source();
+                Gfx* dl = spec->list;
+                int p, cursor = 0;
+                /* Zero-filled assets are possible before pc_assets_init.
+                 * Do not cache a collapsed cap; retry after assets are loaded. */
+                int loaded = 0;
+                for (p = 0; p < spec->source_count; ++p)
+                    loaded |= source[p].v.ob[0] | source[p].v.ob[1] | source[p].v.ob[2];
+                if (!loaded) return NULL;
+                gSPTexture(dl++, 0, 0, 0, G_TX_RENDERTILE, G_ON);
+                gDPSetRenderMode(dl++, G_RM_FOG_SHADE_A, G_RM_AA_ZB_TEX_EDGE2);
+                gDPSetCombineLERP(dl++, TEXEL0, 0, SHADE, 0, 0, 0, 0, TEXEL0,
+                                 PRIMITIVE, 0, COMBINED, 0, 0, 0, 0, COMBINED);
+                gDPSetPrimColor(dl++, 0, 128, 255, 255, 255, 255);
+                gSPLoadGeometryMode(dl++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_FOG |
+                                          G_LIGHTING | G_SHADING_SMOOTH);
+                if (spec->material == 1) {
+                    gDPLoadTLUT_Dolphin(dl++, 15, 16, 1, bridge_1_pal_dummy);
+                    gDPLoadTextureBlock_4b_Dolphin(dl++, bridge_1_tex_dummy, G_IM_FMT_CI,
+                                                64, 64, 15, GX_MIRROR, GX_MIRROR, 0, 0);
+                } else {
+                    gDPLoadTLUT_Dolphin(dl++, 15, 16, 1, bridge_2_pal_dummy);
+                    gDPLoadTextureBlock_4b_Dolphin(dl++, bridge_2_tex_dummy, G_IM_FMT_CI,
+                                                128, 32, 15, GX_CLAMP, GX_REPEAT, 0, 0);
+                }
+                for (p = 0; p < spec->patch_count; ++p) {
+                    const pc_crossing_patch* patch = spec->patches + p;
+                    Vtx* v = spec->vertices + cursor;
+                    f32 a[3], b[3], normal[3], length;
+                    int i, j;
+                    for (i = 0; i < patch->count; ++i) {
+                        const pc_crossing_vertex* ref = &patch->vertices[i];
+                        v[i] = source[ref->source];
+                        for (j = 0; j < 3; ++j) v[i].v.ob[j] += ref->offset[j];
+                        v[i].v.tc[0] = ref->uv[0];
+                        v[i].v.tc[1] = ref->uv[1];
+                    }
+                    for (j = 0; j < 3; ++j) {
+                        a[j] = v[1].v.ob[j] - v[0].v.ob[j];
+                        b[j] = v[2].v.ob[j] - v[0].v.ob[j];
+                    }
+                    normal[0] = a[1]*b[2] - a[2]*b[1];
+                    normal[1] = a[2]*b[0] - a[0]*b[2];
+                    normal[2] = a[0]*b[1] - a[1]*b[0];
+                    length = sqrtf(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
+                    if (length <= 0) return NULL;
+                    for (i = 0; i < patch->count; ++i)
+                        for (j = 0; j < 3; ++j) v[i].n.n[j] = (s8)(normal[j] * 120 / length);
+                    gSPVertex(dl++, v, patch->count, 0);
+                    gSP1Triangle(dl++, 0, 1, 2, 0);
+                    if (patch->count == 4) gSP1Triangle(dl++, 0, 2, 3, 0);
+                    cursor += patch->count;
+                }
+                gSPEndDisplayList(dl++);
+                spec->ready = 1;
+            }
+            return spec->list;
+        }
+    }
+    return NULL;
+}

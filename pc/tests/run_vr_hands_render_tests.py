@@ -1,4 +1,4 @@
-"""Compile the real mitten renderer and exercise it in a hidden native GL context.
+"""Compile the real hand-marker renderer and exercise it in a hidden native GL context.
 
 No ROM, headset, installed game, or user save is used. The BMP preview contains
 the actual production mesh and shader at synthetic controller grip poses.

@@ -19,6 +19,6 @@ static void aTUR_actor_draw(ACTOR* actorx, GAME* game) {
 
         CLOSE_POLY_OPA_DISP(graph);
 
-        CLIP(bg_item_clip)->draw_shadow_proc(game, shadow[turi->structure_class.arg0], FALSE);
+        bIT_draw_shadow_safe(CLIP(bg_item_clip), game, shadow[turi->structure_class.arg0], FALSE);
     }
 }

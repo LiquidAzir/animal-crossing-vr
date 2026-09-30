@@ -39,5 +39,5 @@ static void aSCR_actor_draw(ACTOR* actor, GAME* game) {
     SET_POLY_OPA_DISP(gfx);
     CLOSE_DISP(graph);
 
-    (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, &aSCR_shadow_data, FALSE);
+    bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, &aSCR_shadow_data, FALSE);
 }

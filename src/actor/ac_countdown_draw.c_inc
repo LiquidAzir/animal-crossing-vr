@@ -100,7 +100,7 @@ static void aCOU_actor_draw(ACTOR* actorx, GAME* game) {
             CLOSE_POLY_XLU_DISP(graph);
             
             cKF_Si3_draw_R_SV(game, keyframe, mtx, aCOU_actor_draw_before, NULL, actorx);
-            CLIP(bg_item_clip)->draw_shadow_proc(game, &aCOU_shadow_data, FALSE);
+            bIT_draw_shadow_safe(CLIP(bg_item_clip), game, &aCOU_shadow_data, FALSE);
         }
     }
 }

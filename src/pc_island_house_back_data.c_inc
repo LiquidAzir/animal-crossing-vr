@@ -1,0 +1,50 @@
+/* Island cottages use these same two meshes and palettes in every season.
+ * Complete their missing wall boundaries and the downward-facing thatch rim.
+ * Artwork is sampled from the user's disc; the original facade, animation,
+ * door, window, fence and roof display lists are never copied or changed. */
+extern Vtx obj_s_myhome_i_v[], obj_s_house_i_v[];
+extern u8 obj_s_myhome_i_1_tex_txt[], obj_s_myhome_i_2_tex_txt[];
+extern u8 obj_s_house_i_1_tex_txt[], obj_s_house_i_2_tex_txt[];
+
+#define PC_ISLAND_AT(i,u,v) {i,{0,0,0},{u,v}}
+#define PC_ISLAND_CORNER(i,u,v) {i,{-5657,0,5656},{u,v}}
+#define PC_ISLAND_CENTER(i,u,v) {i,{0,-6800,0},{u,v}}
+#define PC_ISLAND_QUAD {0,1,2,0,2,3}
+#define PC_ISLAND_FAN {0,2,1,0,3,2,0,4,3,0,5,4,0,6,5,0,7,6}
+
+/* The diagonal cottage's fourth corner is the parallelogram completion of
+ * its three authored corners. Repeated plaster/timber samples retain the
+ * original material scale and exclude the entire door/window region. */
+static const pc_structure_back_patch pc_island_cottage_patches[] = {
+    { obj_s_myhome_i_2_tex_txt, 64, {0,0,27,11}, 4,2,
+      { PC_ISLAND_AT(16,0,94), PC_ISLAND_CORNER(16,64,94),
+        PC_ISLAND_CORNER(17,64,0), PC_ISLAND_AT(17,0,0) }, PC_ISLAND_QUAD },
+    { obj_s_myhome_i_2_tex_txt, 64, {0,0,27,11}, 4,2,
+      { PC_ISLAND_CORNER(16,0,94), PC_ISLAND_AT(15,64,94),
+        PC_ISLAND_AT(14,64,0), PC_ISLAND_CORNER(17,0,0) }, PC_ISLAND_QUAD },
+    { obj_s_myhome_i_1_tex_txt, 32, {0,15,31,28}, 8,6,
+      { PC_ISLAND_CENTER(66,0,0), PC_ISLAND_AT(59,-35,-35), PC_ISLAND_AT(60,-49,-11), PC_ISLAND_AT(62,-45,15), PC_ISLAND_AT(64,-31,31), PC_ISLAND_AT(75,-15,45), PC_ISLAND_AT(79,11,49), PC_ISLAND_AT(82,35,35) }, PC_ISLAND_FAN },
+    { obj_s_myhome_i_1_tex_txt, 32, {0,15,31,28}, 8,6,
+      { PC_ISLAND_CENTER(66,0,0), PC_ISLAND_AT(82,35,35), PC_ISLAND_AT(100,49,11), PC_ISLAND_AT(93,45,-15), PC_ISLAND_AT(94,31,-31), PC_ISLAND_AT(109,15,-45), PC_ISLAND_AT(105,-11,-49), PC_ISLAND_AT(59,-35,-35) }, PC_ISLAND_FAN },
+};
+
+/* The islander's three existing tapered walls leave exactly one rear quad.
+ * The opaque bamboo/plaster strip repeats horizontally at the original scale. */
+static const pc_structure_back_patch pc_island_villager_patches[] = {
+    { obj_s_house_i_2_tex_txt, 64, {21,12,44,63}, 4,2,
+      { PC_ISLAND_AT(28,0,31), PC_ISLAND_AT(27,56,31),
+        PC_ISLAND_AT(26,60,0), PC_ISLAND_AT(29,-4,0) }, PC_ISLAND_QUAD },
+    { obj_s_house_i_1_tex_txt, 32, {0,88,31,110}, 8,6,
+      { PC_ISLAND_CENTER(106,0,0), PC_ISLAND_AT(98,41,0), PC_ISLAND_AT(99,39,-22), PC_ISLAND_AT(102,25,-43), PC_ISLAND_AT(104,0,-50), PC_ISLAND_AT(149,-25,-43), PC_ISLAND_AT(146,-39,-22), PC_ISLAND_AT(139,-41,0) }, PC_ISLAND_FAN },
+    { obj_s_house_i_1_tex_txt, 32, {0,88,31,110}, 8,6,
+      { PC_ISLAND_CENTER(106,0,0), PC_ISLAND_AT(139,-41,0), PC_ISLAND_AT(137,-39,22), PC_ISLAND_AT(133,-25,43), PC_ISLAND_AT(115,0,50), PC_ISLAND_AT(116,25,43), PC_ISLAND_AT(118,39,22), PC_ISLAND_AT(98,41,0) }, PC_ISLAND_FAN },
+};
+static const pc_structure_back_spec pc_island_house_back_specs[] = {
+    { obj_s_myhome_i_v, ARRAY_COUNT(pc_island_cottage_patches), pc_island_cottage_patches, NULL },
+    { obj_s_house_i_v, ARRAY_COUNT(pc_island_villager_patches), pc_island_villager_patches, NULL },
+};
+#undef PC_ISLAND_FAN
+#undef PC_ISLAND_QUAD
+#undef PC_ISLAND_CENTER
+#undef PC_ISLAND_CORNER
+#undef PC_ISLAND_AT

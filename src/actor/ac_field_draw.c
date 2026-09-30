@@ -9,6 +9,13 @@
 #include "m_rcp.h"
 #include "sys_matrix.h"
 
+#ifdef TARGET_PC
+#include "pc_crossing_back.h"
+#include "../pc_crossing_back.c_inc"
+extern int pc_fp_view_is_active(void);
+extern int pc_vr_active(void);
+#endif
+
 static void Bg_Draw_Actor_ct(ACTOR* actorx, GAME* game);
 static void Bg_Draw_Actor_dt(ACTOR* actorx, GAME* game);
 static void Bg_Draw_Actor_move(ACTOR* actorx, GAME* game);
@@ -459,6 +466,13 @@ static void aFD_DrawBg(Gfx* gfx, int exists, GAME* game) {
 
         gSPSegment(NEXT_BG_OPA_DISP, G_MWO_SEGMENT_A, gfx); /* Bg display list is called in between culling microcode */
         gSPDisplayList(NEXT_BG_OPA_DISP, aFD_cull_set_model);
+
+#ifdef TARGET_PC
+        if (pc_fp_view_is_active() || pc_vr_active()) {
+            Gfx* back = pc_crossing_back_lookup(gfx);
+            if (back != NULL) gSPDisplayList(NEXT_BG_OPA_DISP, back);
+        }
+#endif
 
         CLOSE_DISP(game->graph);
     }

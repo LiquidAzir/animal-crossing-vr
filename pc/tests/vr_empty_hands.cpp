@@ -9,11 +9,13 @@
 typedef uint32_t u32;
 typedef int GLint;
 typedef unsigned int GLuint;
+typedef double GLdouble;
 typedef float M34[3][4];
 enum { GL_DRAW_FRAMEBUFFER_BINDING, GL_READ_FRAMEBUFFER_BINDING, GL_VIEWPORT,
-       GL_DRAW_FRAMEBUFFER, GL_READ_FRAMEBUFFER };
+       GL_DRAW_FRAMEBUFFER, GL_READ_FRAMEBUFFER, GL_DEPTH_RANGE };
 static struct {
     int active, head_pose_valid, input_ready;
+    int in_scene_pass, current_eye, ui_bound;
     VR_IVRInput_FnTable* input;
     VRActionHandle_t act_empty_hand[2];
     M34 empty_hand_pose[2], inv_eye_pose[2];
@@ -22,6 +24,7 @@ static struct {
     u32 empty_hands_stamp, active_since_ticks;
     struct { GLuint fbo; int w, h; } eye[2];
     float eye_projection[2][4][4];
+    float eye_depth_range[2][2];
 } s_vr;
 PCSettings g_pc_settings;
 u32 pc_frame_counter;
@@ -53,12 +56,21 @@ static EVRInputError OPENVR_FNTABLE_CALLTYPE get_pose(
 }
 
 static GLint draw_fbo, read_fbo, viewport[4];
+static GLdouble depth_range[2];
 static int gl_changes, draw_calls, fail_draw_call, logs;
-struct DrawRecord { int hand; GLint fbo, viewport[4]; float model[12], projection[16]; };
+struct DrawRecord { int hand; GLint fbo, viewport[4]; float model[12], projection[16]; GLdouble depth_range[2]; };
 static DrawRecord draws[8];
 static void glGetIntegerv(int name, GLint* out) {
     if (name == GL_VIEWPORT) memcpy(out, viewport, sizeof(viewport));
     else *out = name == GL_DRAW_FRAMEBUFFER_BINDING ? draw_fbo : read_fbo;
+}
+static void glGetDoublev(int name, GLdouble* out) {
+    CHECK(name == GL_DEPTH_RANGE, "queries viewport depth range");
+    memcpy(out, depth_range, sizeof(depth_range));
+}
+static void glDepthRange(GLdouble near_depth, GLdouble far_depth) {
+    ++gl_changes;
+    depth_range[0] = near_depth; depth_range[1] = far_depth;
 }
 static void glBindFramebuffer(int target, GLuint fbo) {
     ++gl_changes;
@@ -76,6 +88,7 @@ static int pc_vr_hands_draw(const float* model, const float* projection, int han
     memcpy(rec->viewport, viewport, sizeof(viewport));
     memcpy(rec->model, model, sizeof(rec->model));
     memcpy(rec->projection, projection, sizeof(rec->projection));
+    memcpy(rec->depth_range, depth_range, sizeof(depth_range));
     return draw_calls != fail_draw_call;
 }
 static void pcvr_log(const char*) { ++logs; }
@@ -93,6 +106,7 @@ static void reset(void) {
     input_table.GetPoseActionDataForNextFrame = get_pose;
     s_vr.input = &input_table;
     s_vr.active = s_vr.head_pose_valid = s_vr.input_ready = 1;
+    s_vr.in_scene_pass = 1;
     s_vr.active_since_ticks = 1000;
     now_ticks = 2000;
     g_pc_settings.vr_empty_hands = fp_active = 1;
@@ -111,10 +125,13 @@ static void reset(void) {
         s_vr.eye[hand].fbo = 80 + hand;
         s_vr.eye[hand].w = 1200 + hand;
         s_vr.eye[hand].h = 1300 + hand;
+        s_vr.eye_depth_range[hand][0] = hand ? 0.1f : 0.0f;
+        s_vr.eye_depth_range[hand][1] = hand ? 0.9f : 1022.0f/1023.0f;
         for (int i = 0; i < 16; ++i) (&s_vr.eye_projection[hand][0][0])[i] = (float)(hand * 20 + i);
     }
     draw_fbo = 30; read_fbo = 31;
     viewport[0] = 3; viewport[1] = 4; viewport[2] = 640; viewport[3] = 480;
+    depth_range[0] = 0.2; depth_range[1] = 0.8;
     gl_changes = draw_calls = fail_draw_call = logs = 0;
 }
 
@@ -205,6 +222,35 @@ static void check_restored(void) {
     CHECK(draw_fbo == 30 && read_fbo == 31, "separate draw/read FBOs restored");
     CHECK(viewport[0] == 3 && viewport[1] == 4 && viewport[2] == 640 && viewport[3] == 480,
           "full viewport restored for UI/world renderer");
+    CHECK(fabs(depth_range[0]-0.2) < 1e-12 && fabs(depth_range[1]-0.8) < 1e-12,
+          "incoming UI depth range restored");
+}
+
+static void test_scene_depth_range(void) {
+    reset();
+    for (int eye = 0; eye < 2; ++eye) {
+        s_vr.current_eye = eye;
+        pc_vr_set_scene_depth_range(0.05f, 1022.0f/1023.0f);
+        CHECK(fabsf(s_vr.eye_depth_range[eye][0]-0.05f) < 1e-7f &&
+              fabsf(s_vr.eye_depth_range[eye][1]-1022.0f/1023.0f) < 1e-7f,
+              "records perspective depth range independently per eye");
+        for (int invalid = 0; invalid < 7; ++invalid) {
+            s_vr.active = invalid != 0;
+            s_vr.in_scene_pass = invalid != 1;
+            s_vr.ui_bound = invalid == 2;
+            s_vr.current_eye = invalid == 3 ? -1 : invalid == 4 ? 2 : eye;
+            pc_vr_set_scene_depth_range(invalid == 5 ? NAN : 0.2f,
+                                        invalid == 6 ? INFINITY : 0.8f);
+            CHECK(fabsf(s_vr.eye_depth_range[eye][0]-0.05f) < 1e-7f &&
+                  fabsf(s_vr.eye_depth_range[eye][1]-1022.0f/1023.0f) < 1e-7f,
+                  "UI, inactive, bad eye or invalid range cannot overwrite world depths");
+        }
+        s_vr.active = s_vr.in_scene_pass = 1; s_vr.ui_bound = 0; s_vr.current_eye = eye;
+        pc_vr_set_scene_depth_range(-1.0f, 2.0f);
+        CHECK(s_vr.eye_depth_range[eye][0] == 0 && s_vr.eye_depth_range[eye][1] == 1,
+              "recorded range is clamped like glDepthRange");
+    }
+    CHECK(gl_changes == 0, "recording world depths makes no GL calls");
 }
 
 static void test_missing_pose_diagnostic(void) {
@@ -275,6 +321,9 @@ static void test_draw(void) {
               rec->viewport[2] == 1200 + eye && rec->viewport[3] == 1300 + eye, "correct eye viewport");
         CHECK(memcmp(rec->projection, s_vr.eye_projection[eye], sizeof(rec->projection)) == 0,
               "uses corresponding world eye projection");
+        CHECK(rec->depth_range[0] == s_vr.eye_depth_range[eye][0] &&
+              rec->depth_range[1] == s_vr.eye_depth_range[eye][1],
+              "native hands use recorded world depth range, not the later UI range");
         float x = hand ? .3f : -.3f;
         CHECK(fabsf(rec->model[3] - (eye ? -.7f-.032f : x+.032f)) < 1e-6f &&
               fabsf(rec->model[7] + .25f) < 1e-6f &&
@@ -334,7 +383,7 @@ static void test_draw(void) {
 }
 
 int main(void) {
-    test_visibility(); test_poses(); test_draw(); test_missing_pose_diagnostic();
+    test_visibility(); test_poses(); test_draw(); test_missing_pose_diagnostic(); test_scene_depth_range();
     printf("Empty-hand runtime: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

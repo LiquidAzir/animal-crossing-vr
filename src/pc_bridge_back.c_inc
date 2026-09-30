@@ -1,0 +1,35 @@
+/* Only the four stationary BridgeA post backs are missing. The suspended
+ * deck uses animated matrices and is left exactly as authored. These quads
+ * are attached to the original base joint, after its children unwind. */
+extern cKF_Skeleton_R_c cKF_bs_r_obj_s_bridgeA, cKF_bs_r_obj_w_bridgeA;
+extern Vtx obj_s_bridgeA_v[], obj_w_bridgeA_v[];
+extern u8 obj_s_bridgeA_t2_tex_txt[], obj_w_bridgeA_t2_tex_txt[];
+extern u16 obj_s_bridgeA_pal[], obj_w_bridgeA_pal[];
+
+#define PC_BRIDGE_V(i,u,v) {i,{0,0,0},{u,v}}
+#define PC_BRIDGE_POST(s,a,b,c,d) \
+    { obj_##s##_bridgeA_t2_tex_txt,128,{80,1,126,10},4,2, \
+      {PC_BRIDGE_V(a,0,0),PC_BRIDGE_V(b,31,0), \
+       PC_BRIDGE_V(c,31,31),PC_BRIDGE_V(d,0,31)}, {0,1,2,0,2,3} }
+#define PC_BRIDGE_POSTS(s) \
+    PC_BRIDGE_POST(s,88,91,95,94), PC_BRIDGE_POST(s,112,113,106,105), \
+    PC_BRIDGE_POST(s,114,117,121,120), PC_BRIDGE_POST(s,136,137,132,131)
+static const pc_structure_back_patch pc_bridge_s_patches[]={PC_BRIDGE_POSTS(s)};
+static const pc_structure_back_patch pc_bridge_w_patches[]={PC_BRIDGE_POSTS(w)};
+static const pc_structure_back_spec pc_bridge_back_specs[]={
+    {obj_s_bridgeA_v,4,pc_bridge_s_patches,obj_s_bridgeA_pal},
+    {obj_w_bridgeA_v,4,pc_bridge_w_patches,obj_w_bridgeA_pal},
+};
+static pc_structure_back_cache pc_bridge_back_caches[2];
+
+static int pc_bridge_back_lookup(cKF_Skeleton_R_c* skeleton,Gfx** out){
+    int season;
+    if(skeleton==&cKF_bs_r_obj_s_bridgeA)season=0;
+    else if(skeleton==&cKF_bs_r_obj_w_bridgeA)season=1;
+    else{*out=NULL;return 0;}
+    *out=pc_structure_back_build_spec(&pc_bridge_back_specs[season],&pc_bridge_back_caches[season]);
+    return 1; /* Never use a reflected bridge, including before disc loading. */
+}
+#undef PC_BRIDGE_POSTS
+#undef PC_BRIDGE_POST
+#undef PC_BRIDGE_V

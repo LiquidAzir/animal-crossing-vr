@@ -35,17 +35,37 @@ typedef enum {
 static PauseMenuPage cur_page = PAGE_MAIN;
 static int main_sel = 0;    /* 0=Resume, 1=Settings, 2=Quit Game */
 static int confirm_sel = 0; /* 0=No (default), 1=Yes */
+static int s_vr_settings_host = 0;
+static int s_vr_nav_ready = 0;
+static int s_vr_nav_latched = 0;
+static int s_vr_confirm_prev = 0, s_vr_cancel_prev = 0;
 
 void pc_pause_menu_toggle(void) {
     if (!g_pc_paused && (g_pc_title_main_menu_visible || g_pc_nes_active)) return;
 
     g_pc_paused = !g_pc_paused;
+    s_vr_settings_host = 0;
+    s_vr_nav_ready = 0;
     if (g_pc_paused) {
         cur_page = PAGE_MAIN;
         main_sel = 0;
     } else {
         g_pc_pause_input_drain = 1;
     }
+}
+
+int pc_pause_menu_open_vr_settings(void) {
+    if (g_pc_paused || g_pc_title_main_menu_visible || g_pc_nes_active) return 0;
+    pc_pause_menu_toggle();
+    s_vr_settings_host = 1;
+    cur_page = PAGE_SETTINGS;
+    pc_settings_menu_enter_vr();
+    return 1;
+}
+
+static void settings_page_closed(void) {
+    cur_page = PAGE_MAIN;
+    if (s_vr_settings_host) pc_pause_menu_toggle();
 }
 
 /* Input */
@@ -96,10 +116,10 @@ static void handle_action(MenuAction act) {
             case ACT_LEFT:  pc_settings_menu_nav_left();  break;
             case ACT_RIGHT: pc_settings_menu_nav_right(); break;
             case ACT_CONFIRM:
-                if (!pc_settings_menu_confirm()) cur_page = PAGE_MAIN;
+                if (!pc_settings_menu_confirm()) settings_page_closed();
                 break;
             case ACT_CANCEL:
-                if (!pc_settings_menu_cancel()) cur_page = PAGE_MAIN;
+                if (!pc_settings_menu_cancel()) settings_page_closed();
                 break;
             default: break;
         }
@@ -131,6 +151,47 @@ static void handle_action(MenuAction act) {
             default: break;
         }
     }
+}
+
+int pc_pause_menu_vr_input(float stick_x, float stick_y, int confirm, int cancel) {
+    if (!g_pc_paused) {
+        s_vr_nav_ready = 0;
+        return 0;
+    }
+    /* Reject the entire malformed snapshot and rearm only after neutral. */
+    if (!(stick_x >= -1.0f && stick_x <= 1.0f &&
+          stick_y >= -1.0f && stick_y <= 1.0f)) {
+        s_vr_nav_ready = 0;
+        return 1;
+    }
+    int neutral = stick_x > -0.35f && stick_x < 0.35f &&
+                  stick_y > -0.35f && stick_y < 0.35f;
+    if (!s_vr_nav_ready) {
+        if (neutral && !confirm && !cancel) {
+            s_vr_nav_ready = 1;
+            s_vr_nav_latched = 0;
+            s_vr_confirm_prev = s_vr_cancel_prev = 0;
+        }
+        return 1;
+    }
+    MenuAction action = ACT_NONE;
+    if (cancel && !s_vr_cancel_prev) action = ACT_CANCEL;
+    else if (confirm && !s_vr_confirm_prev) action = ACT_CONFIRM;
+    s_vr_confirm_prev = confirm != 0;
+    s_vr_cancel_prev = cancel != 0;
+    if (neutral) s_vr_nav_latched = 0;
+    else if (!s_vr_nav_latched && action == ACT_NONE) {
+        /* One push, one step, including diagonal pushes. */
+        if (stick_y >= 0.60f && stick_y <= 1.0f) action = ACT_UP;
+        else if (stick_y <= -0.60f && stick_y >= -1.0f) action = ACT_DOWN;
+        else if (stick_x <= -0.60f && stick_x >= -1.0f) action = ACT_LEFT;
+        else if (stick_x >= 0.60f && stick_x <= 1.0f) action = ACT_RIGHT;
+        if (action != ACT_NONE) s_vr_nav_latched = 1;
+    }
+    /* Holding the stick while confirming must not queue a second action. */
+    if ((confirm || cancel) && !neutral) s_vr_nav_latched = 1;
+    if (!pc_settings_menu_capture_blocking()) handle_action(action);
+    return 1;
 }
 
 static MenuAction translate_key(SDL_Keycode k) {
@@ -242,7 +303,7 @@ void pc_pause_menu_draw(struct game_s* game) {
         /* Settings module owns its own dim backdrop. */
         pc_settings_menu_draw(game, /*with_dim_backdrop=*/1);
         /* The user may have closed it from inside (Back). */
-        if (!pc_settings_menu_active()) cur_page = PAGE_MAIN;
+        if (!pc_settings_menu_active()) settings_page_closed();
     } else {
         pc_menu_dim_rect(game->graph, 180);
         if (cur_page == PAGE_MAIN)              draw_main_page(game);

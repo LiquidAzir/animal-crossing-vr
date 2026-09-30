@@ -32,6 +32,6 @@ static void aYAT_actor_draw(ACTOR* actor, GAME* game) {
         SET_POLY_OPA_DISP(gfx);
         CLOSE_DISP(graph);
 
-        (*Common_Get(clip).bg_item_clip->draw_shadow_proc)(game, shadow_data[yatai->arg0], FALSE);
+        bIT_draw_shadow_safe(Common_Get(clip).bg_item_clip, game, shadow_data[yatai->arg0], FALSE);
     }
 }
