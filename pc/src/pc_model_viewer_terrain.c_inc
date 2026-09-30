@@ -1,0 +1,84 @@
+/* Viewer-only material isolation for the authored dock/river-bridge meshes.
+ * Copy their original command span, vertices and seasonal texture data. This
+ * intentionally omits the surrounding acre so rear/underside holes are visible.
+ * It never runs in game scenes or changes the original display lists. */
+extern Gfx grd_s_m_wf_1_model[], grd_s_m_wf_2_model[], grd_s_m_wf_3_model[];
+extern Gfx grd_s_ir_1_model[], grd_s_ir_2_model[], grd_s_ir_3_model[], grd_s_ir_4_model[];
+extern Gfx grd_s_r1_b_1_model[], grd_s_r1_b_2_model[];
+extern u8 bridge_1_tex_dummy[], bridge_2_tex_dummy[];
+extern u8 bridge_1_pal_dummy[], bridge_2_pal_dummy[];
+extern u8 mFM_grd_s_bridge1_tex[], mFM_grd_s_bridge2_tex[];
+extern u8 mFM_grd_w_bridge1_tex[], mFM_grd_w_bridge2_tex[];
+extern u16 mFM_grd_s_bridge1_pal[], mFM_grd_s_bridge2_pal[];
+#include "pc_crossing_back.h"
+
+static uintptr_t mv_terrain_pointer(u32 word) {
+    uintptr_t unpacked = pc_gbi_unpack_runtime_ptr(word);
+    return unpacked ? unpacked : word & ~1u;
+}
+
+static void mv_draw_terrain_surface(GAME* game, const MVModelEntry* entry) {
+    static Gfx* const models[] = {
+        grd_s_m_wf_1_model, grd_s_m_wf_2_model, grd_s_m_wf_3_model,
+        grd_s_ir_1_model, grd_s_ir_2_model, grd_s_ir_3_model, grd_s_ir_4_model,
+        grd_s_r1_b_1_model, grd_s_r1_b_2_model
+    };
+    static Gfx material_commands[1024];
+    static int loaded_kind = -1, command_count;
+    static f32 center[3];
+    GRAPH* graph = game->graph;
+    Gfx* original = models[entry->raw_kind - MV_RAW_TERRAIN_FIRST];
+    if (loaded_kind != entry->raw_kind) {
+        unsigned i;
+        int copy = 0, remaining = 0;
+        f32 lo[3] = { 1e9f, 1e9f, 1e9f }, hi[3] = { -1e9f, -1e9f, -1e9f };
+        command_count = 0;
+        for (i = 0; i < 4096; ++i) {
+            Gfx command = original[i];
+            u32 op = command.words.w0 >> 24;
+            if (remaining || op == G_TRIN_INDEPEND) {
+                int first = !remaining;
+                if (first) remaining = ((command.words.w0 >> 17) & 127) + 1;
+                remaining -= remaining < (first ? 3 : 4) ? remaining : (first ? 3 : 4);
+            } else {
+                if (op == G_ENDDL) break;
+                if (op == G_LOADTLUT) {
+                    uintptr_t pal = mv_terrain_pointer(command.words.w1);
+                    copy = pal == (uintptr_t)bridge_1_pal_dummy || pal == (uintptr_t)bridge_2_pal_dummy;
+                }
+                if (copy && op == G_VTX) {
+                    int v, axis, count = (command.words.w0 >> 12) & 255;
+                    Vtx* vertices = (Vtx*)mv_terrain_pointer(command.words.w1);
+                    for (v = 0; v < count; ++v) for (axis = 0; axis < 3; ++axis) {
+                        f32 p = vertices[v].v.ob[axis];
+                        if (p < lo[axis]) lo[axis] = p;
+                        if (p > hi[axis]) hi[axis] = p;
+                    }
+                }
+            }
+            if (copy && command_count < 1023) material_commands[command_count++] = command;
+        }
+        gSPEndDisplayList(&material_commands[command_count]);
+        center[0] = (lo[0] + hi[0]) * 0.5f;
+        center[1] = lo[1];
+        center[2] = (lo[2] + hi[2]) * 0.5f;
+        loaded_kind = entry->raw_kind;
+    }
+    memcpy(bridge_1_tex_dummy, entry->is_winter ? mFM_grd_w_bridge1_tex : mFM_grd_s_bridge1_tex, 2048);
+    memcpy(bridge_2_tex_dummy, entry->is_winter ? mFM_grd_w_bridge2_tex : mFM_grd_s_bridge2_tex, 2048);
+    memcpy(bridge_1_pal_dummy, mFM_grd_s_bridge1_pal, 32);
+    memcpy(bridge_2_pal_dummy, mFM_grd_s_bridge2_pal, 32);
+    Matrix_translate(-center[0], -center[1], -center[2], MTX_MULT);
+    OPEN_DISP(graph);
+    gSPMatrix(NEXT_POLY_OPA_DISP, _Matrix_to_Mtx_new(graph), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+    gSPTexture(NEXT_POLY_OPA_DISP, 0, 0, 0, 0, G_ON);
+    gDPSetCombineLERP(NEXT_POLY_OPA_DISP, TEXEL0, 0, SHADE, 0, 0, 0, 0, TEXEL0, PRIMITIVE, 0, COMBINED, 0, 0, 0, 0, COMBINED);
+    gDPSetRenderMode(NEXT_POLY_OPA_DISP, G_RM_FOG_SHADE_A, G_RM_AA_ZB_OPA_SURF2);
+    gSPLoadGeometryMode(NEXT_POLY_OPA_DISP, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_LIGHTING | G_SHADING_SMOOTH);
+    gSPDisplayList(NEXT_POLY_OPA_DISP, material_commands);
+    if (g_pc_model_viewer_solid) {
+        Gfx* back = pc_crossing_back_lookup(original);
+        if (back) gSPDisplayList(NEXT_POLY_OPA_DISP, back);
+    }
+    CLOSE_DISP(graph);
+}

@@ -37,7 +37,7 @@ def main():
                str(ROOT / 'quest/tests/island_transition_offscreen.c'),
                '-L' + str(BUILD / 'sdl'), '-lSDL2', '-lGLESv3', '-lEGL', '-ldl', '-o', str(exe)]
     compiled = subprocess.run(command, capture_output=True, text=True)
-    (out / 'compile.log').write_text(compiled.stdout + compiled.stderr)
+    (out / 'compile.log').write_text(compiled.stdout + compiled.stderr, encoding='utf-8')
     if compiled.returncode:
         print(compiled.stdout + compiled.stderr)
         return compiled.returncode
@@ -58,7 +58,7 @@ def main():
     resumed = [line.strip() for line in activity.splitlines()
                if ('mResumedActivity' in line or 'topResumedActivity' in line)
                and 'null' not in line]
-    (out / 'device-preflight.txt').write_text(live.stdout + '\n' + '\n'.join(resumed))
+    (out / 'device-preflight.txt').write_text(live.stdout + '\n' + '\n'.join(resumed), encoding='utf-8')
     if live.stdout.strip() or any('HomeActivity' not in line for line in resumed):
         raise SystemExit('A game or non-Home activity is active; GPU test skipped.')
 
@@ -84,12 +84,14 @@ def main():
     adb('shell', f'chmod 500 {remote}/island-transition && chmod 400 {remote}/rom/AnimalCrossing.ciso')
     result = adb('shell', f'cd {remote} && LD_LIBRARY_PATH={remote} ACQUEST_TEST_PROFILE=0 '
                  'ACQUEST_TEST_SAMPLES=1800 ./island-transition', check=False)
-    (out / 'results.log').write_text(result.stdout + result.stderr)
+    # adb output includes translated game strings; Windows' locale encoding
+    # cannot preserve those. Save UTF-8 before collecting the native report.
+    (out / 'results.log').write_text(result.stdout + result.stderr, encoding='utf-8')
     for name in ('island-transition-results.txt', 'town-before.bmp',
                  'island-climate-restored.bmp', 'town-return-restored.bmp'):
         adb('pull', remote + '/' + name, str(out / name), check=False)
     report = out / 'island-transition-results.txt'
-    report_text = report.read_text() if report.exists() else ''
+    report_text = report.read_text(encoding='utf-8') if report.exists() else ''
     manifest['exit_code'] = result.returncode
     good = result.returncode == 0 and 'PASS ' in report_text
     if args.expect_crash:

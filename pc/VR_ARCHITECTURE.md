@@ -200,6 +200,23 @@ The two `grd_s_c4_s_[12]` ramp acres omit three cliff-side triangles. Their
 display lists now draw those triangles using existing vertices/materials;
 neither collision nor culling rules change.
 
+`src/pc_island_house_back.c_inc` extends the owner-scoped repair to the island
+cottage and islander's house. Fitted bamboo/plaster walls and thatch undersides
+use their original textures and live palettes, adding 30 triangles across the
+two models. Both seasonal actor configurations use these same models.
+
+`src/pc_crossing_back.c_inc` adds missing dock/bridge post faces, deck edges and
+undersides, and opposite stone walls for an explicit set of 31 acre models.
+Four other stone variants already contain both sides. Source vertex getters
+expose each original acre's static data without changing it. Lists build once
+and reuse the live seasonal bridge texture/palette buffers. `aFD_DrawBg` appends
+them under the original acre matrix only for first-person or VR; original
+display lists, collisions, and flat-camera behavior remain unchanged.
+`src/pc_bridge_back.c_inc` closes the four stationary post backs of each
+seasonal animated wooden bridge with eight triangles. Its original moving deck
+and deformation callback are unchanged.
+See `docs/vr-island-surfaces-20260929.md` for verification and install evidence.
+
 The diagnostic model viewer can capture the real renderer without a headset:
 `--model-viewer 8 --model-viewer-solid --model-viewer-angle 225
 --model-viewer-distance 30000 --model-viewer-height 6500

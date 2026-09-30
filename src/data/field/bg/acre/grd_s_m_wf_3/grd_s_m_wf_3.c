@@ -493,4 +493,6 @@ extern void pc_load_asset(const char*, void*, unsigned int, unsigned int, int, i
 void _pc_load_src_data_field_bg_acre_grd_s_m_wf_3_grd_s_m_wf_3_c(void) {
     pc_load_asset("assets/field/bg/grd_s_m_wf_3_v.bin", grd_s_m_wf_3_v, 0x1300, 0xA10E88, 0, 2);
 }
+/* Read-only geometry source for the first-person dock/bridge completion. */
+Vtx* pc_crossing_source_grd_s_m_wf_3(void) { return grd_s_m_wf_3_v; }
 #endif

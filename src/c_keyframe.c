@@ -795,6 +795,8 @@ extern int cKF_SkeletonInfo_R_play(cKF_SkeletonInfo_R_c* keyframe) {
 #include "pc_structure_back.c_inc"
 #include "pc_civic_back.c_inc"
 #include "pc_shop_back.c_inc"
+#include "pc_island_house_back.c_inc"
+#include "pc_bridge_back.c_inc"
 
 static Gfx* g_ckf_house_back;
 static cKF_SkeletonInfo_R_c* g_ckf_house_back_owner;
@@ -1393,7 +1395,9 @@ extern void cKF_Si3_draw_R_SV_solid(GAME* game, cKF_SkeletonInfo_R_c* keyframe, 
         if (pc_house_back_lookup(keyframe->skeleton, &rear) ||
             pc_tailor_back_lookup(keyframe->skeleton, &rear) ||
             pc_post_office_back_lookup(keyframe->skeleton, &rear) ||
-            pc_shop_back_lookup(keyframe->skeleton, &rear)) {
+            pc_shop_back_lookup(keyframe->skeleton, &rear) ||
+            pc_island_house_back_lookup(keyframe->skeleton, &rear) ||
+            pc_bridge_back_lookup(keyframe->skeleton, &rear)) {
             Gfx* previous_rear = g_ckf_house_back;
             cKF_SkeletonInfo_R_c* previous_owner = g_ckf_house_back_owner;
             /* These buildings use original-edge caps, including while deferred:
