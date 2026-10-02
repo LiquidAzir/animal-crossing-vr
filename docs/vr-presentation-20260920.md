@@ -42,7 +42,7 @@ This is a fixed vertical adjustment, not a world-space bubble attached to an NPC
 - `git diff --check` passed.
 
 These checks do not verify catch artwork or dialogue clearance on a physical
-headset. `VR_PLAYTEST.md` includes fish/bug/fossil catches, full pockets, deliberate
+headset. Pending physical checks included fish/bug/fossil catches, full pockets, deliberate
 A versus gestures, repeated conversations and shop choices, and flat/diorama
 regressions. The item presentation still uses its original artwork/animation.
 

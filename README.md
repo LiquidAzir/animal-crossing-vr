@@ -26,7 +26,7 @@ Both require your own **Animal Crossing USA Rev 0 (GAFE01_00)** disc image: `.is
 5. Start SteamVR with the headset and controllers connected, then run `AnimalCrossing.exe`. For Quest PC VR, connect through Steam Link, Virtual Desktop, or Quest Link/Air Link first.
 6. Press **F5** or **left grip + Y** to enter first person. **X + Y** recenters. Without a connected headset, the Windows build also runs flat.
 
-**Updating:** close the game, back up `save`, then repeat steps 3–4 with the complete new package. [Full PC controls and troubleshooting](VR_README.md).
+**Updating:** close the game, back up `save`, then repeat steps 3–4 with the complete new package. [VR controls](#vr-controls).
 
 ### Standalone Quest 3
 
@@ -69,7 +69,7 @@ Tool shortcuts work during normal outdoor movement and use tools in your pockets
 
 **VR Settings:** left stick **up/down** selects a row, **left/right** changes its value, **A/right trigger** confirms, and **B/left trigger** goes back or resumes. Choose **Apply** to save changes, then resume; unapplied edits prompt before being discarded. Settings include hand visuals (**off by default**), smooth/snap turning, motion swings, and volume. Open this menu during gameplay; it is unavailable on the title screen or inside NES games.
 
-On PC, **F5** also toggles first person. Custom SteamVR bindings can differ; change them in **SteamVR → Settings → Controllers → Manage Controller Bindings**. [PC setup and troubleshooting](VR_README.md).
+On PC, **F5** also toggles first person. Custom SteamVR bindings can differ; change them in **SteamVR → Settings → Controllers → Manage Controller Bindings**. [PC installation](#windows-pc-vr).
 
 ## This release
 

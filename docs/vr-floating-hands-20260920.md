@@ -49,8 +49,8 @@ sky, and save-game logic are unchanged.
 
 Native preview artifacts are in `pc/build32/vr-hands-tests/`. They exercise
 the production renderer with simulated poses, not a physical headset.
-Actual controller fit, perceived size, and comfort still need a headset pass;
-the focused route is recorded in `VR_PLAYTEST.md`.
+Actual controller fit, perceived size, and comfort remained pending a physical
+headset pass at the time of this review.
 
 The full 32-bit game build passed (`pc/build32/floating-hands-build.log`).
 The final executable reached the title screen in an isolated fixture with

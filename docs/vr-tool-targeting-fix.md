@@ -81,8 +81,8 @@ python pc/tests/run_vr_tool_tests.py --revision 7aa64bc
 
 The second command is expected to fail: it is the regression baseline.
 Build and test logs are in `pc/build32/`; no ROM or save is required for
-these automated checks. Follow the added cases in `VR_PLAYTEST.md` for the
-remaining physical-headset verification. No GitHub release is published by
+these automated checks. Physical headset verification remained pending at the
+time of this review. No GitHub release is published by
 this local repair.
 
 ## Local installation

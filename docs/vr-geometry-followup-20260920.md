@@ -101,8 +101,8 @@ AnimalCrossing.exe --no-vr --model-viewer 8 --model-viewer-solid
 
 Model-viewer windows use diagnostic lighting and show optional decorations;
 these captures verify geometry/material placement, not full actor-driven
-gameplay. Physical headset comfort, net feel, and in-town appearance still need
-the checks in `VR_PLAYTEST.md`. No user saves are used in automated captures.
+gameplay. Physical headset comfort, net feel, and in-town appearance remained
+pending headset checks at the time of this review. No user saves are used in automated captures.
 
 ## Installation
 

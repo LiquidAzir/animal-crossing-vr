@@ -38,7 +38,7 @@ foreach ($relative in @(
 }
 
 foreach ($relative in @(
-    "README.md", "VR_README.md", "VR_PLAYTEST.md", "FAQ.md", "LICENSE",
+    "README.md", "FAQ.md", "LICENSE",
     "pc/VR_ARCHITECTURE.md", "pc/DOCUMENTATION.md", "docs/images/quest-controls.svg"
 )) {
     $payload[$relative] = Join-Path $repo $relative

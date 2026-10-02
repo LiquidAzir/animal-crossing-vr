@@ -66,7 +66,7 @@ are not a headset playtest. Local captures are under
 `pc/build32/structure-followup/` and the relevant material/fountain test folders.
 
 Physical checks for daylight/dusk colors, entrances, and fountain animation
-are listed in `VR_PLAYTEST.md`.
+remained pending at the time of this review.
 
 The reviewed rendering pass covers all 18 seasonal homes, 22 police/tailor
 views, and 12 fountain views. Six further summer/winter tailor captures verify

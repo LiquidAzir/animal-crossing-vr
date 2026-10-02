@@ -60,8 +60,8 @@ model-viewer overrides, wireframe behavior, and interrupted task cleanup.
 ## Verification scope
 
 The native tests use real OpenGL rendering; controller input is simulated.
-Final physical headset confirmation remains on the focused route in
-[VR_PLAYTEST](../VR_PLAYTEST.md). Test artifacts remain in ignored directories
+Final physical headset confirmation remained pending at the time of this review.
+Test artifacts remain in ignored directories
 under `pc/build32/` and are not release assets.
 
 The combined MinGW game build passed. The final executable reached the title
