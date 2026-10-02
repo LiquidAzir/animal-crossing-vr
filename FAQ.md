@@ -1,6 +1,6 @@
 # Frequently Asked Questions
 
-*This is the upstream [PC port](https://github.com/flyngmt/ACGC-PC-Port)'s FAQ, kept as-is — "I" below is the port's author. For VR questions, see [VR_README.md](VR_README.md).*
+*This is the upstream [PC port](https://github.com/flyngmt/ACGC-PC-Port)'s FAQ, kept as-is — "I" below is the port's author. For VR setup and controls, see the [main README](README.md).*
 
 ## Is the PC Port compatible with the Animal Crossing Deluxe mod by Cuyler?
 

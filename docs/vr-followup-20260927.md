@@ -75,7 +75,7 @@ do; perceived latency and placement still require a physical headset check.
   suites: 34,510 checks passed.
 
 Actual headset visibility, catch comfort, and walking through the repaired
-shop entrance remain in the focused route in [VR_PLAYTEST](../VR_PLAYTEST.md).
+shop entrance remained pending physical headset checks at the time of this review.
 
 The full game build passed (`pc/build32/vr-followup-20260927-build.log`). The
 final executable reached the title screen in an isolated fixture, with empty

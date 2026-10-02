@@ -64,7 +64,7 @@ plane when a longer camera distance is requested, keeping broad museum roofs
 inside the frame; interactive defaults are unchanged.
 
 Model-viewer lighting differs from town gameplay. Physical headset checks for
-day/dusk appearance and normal building interaction remain in `VR_PLAYTEST.md`.
+day/dusk appearance and normal building interaction remained pending at the time of this review.
 
 The completed native regression covers 48 views: eight angles each for both
 museum/post-office seasons, eight legacy museum comparison views, and eight
